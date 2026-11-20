@@ -6,9 +6,13 @@ import {
 } from "@/lib/midtrans";
 import { deleteUploadedFile } from "@/lib/storage";
 
+export async function GET() {
+  return NextResponse.json({ ok: true, service: "QRPrint.id Midtrans Webhook" });
+}
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const orderId = String(body.order_id || "");
     const statusCode = String(body.status_code || "");
     const grossAmount = String(body.gross_amount || "");
@@ -16,7 +20,12 @@ export async function POST(req: Request) {
     const transactionStatus = String(body.transaction_status || "");
     const fraudStatus = String(body.fraud_status || "accept");
 
-    if (!orderId || !statusCode || !grossAmount || !signatureKey) {
+    // Midtrans "Test notification URL" sends a synthetic order_id like payment_notif_test_...
+    if (orderId.startsWith("payment_notif_test_") || !orderId) {
+      return NextResponse.json({ ok: true, test: true });
+    }
+
+    if (!statusCode || !grossAmount || !signatureKey) {
       return NextResponse.json(
         { error: "Payload webhook Midtrans tidak lengkap." },
         { status: 400 }
@@ -29,10 +38,8 @@ export async function POST(req: Request) {
     });
 
     if (!job) {
-      return NextResponse.json(
-        { error: "Order tidak ditemukan." },
-        { status: 404 }
-      );
+      // Return 200 for unknown/test orders so Midtrans does not retry endlessly or fail URL verification
+      return NextResponse.json({ ok: true, ignored: true });
     }
 
     const config = resolveMidtransConfig(job.shop);
