@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {
+  expireStalePendingJobs,
+  PENDING_JOB_EXPIRE_MINUTES,
+} from "@/lib/jobs-cleanup";
 
 /**
  * Ekstrak nominal Rupiah dari teks notifikasi Android (GoPay Merchant, GoBiz, DANA Bisnis, OVO, BRI, BCA, dll).
@@ -106,8 +110,12 @@ export async function POST(req: Request) {
       );
     }
 
-    // Match the most recent PENDING MERCHANT_QRIS (or QRIS) job from the last 60 minutes with exact unique totalPrice
-    const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
+    await expireStalePendingJobs(shop.id).catch(() => 0);
+
+    // Match the most recent PENDING QRIS job within the active 30-minute window with exact unique totalPrice
+    const activeCutoff = new Date(
+      Date.now() - PENDING_JOB_EXPIRE_MINUTES * 60 * 1000
+    );
     const matchingJob = await prisma.printJob.findFirst({
       where: {
         shopId: shop.id,
@@ -115,7 +123,7 @@ export async function POST(req: Request) {
         paymentStatus: "PENDING",
         printStatus: "WAITING_PAYMENT",
         totalPrice: detectedAmount,
-        createdAt: { gte: sixtyMinsAgo },
+        createdAt: { gte: activeCutoff },
       },
       orderBy: { createdAt: "desc" },
     });

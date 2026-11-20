@@ -96,6 +96,7 @@ function CustomerScanPortalContent({
   const [qrisDataUrl, setQrisDataUrl] = useState<string>("");
   const [simulatingPay, setSimulatingPay] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [cancellingOrder, setCancellingOrder] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
 
   useEffect(() => {
@@ -293,6 +294,35 @@ function CustomerScanPortalContent({
     }
   }
 
+  async function handleCancelOrder() {
+    if (!activeJob || cancellingOrder) return;
+    const confirmed = window.confirm(
+      "Batalkan pesanan cetak ini? File dokumen Anda akan langsung dihapus permanen dari server."
+    );
+    if (!confirmed) return;
+
+    setCancellingOrder(true);
+    try {
+      const res = await fetch(`/api/public/jobs/${activeJob.jobCode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "CANCEL" }),
+      });
+      if (res.ok) {
+        const refreshed = await fetch(
+          `/api/public/jobs/${activeJob.jobCode}?t=${Date.now()}`,
+          { cache: "no-store" }
+        );
+        if (refreshed.ok) {
+          const data = await refreshed.json();
+          setActiveJob(data.job);
+        }
+      }
+    } finally {
+      setCancellingOrder(false);
+    }
+  }
+
   function resetOrder() {
     setActiveJob(null);
     setFile(null);
@@ -468,8 +498,25 @@ function CustomerScanPortalContent({
                 </div>
               </div>
 
-              {/* Payment Block if Pending */}
-              {activeJob.paymentStatus === "PENDING" && (
+              {/* Cancelled Banner */}
+              {activeJob.printStatus === "CANCELLED" && (
+                <div className="mt-5 rounded-xl border border-[#dc2626]/25 bg-[#dc2626]/5 p-5 text-center">
+                  <AlertCircle
+                    className="mx-auto h-6 w-6 text-[#dc2626]"
+                    strokeWidth={1.5}
+                  />
+                  <p className="mt-2 text-sm font-medium text-[#1f1b16]">
+                    Pesanan cetak dibatalkan
+                  </p>
+                  <p className="mt-1 text-xs text-[#5e554a]">
+                    Antrean ini sudah dibatalkan atau melewati batas waktu bayar 30 menit. File dokumen Anda telah dihapus dari server.
+                  </p>
+                </div>
+              )}
+
+              {/* Payment Block if Pending & Not Cancelled */}
+              {activeJob.paymentStatus === "PENDING" &&
+                activeJob.printStatus !== "CANCELLED" && (
                 <div className="mt-5 rounded-xl border border-[#1f1b16]/10 bg-white p-5 text-center">
                   {activeJob.paymentMethod === "QRIS" ? (
                     <>
@@ -722,9 +769,28 @@ function CustomerScanPortalContent({
                 </div>
               )}
 
+              {activeJob.paymentStatus === "PENDING" &&
+                activeJob.printStatus === "WAITING_PAYMENT" && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-center text-[11px] text-[#7b7266]">
+                      Pesanan otomatis dibatalkan &amp; file dihapus jika belum dibayar dalam 30 menit.
+                    </p>
+                    <button
+                      type="button"
+                      disabled={cancellingOrder}
+                      onClick={handleCancelOrder}
+                      className="btn-action h-10 w-full cursor-pointer rounded-lg border border-[#dc2626]/30 bg-white text-xs font-medium text-[#dc2626] hover:bg-[#dc2626]/5 disabled:opacity-50"
+                    >
+                      {cancellingOrder
+                        ? "Membatalkan pesanan..."
+                        : "Batalkan pesanan & hapus file"}
+                    </button>
+                  </div>
+                )}
+
               <button
                 onClick={resetOrder}
-                className="btn-action mt-5 h-10 w-full cursor-pointer rounded-lg border border-[#1f1b16]/15 bg-white text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                className="btn-action mt-3 h-10 w-full cursor-pointer rounded-lg border border-[#1f1b16]/15 bg-white text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
               >
                 Cetak dokumen lainnya
               </button>

@@ -3,12 +3,15 @@ import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { evaluateShopEntitlement, SAAS_PLANS } from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
+import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
 
 export async function GET() {
   const shop = await getCurrentShop();
   if (!shop) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  await expireStalePendingJobs(shop.id).catch(() => 0);
 
   const [jobs, totalJobsCount, invoices] = await Promise.all([
     prisma.printJob.findMany({
