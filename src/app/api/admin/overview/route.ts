@@ -182,8 +182,29 @@ export async function GET() {
     });
   }
 
+  const staleCutoff = new Date(Date.now() - 30 * 60 * 1000);
+  const pendingStaleCount = await prisma.printJob.count({
+    where: {
+      paymentStatus: "PENDING",
+      printStatus: "WAITING_PAYMENT",
+      createdAt: { lt: staleCutoff },
+    },
+  });
+
   return NextResponse.json({
     admin,
+    system: {
+      appUrl:
+        process.env.NEXT_PUBLIC_APP_URL || "https://ngeprint.gellona.web.id",
+      hasPlatformMidtrans: Boolean((process.env.MIDTRANS_SERVER_KEY || "").trim()),
+      hasPlatformStaticQris: Boolean(
+        (process.env.PLATFORM_STATIC_QRIS || "").trim()
+      ),
+      dbEngine: (process.env.DATABASE_URL || "").startsWith("file:")
+        ? "SQLite (Local Disk)"
+        : "PostgreSQL",
+      pendingStaleCount,
+    },
     stats: {
       totalShops: enrichedShops.length,
       activePaidShops,

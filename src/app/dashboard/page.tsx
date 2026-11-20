@@ -28,6 +28,9 @@ import {
   VolumeX,
   Search,
   Lock,
+  Receipt,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 
@@ -112,6 +115,7 @@ function exportShopJobsCsv(shopCode: string, jobs: PrintJobItem[]) {
 interface ShopInfo {
   id: string;
   shopCode: string;
+  shopCodeChangeCount?: number;
   name: string;
   ownerName: string;
   email: string;
@@ -279,6 +283,7 @@ function DashboardContent() {
   const [pwIsError, setPwIsError] = useState(false);
   const [posterSize, setPosterSize] = useState<"A5" | "A4">("A5");
   const [downloadingPoster, setDownloadingPoster] = useState(false);
+  const [receiptJob, setReceiptJob] = useState<PrintJobItem | null>(null);
 
   async function handleDownloadPosterPng() {
     if (!data?.shop || !qrImage) return;
@@ -704,11 +709,24 @@ function DashboardContent() {
 
   async function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
+    const currentCode = data?.shop.shopCode || "";
+    const changeCount = data?.shop.shopCodeChangeCount ?? 0;
+    const isChangingSlug =
+      changeCount < 1 &&
+      settingsForm.shopCode.trim().toLowerCase() !== currentCode.toLowerCase();
+
+    if (isChangingSlug) {
+      const ok = window.confirm(
+        `Ubah URL portal pelanggan menjadi "/s/${settingsForm.shopCode.trim()}"?\n\nPerhatian: Perubahan URL hanya bisa dilakukan 1x gratis. Setelah disimpan, URL akan terkunci dan perubahan berikutnya dikenakan biaya Rp 37.000.`
+      );
+      if (!ok) return;
+    }
+
     setSavingSettings(true);
     setSettingsMsg(null);
     try {
       const payload: Record<string, unknown> = {
-        shopCode: settingsForm.shopCode,
+        ...(isChangingSlug ? { shopCode: settingsForm.shopCode } : {}),
         name: settingsForm.name,
         address: settingsForm.address,
         qrisName: settingsForm.qrisName,
@@ -1588,6 +1606,39 @@ function DashboardContent() {
                             </a>
                           )}
 
+                          {job.paymentStatus === "PAID" && (
+                            <button
+                              type="button"
+                              onClick={() => setReceiptJob(job)}
+                              title="Lihat & cetak nota struk pembayaran"
+                              className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-2.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                            >
+                              <Receipt
+                                className="h-3.5 w-3.5 text-[#737373]"
+                                strokeWidth={1.5}
+                              />
+                              <span>Struk</span>
+                            </button>
+                          )}
+
+                          {job.printStatus === "PRINTING" &&
+                            job.storedFilePath && (
+                              <button
+                                disabled={busy}
+                                onClick={() =>
+                                  handleJobAction(job.id, "REQUEUE")
+                                }
+                                title="Kirim ulang ke antrean Print Agent (jika kertas macet)"
+                                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-2.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+                              >
+                                <RotateCcw
+                                  className="h-3.5 w-3.5 text-[#737373]"
+                                  strokeWidth={1.5}
+                                />
+                                <span>Ulangi cetak</span>
+                              </button>
+                            )}
+
                           {job.paymentStatus === "PENDING" &&
                             job.printStatus !== "CANCELLED" && (
                               <button
@@ -1601,7 +1652,11 @@ function DashboardContent() {
                                   className="h-3.5 w-3.5"
                                   strokeWidth={1.5}
                                 />
-                                <span>Terima tunai</span>
+                                <span>
+                                  {job.paymentMethod === "QRIS"
+                                    ? "Konfirmasi lunas"
+                                    : "Terima tunai"}
+                                </span>
                               </button>
                             )}
 
@@ -2151,14 +2206,39 @@ function DashboardContent() {
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-[#171717]">
-                    URL Portal Pelanggan (Kode Toko)
-                  </label>
-                  <div className="flex items-center overflow-hidden rounded-lg border border-[#171717]/12 bg-[#fafafa] focus-within:border-[#171717] focus-within:bg-white">
+                  <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-xs font-medium text-[#171717]">
+                      URL Portal Pelanggan (Kode Toko)
+                    </label>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 font-mono-num text-[10px] font-medium ${
+                        (shop.shopCodeChangeCount ?? 0) >= 1
+                          ? "bg-[#171717]/8 text-[#525252]"
+                          : "bg-[#d9381e]/10 text-[#d9381e]"
+                      }`}
+                    >
+                      {(shop.shopCodeChangeCount ?? 0) >= 1 ? (
+                        <>
+                          <Lock className="h-3 w-3" strokeWidth={1.5} />
+                          <span>Terkunci (kuota 1x gratis terpakai)</span>
+                        </>
+                      ) : (
+                        <span>Sisa kuota ganti: 1x gratis</span>
+                      )}
+                    </span>
+                  </div>
+                  <div
+                    className={`flex items-center overflow-hidden rounded-lg border border-[#171717]/12 ${
+                      (shop.shopCodeChangeCount ?? 0) >= 1
+                        ? "bg-[#f4f4f5] opacity-80"
+                        : "bg-[#fafafa] focus-within:border-[#171717] focus-within:bg-white"
+                    }`}
+                  >
                     <span className="font-mono-num shrink-0 border-r border-[#171717]/10 bg-[#f4f4f5] px-3 py-2.5 text-xs text-[#525252]">
                       {origin.replace(/^https?:\/\//, "")}/s/
                     </span>
                     <input
+                      disabled={(shop.shopCodeChangeCount ?? 0) >= 1}
                       value={settingsForm.shopCode}
                       onChange={(e) =>
                         setSettingsForm({
@@ -2170,16 +2250,31 @@ function DashboardContent() {
                       }
                       maxLength={32}
                       placeholder="fotokopi-sinar-jaya"
-                      className="font-mono-num h-10 w-full bg-transparent px-3 text-sm font-medium text-[#171717] outline-none"
+                      className="font-mono-num h-10 w-full bg-transparent px-3 text-sm font-medium text-[#171717] outline-none disabled:cursor-not-allowed"
                     />
                   </div>
-                  <p className="mt-1 text-[11px] text-[#737373]">
-                    Gunakan huruf kecil, angka, atau tanda hubung (contoh:{" "}
-                    <code className="font-mono-num text-[#171717]">
-                      sinar-jaya
-                    </code>
-                    ). Jika diubah, unduh &amp; cetak ulang Poster QR meja kasir Anda.
-                  </p>
+                  {(shop.shopCodeChangeCount ?? 0) >= 1 ? (
+                    <p className="mt-1.5 text-[11px] text-[#525252]">
+                      URL portal pelanggan sudah pernah diganti dan kini terkunci permanen. Perubahan URL berikutnya dikenakan biaya{" "}
+                      <strong className="font-mono-num text-[#171717]">
+                        Rp 37.000
+                      </strong>{" "}
+                      — silakan hubungi admin{" "}
+                      <a
+                        href={`mailto:admin@gellona.id?subject=${encodeURIComponent(
+                          `Permintaan Ganti URL Portal Rp 37.000 (${shop.shopCode})`
+                        )}`}
+                        className="font-medium text-[#d9381e] underline"
+                      >
+                        Gellona Teknologi
+                      </a>
+                      .
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-[#737373]">
+                      Default otomatis mengikuti nama toko saat pendaftaran. Anda hanya dapat menggantinya <strong>1 kali gratis</strong> — setelah itu terkunci (perubahan berikutnya Rp 37.000).
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -2925,6 +3020,129 @@ function DashboardContent() {
           )}
         </div>
       </main>
+
+      {/* RECEIPT / NOTA CETAK MODAL */}
+      {receiptJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-sm rounded-2xl border border-[#171717]/12 bg-white p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setReceiptJob(null)}
+              aria-label="Tutup struk"
+              className="no-print absolute top-4 right-4 cursor-pointer rounded-lg p-1.5 text-[#737373] hover:bg-[#f4f4f5] hover:text-[#171717]"
+            >
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+
+            <div className="print-poster space-y-3 text-xs text-[#171717]">
+              <div className="border-b border-dashed border-[#171717]/20 pb-3 text-center">
+                <p className="font-mono-num text-[10px] uppercase tracking-wider text-[#737373]">
+                  Nota Pembayaran Cetak · Ngeprint
+                </p>
+                <p className="mt-1 text-base font-semibold text-[#171717]">
+                  {shop.name}
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#737373]">
+                  {shop.address}
+                </p>
+              </div>
+
+              <div className="space-y-1.5 border-b border-dashed border-[#171717]/20 pb-3">
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#737373]">Kode Antrean</span>
+                  <span className="font-mono-num font-medium">
+                    {receiptJob.jobCode}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#737373]">Tanggal</span>
+                  <span className="font-mono-num">
+                    {new Date(receiptJob.createdAt).toLocaleString("id-ID", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#737373]">Pelanggan</span>
+                  <span className="font-medium">{receiptJob.customerName}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#737373]">Dokumen</span>
+                  <span className="max-w-[190px] truncate font-medium">
+                    {receiptJob.fileName}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#737373]">Rincian</span>
+                  <span className="font-mono-num text-right">
+                    {receiptJob.pageCount} hal ({receiptJob.pageRange}) ×{" "}
+                    {receiptJob.copies} ·{" "}
+                    {receiptJob.colorMode === "COLOR" ? "Warna" : "HP"} ·{" "}
+                    {receiptJob.paperSize}
+                    {receiptJob.duplex ? " · Duplex" : ""}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <div className="flex justify-between gap-2">
+                  <span className="text-[#737373]">Metode Bayar</span>
+                  <span className="font-mono-num font-medium">
+                    {receiptJob.paymentMethod} (LUNAS)
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between gap-2 pt-1">
+                  <span className="text-sm font-medium">Total Bayar</span>
+                  <span className="font-mono-num text-lg font-semibold text-[#171717]">
+                    {formatRupiah(receiptJob.totalPrice)}
+                  </span>
+                </div>
+              </div>
+
+              <p className="border-t border-dashed border-[#171717]/20 pt-3 text-center text-[10px] text-[#737373]">
+                Terima kasih telah mencetak di {shop.name}. Dokumen Anda dihapus otomatis setelah selesai dicetak.
+              </p>
+            </div>
+
+            <div className="no-print mt-5 grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = [
+                    `*NOTA CETAK — ${shop.name}*`,
+                    `Kode: ${receiptJob.jobCode}`,
+                    `Tanggal: ${new Date(receiptJob.createdAt).toLocaleString("id-ID")}`,
+                    `Pelanggan: ${receiptJob.customerName}`,
+                    `File: ${receiptJob.fileName}`,
+                    `Rincian: ${receiptJob.pageCount} hal (${receiptJob.pageRange}) x ${receiptJob.copies}, ${receiptJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"}, ${receiptJob.paperSize}${receiptJob.duplex ? ", Bolak-balik" : ""}`,
+                    `Metode: ${receiptJob.paymentMethod} (LUNAS)`,
+                    `*Total: ${formatRupiah(receiptJob.totalPrice)}*`,
+                  ].join("\n");
+                  copyToClipboard(text, "receipt_wa");
+                }}
+                className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+              >
+                <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>
+                  {copiedText === "receipt_wa" ? "Tersalin!" : "Salin utk WA"}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#171717] text-xs font-medium text-white hover:bg-[#171717]/90"
+              >
+                <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>Cetak Struk</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

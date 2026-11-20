@@ -8,7 +8,129 @@ import {
   generateInvoiceCode,
   getPlanDef,
 } from "@/lib/plans";
-import { generateAgentKey } from "@/lib/utils";
+import {
+  generateAgentKey,
+  generateShopSlugFromName,
+  isValidShopSlug,
+  sanitizeShopSlug,
+} from "@/lib/utils";
+import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
+
+export async function POST(req: Request) {
+  const admin = await getCurrentAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const body = await req.json();
+    const cleanName = String(body.name || "").trim().slice(0, 80);
+    const cleanOwner = String(body.ownerName || cleanName).trim().slice(0, 80);
+    const cleanEmail = String(body.email || "").trim().toLowerCase().slice(0, 120);
+    const cleanPhone = String(body.phone || "").replace(/\D/g, "").slice(0, 15);
+    const cleanAddress = String(body.address || "").trim().slice(0, 200) || "Indonesia";
+    const rawPassword = String(body.password || "").trim();
+    const requestedPlan = getPlanDef(body.plan || "DEMO");
+    const demoId = body.demoId ? String(body.demoId) : null;
+
+    if (!cleanName || !cleanEmail || !cleanPhone || rawPassword.length < 6) {
+      return NextResponse.json(
+        { error: "Nama toko, email, WhatsApp, dan sandi (min. 6 karakter) wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    const existingEmail = await prisma.shop.findUnique({
+      where: { email: cleanEmail },
+      select: { id: true },
+    });
+    if (existingEmail) {
+      return NextResponse.json(
+        { error: "Email ini sudah terdaftar di toko lain." },
+        { status: 409 }
+      );
+    }
+
+    let shopCode = body.shopCode
+      ? sanitizeShopSlug(String(body.shopCode))
+      : generateShopSlugFromName(cleanName);
+    if (!isValidShopSlug(shopCode)) {
+      shopCode = generateShopSlugFromName(cleanName);
+    }
+
+    const existingSlug = await prisma.shop.findFirst({
+      where: {
+        OR: [{ shopCode }, { shopCode: shopCode.toUpperCase() }],
+      },
+      select: { id: true },
+    });
+    if (existingSlug) {
+      shopCode = `${shopCode.slice(0, 26)}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
+    const agentKey = generateAgentKey();
+    const expiresAt = calculateNewExpiryDate(null, requestedPlan.durationDays);
+
+    const shop = await prisma.shop.create({
+      data: {
+        shopCode,
+        name: cleanName,
+        ownerName: cleanOwner,
+        email: cleanEmail,
+        phone: cleanPhone,
+        address: cleanAddress,
+        passwordHash,
+        plan: requestedPlan.id,
+        planStatus: "ACTIVE",
+        planExpiresAt: expiresAt,
+        bwPrice: Math.max(100, Number(body.bwPrice) || 500),
+        colorPrice: Math.max(100, Number(body.colorPrice) || 1500),
+        agentKey,
+        qrisName: `QRIS ${cleanName.toUpperCase()}`,
+      },
+    });
+
+    if (requestedPlan.price > 0) {
+      await prisma.subscriptionInvoice.create({
+        data: {
+          invoiceCode: generateInvoiceCode(),
+          shopId: shop.id,
+          plan: requestedPlan.id,
+          amount: requestedPlan.price,
+          durationDays: requestedPlan.durationDays,
+          paymentProvider: "MANUAL_ADMIN",
+          status: "PAID",
+          paidAt: new Date(),
+        },
+      });
+    }
+
+    if (demoId) {
+      await prisma.demoRequest
+        .update({
+          where: { id: demoId },
+          data: { status: "CONVERTED" },
+        })
+        .catch(() => null);
+    }
+
+    return NextResponse.json(
+      {
+        ok: true,
+        shop,
+        message: `Toko ${shop.name} (/s/${shop.shopCode}) berhasil dibuat dengan paket ${requestedPlan.name}.`,
+      },
+      { status: 201 }
+    );
+  } catch (err) {
+    console.error("Admin create shop error:", err);
+    return NextResponse.json(
+      { error: "Gagal membuat akun toko baru." },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(req: Request) {
   const admin = await getCurrentAdmin();
@@ -257,6 +379,73 @@ export async function PATCH(req: Request) {
       return NextResponse.json({
         ok: true,
         message: "Data permintaan demo dihapus.",
+      });
+    }
+
+    // 11. Update Shop URL Slug / Basic Profile from Admin Drawer
+    if (action === "UPDATE_SHOP_PROFILE" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+
+      let nextCode = shop.shopCode;
+      if (body.shopCode !== undefined) {
+        const cleaned = sanitizeShopSlug(String(body.shopCode));
+        if (!isValidShopSlug(cleaned)) {
+          return NextResponse.json(
+            {
+              error:
+                "Kode URL toko tidak valid (3–32 karakter huruf kecil, angka, atau tanda hubung).",
+            },
+            { status: 400 }
+          );
+        }
+        if (cleaned.toLowerCase() !== shop.shopCode.toLowerCase()) {
+          const conflict = await prisma.shop.findFirst({
+            where: {
+              id: { not: shop.id },
+              OR: [{ shopCode: cleaned }, { shopCode: cleaned.toUpperCase() }],
+            },
+            select: { id: true },
+          });
+          if (conflict) {
+            return NextResponse.json(
+              { error: `Kode URL "/s/${cleaned}" sudah dipakai toko lain.` },
+              { status: 409 }
+            );
+          }
+        }
+        nextCode = cleaned;
+      }
+
+      const updated = await prisma.shop.update({
+        where: { id: shop.id },
+        data: {
+          shopCode: nextCode,
+          name: body.name ? String(body.name).trim().slice(0, 80) : shop.name,
+          phone: body.phone ? String(body.phone).trim().slice(0, 20) : shop.phone,
+        },
+      });
+      return NextResponse.json({
+        ok: true,
+        message: `Profil ${updated.name} (/s/${updated.shopCode}) diperbarui.`,
+      });
+    }
+
+    // 12. Global cleanup of abandoned pending print jobs (> 30 min)
+    if (action === "CLEANUP_STALE_JOBS") {
+      const cleaned = await expireStalePendingJobs();
+      return NextResponse.json({
+        ok: true,
+        cleaned,
+        message:
+          cleaned > 0
+            ? `${cleaned} antrean terbengkalai (> 30 menit) dibatalkan & file fisiknya dihapus.`
+            : "Tidak ada antrean terbengkalai yang perlu dibersihkan.",
       });
     }
 

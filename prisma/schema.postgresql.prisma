@@ -9,9 +9,10 @@ datasource db {
 }
 
 model Shop {
-  id                String                @id @default(cuid())
-  shopCode          String                @unique
-  name              String
+  id                  String                @id @default(cuid())
+  shopCode            String                @unique
+  shopCodeChangeCount Int                   @default(0)
+  name                String
   ownerName         String                @default("Pemilik Toko")
   email             String                @unique
   phone             String

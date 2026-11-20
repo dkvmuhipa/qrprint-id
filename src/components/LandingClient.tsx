@@ -21,6 +21,8 @@ import {
   Clock,
   FileCheck2,
   Users,
+  ChevronDown,
+  Download,
 } from "lucide-react";
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
@@ -76,8 +78,8 @@ const PLANS = [
       "Aktif 24 jam penuh",
       "Kuota 10 kali cetak dokumen",
       "1 printer USB aktif (A4 standar)",
-      "Poster QR toko siap cetak",
-      "Penghapusan file otomatis usai cetak",
+      "URL portal custom & Poster QR A5/A4",
+      "Auto-hapus file usai cetak / 30 menit",
     ],
     cta: "Mulai demo gratis",
     action: "demo" as const,
@@ -93,8 +95,8 @@ const PLANS = [
       "Cetak dokumen tanpa batas kuota",
       "Hingga 2 printer (1 B&W + 1 Warna)",
       "Mode Duplex, F4 & Foto 4×6",
-      "Integrasi pembayaran QRIS penuh",
-      "Bantuan kendala via WhatsApp",
+      "QRIS GoPay Merchant + APK Listener gratis",
+      "Grafik omzet 7 hari, CSV & bel kasir",
     ],
     cta: "Pilih Bulanan",
     action: "register" as const,
@@ -109,9 +111,9 @@ const PLANS = [
     features: [
       "Cetak dokumen tanpa batas 1 tahun",
       "Hingga 3 printer aktif bersamaan",
-      "Pendampingan setup QRIS & Agent",
-      "Desain poster QR meja kasir",
-      "Mode Duplex, F4 & Foto 4×6",
+      "QRIS GoPay Merchant + APK Listener gratis",
+      "Poster Standee QR A5/A4 & URL custom",
+      "Mode Duplex, F4 & Foto 4×6 + setup WA",
     ],
     cta: "Pilih Paket Pro",
     action: "register" as const,
@@ -128,10 +130,33 @@ const PLANS = [
       "Jumlah printer terhubung tanpa batas",
       "Dukungan kertas A4, F4 & Foto 4×6",
       "Prioritas bantuan remote AnyDesk",
-      "Pembaruan fitur berikutnya gratis",
+      "Pembaruan fitur & aplikasi gratis",
     ],
     cta: "Pilih Premium",
     action: "register" as const,
+  },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: "Apakah toko harus membeli printer Wi-Fi atau mesin baru?",
+    a: "Tidak perlu. Ngeprint bekerja dengan semua printer USB standar (Epson, Canon, HP, Brother, dll.) yang terhubung ke PC atau laptop Windows 10/11 di meja kasir Anda.",
+  },
+  {
+    q: "Uang pembayaran QRIS pelanggan masuk ke mana? Apakah ada potongan?",
+    a: "100% langsung masuk ke saldo QRIS GoPay Merchant (GoBiz), DANA Bisnis, OVO, atau rekening bank toko Anda dengan potongan 0% dari Ngeprint. Cukup unggah foto QRIS toko Anda di Dashboard dan pasang aplikasi Android Ngeprint Listener gratis agar konfirmasi lunas berjalan otomatis.",
+  },
+  {
+    q: "Apakah pelanggan harus mengunduh aplikasi terlebih dahulu?",
+    a: "Tidak. Pelanggan cukup memindai Poster QR di meja kasir memakai kamera HP, langsung terbuka di browser untuk unggah PDF/foto, pilih opsi cetak, dan bayar QRIS.",
+  },
+  {
+    q: "Bagaimana jika pelanggan membatalkan pesanan atau internet sempat putus?",
+    a: "Pelanggan bisa membatalkan pesanan sebelum membayar, dan pesanan yang terbengkalai lebih dari 30 menit otomatis dibatalkan sekaligus file dokumennya dihapus. Jika notifikasi HP tertunda, kasir tetap memiliki tombol Konfirmasi Lunas dan Unduh File manual di Dashboard.",
+  },
+  {
+    q: "Berapa lama proses pemasangan sampai siap terima cetakan?",
+    a: "Sekitar 2 menit. Daftar akun toko (otomatis mendapat URL custom /s/nama-toko), unduh file konfigurasi .env Print Agent 1-klik untuk PC kasir, lalu unduh Poster Standee QR A5/A4 siap cetak dari Dashboard.",
   },
 ];
 
@@ -139,6 +164,7 @@ export function LandingClient() {
   const [activeTab, setActiveTab] = useState<(typeof PRODUCTS)[number]["id"]>(
     "windows"
   );
+  const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoForm, setDemoForm] = useState({
     name: "",
@@ -410,10 +436,10 @@ export function LandingClient() {
             </h3>
             <ul className="mt-5 space-y-3.5 text-sm text-[#1f1b16]">
               {[
-                "Pelanggan cukup memindai QR poster di meja kasir tanpa perlu chat WhatsApp toko",
+                "Pelanggan cukup memindai QR poster (atau buka URL /s/nama-toko) tanpa perlu chat WhatsApp",
                 "Bebas colok flashdisk sehingga komputer kasir tetap bersih dari virus",
-                "Jumlah halaman PDF dihitung otomatis di HP pelanggan, tarif langsung muncul dan siap dibayar via QRIS",
-                "Rekap omzet harian dan riwayat cetakan tersimpan rapi di dashboard pemilik toko",
+                "Jumlah halaman PDF dihitung otomatis, nominal QRIS GoPay Merchant terisi tepat & terverifikasi otomatis lewat APK Ngeprint Listener",
+                "Grafik omzet 7 hari, ekspor CSV, suara bel kasir, serta penghapusan file otomatis usai cetak atau batal (30 menit)",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
                   <Check
@@ -450,7 +476,7 @@ export function LandingClient() {
               {
                 num: "01",
                 title: "Daftarkan akun toko",
-                desc: "Masukkan nama toko serta tarif cetak Hitam Putih dan Warna per lembar untuk mendapatkan ID Toko",
+                desc: "Masukkan nama toko serta tarif cetak Hitam Putih dan Warna untuk langsung mendapat link cetak /s/nama-toko Anda",
               },
               {
                 num: "02",
@@ -643,24 +669,35 @@ export function LandingClient() {
       {/* QRIS & Referral Partner Row */}
       <section className="mx-auto max-w-6xl space-y-4 px-6 pb-20">
         <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 sm:flex-row sm:items-center">
-          <div>
-            <h3 className="text-base font-medium text-[#1f1b16]">
-              Mendukung pembayaran QRIS standar nasional dan tunai kasir
-            </h3>
-            <p className="mt-1 text-xs text-[#5e554a]">
-              Menerima pembayaran dari GoPay, OVO, DANA, ShopeePay, BCA Mobile, Livin&apos; Mandiri, BRImo, dan seluruh aplikasi perbankan Indonesia.
+          <div className="max-w-2xl">
+            <p className="text-xs font-medium text-[#d9381e]">
+              0% potongan · Langsung ke QRIS toko Anda
             </p>
+            <h3 className="mt-1 text-base font-medium text-[#1f1b16]">
+              Pakai QRIS GoPay Merchant / DANA Bisnis Anda — nominal otomatis &amp; lunas tanpa klik
+            </h3>
+            <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
+              Tidak wajib daftar payment gateway baru. Unggah foto QRIS toko di Dashboard agar nominal harga cetak terisi otomatis saat pelanggan scan, lalu pasang aplikasi Android gratis <strong>Ngeprint Listener</strong> di HP kasir untuk verifikasi otomatis dari GoPay, OVO, DANA, ShopeePay, BCA, Mandiri, dan BRI.
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 font-mono-num text-xs text-[#5e554a]">
+              {["QRIS Merchant", "GoPay", "DANA Bisnis", "OVO", "M-Banking", "Tunai Kasir"].map((p) => (
+                <span
+                  key={p}
+                  className="rounded-md border border-[#1f1b16]/10 bg-[#f7f4ee] px-2.5 py-1 text-[#1f1b16]"
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 font-mono-num text-xs text-[#5e554a]">
-            {["QRIS", "GoPay", "OVO", "DANA", "M-Banking"].map((p) => (
-              <span
-                key={p}
-                className="rounded-md border border-[#1f1b16]/10 bg-[#f7f4ee] px-2.5 py-1 text-[#1f1b16]"
-              >
-                {p}
-              </span>
-            ))}
-          </div>
+          <a
+            href="/downloads/ngeprint-listener.apk"
+            download="ngeprint-listener.apk"
+            className="btn-action inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#1f1b16]/15 bg-white px-4 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+          >
+            <Download className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.5} />
+            <span>Unduh APK Listener Gratis</span>
+          </a>
         </div>
 
         <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#efe9df] p-6 sm:flex-row sm:items-center">
@@ -682,6 +719,48 @@ export function LandingClient() {
           >
             Daftar mitra toko
           </Link>
+        </div>
+      </section>
+
+      {/* FAQ Section (#faq) */}
+      <section id="faq" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="max-w-2xl">
+          <p className="text-xs font-medium text-[#d9381e]">
+            Pertanyaan umum
+          </p>
+          <h2 className="mt-2 text-2xl font-medium tracking-[-0.01em] text-[#1f1b16] sm:text-3xl">
+            Hal yang sering ditanyakan pemilik fotokopi
+          </h2>
+        </div>
+
+        <div className="mt-8 divide-y divide-[#1f1b16]/10 rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7]">
+          {FAQ_ITEMS.map((item, idx) => {
+            const isOpen = openFaqIdx === idx;
+            return (
+              <div key={item.q}>
+                <button
+                  type="button"
+                  onClick={() => setOpenFaqIdx(isOpen ? null : idx)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-4 px-6 py-4 text-left"
+                >
+                  <span className="text-sm font-medium text-[#1f1b16]">
+                    {item.q}
+                  </span>
+                  <ChevronDown
+                    className={`h-4 w-4 shrink-0 text-[#7b7266] transition-transform duration-150 ${
+                      isOpen ? "rotate-180 text-[#1f1b16]" : ""
+                    }`}
+                    strokeWidth={1.5}
+                  />
+                </button>
+                {isOpen && (
+                  <div className="px-6 pb-5 text-xs leading-relaxed text-[#5e554a]">
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -723,6 +802,15 @@ export function LandingClient() {
                   Panel antrean cetak
                 </Link>
               </li>
+              <li>
+                <a
+                  href="/downloads/ngeprint-listener.apk"
+                  download="ngeprint-listener.apk"
+                  className="hover:text-[#1f1b16]"
+                >
+                  Unduh Ngeprint Listener (.apk)
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -756,7 +844,7 @@ export function LandingClient() {
 
         <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-2 border-t border-[#1f1b16]/8 px-6 pt-6 text-xs text-[#7b7266] sm:flex-row">
           <span>
-            © 2026 Ngeprint (ngeprint.id) — Gellona Teknologi
+            © 2026 Ngeprint (ngeprint.gellona.web.id) — Gellona Teknologi
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" strokeWidth={1.5} />

@@ -38,6 +38,23 @@ export async function PATCH(
     return NextResponse.json({ ok: true, job: updated });
   }
 
+  if (action === "REQUEUE") {
+    if (job.paymentStatus !== "PAID" || !job.storedFilePath) {
+      return NextResponse.json(
+        {
+          error:
+            "Antrean tidak bisa dicetak ulang karena belum lunas atau file sudah dihapus.",
+        },
+        { status: 400 }
+      );
+    }
+    const updated = await prisma.printJob.update({
+      where: { id: job.id },
+      data: { printStatus: "QUEUED" },
+    });
+    return NextResponse.json({ ok: true, job: updated });
+  }
+
   if (action === "PRINTING") {
     const updated = await prisma.printJob.update({
       where: { id: job.id },

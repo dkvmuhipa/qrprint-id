@@ -101,6 +101,7 @@ export async function GET() {
     shop: {
       id: shop.id,
       shopCode: shop.shopCode,
+      shopCodeChangeCount: shop.shopCodeChangeCount,
       name: shop.name,
       ownerName: shop.ownerName,
       email: shop.email,
@@ -192,6 +193,7 @@ export async function PATCH(req: Request) {
     }
 
     let nextShopCode: string | undefined = undefined;
+    let shopCodeChanged = false;
     if (body.shopCode !== undefined) {
       const cleanedSlug = sanitizeShopSlug(String(body.shopCode));
       if (!isValidShopSlug(cleanedSlug)) {
@@ -204,6 +206,15 @@ export async function PATCH(req: Request) {
         );
       }
       if (cleanedSlug.toLowerCase() !== shop.shopCode.toLowerCase()) {
+        if (shop.shopCodeChangeCount >= 1) {
+          return NextResponse.json(
+            {
+              error:
+                "Batas ganti URL portal (1x gratis) sudah terpakai dan terkunci. Perubahan URL berikutnya dikenakan biaya Rp 37.000 via admin Gellona Teknologi.",
+            },
+            { status: 403 }
+          );
+        }
         const conflict = await prisma.shop.findFirst({
           where: {
             id: { not: shop.id },
@@ -222,8 +233,9 @@ export async function PATCH(req: Request) {
             { status: 409 }
           );
         }
+        nextShopCode = cleanedSlug;
+        shopCodeChanged = true;
       }
-      nextShopCode = cleanedSlug;
     }
 
     let nextStaticQris: string | null | undefined = undefined;
@@ -250,7 +262,12 @@ export async function PATCH(req: Request) {
     const updated = await prisma.shop.update({
       where: { id: shop.id },
       data: {
-        ...(nextShopCode ? { shopCode: nextShopCode } : {}),
+        ...(nextShopCode && shopCodeChanged
+          ? {
+              shopCode: nextShopCode,
+              shopCodeChangeCount: { increment: 1 },
+            }
+          : {}),
         name: body.name ? String(body.name).trim() : shop.name,
         address: body.address ? String(body.address).trim() : shop.address,
         phone: body.phone ? String(body.phone).trim() : shop.phone,

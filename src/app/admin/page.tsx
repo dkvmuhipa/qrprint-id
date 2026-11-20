@@ -27,6 +27,9 @@ import {
   CalendarPlus,
   RotateCw,
   FileText,
+  Server,
+  Plus,
+  UserPlus,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 
@@ -107,6 +110,13 @@ interface GlobalJobRow {
 
 interface OverviewData {
   admin: { email: string };
+  system?: {
+    appUrl: string;
+    hasPlatformMidtrans: boolean;
+    hasPlatformStaticQris: boolean;
+    dbEngine: string;
+    pendingStaleCount: number;
+  };
   stats: {
     totalShops: number;
     activePaidShops: number;
@@ -170,7 +180,7 @@ export default function SuperAdminPage() {
 
   // Panel state
   const [tab, setTab] = useState<
-    "overview" | "shops" | "invoices" | "jobs" | "demos"
+    "overview" | "shops" | "invoices" | "jobs" | "demos" | "system"
   >("overview");
   const [search, setSearch] = useState("");
   const [shopFilter, setShopFilter] = useState<
@@ -186,7 +196,65 @@ export default function SuperAdminPage() {
   const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
   const [modalPlan, setModalPlan] = useState("PRO");
   const [resetPassInput, setResetPassInput] = useState("");
+  const [editSlugInput, setEditSlugInput] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Create Shop Modal state (manual onboarding & 1-click Demo lead conversion)
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creatingShop, setCreatingShop] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    ownerName: "",
+    email: "",
+    phone: "",
+    address: "",
+    shopCode: "",
+    password: "",
+    plan: "PRO",
+    demoId: "",
+  });
+
+  function openCreateShopModal(prefill?: Partial<typeof createForm>) {
+    setCreateError(null);
+    setCreateForm({
+      name: prefill?.name || "",
+      ownerName: prefill?.ownerName || "",
+      email: prefill?.email || "",
+      phone: prefill?.phone || "",
+      address: prefill?.address || "",
+      shopCode: prefill?.shopCode || "",
+      password: prefill?.password || "ngeprint123",
+      plan: prefill?.plan || "PRO",
+      demoId: prefill?.demoId || "",
+    });
+    setCreateOpen(true);
+  }
+
+  async function handleCreateShop(e: React.FormEvent) {
+    e.preventDefault();
+    setCreatingShop(true);
+    setCreateError(null);
+    try {
+      const res = await fetch("/api/admin/shops", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(createForm),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setCreateError(json.error || "Gagal membuat akun toko.");
+      } else {
+        setCreateOpen(false);
+        setNotice(json.message || "Toko baru berhasil dibuat.");
+        await loadOverview();
+      }
+    } catch {
+      setCreateError("Tidak dapat terhubung ke server.");
+    } finally {
+      setCreatingShop(false);
+    }
+  }
 
   const loadOverview = useCallback(async () => {
     try {
@@ -437,6 +505,13 @@ export default function SuperAdminPage() {
       count: stats.newDemosCount,
       highlight: stats.newDemosCount > 0,
     },
+    {
+      id: "system" as const,
+      label: "Sistem & platform",
+      icon: Server,
+      count: data.system?.pendingStaleCount || undefined,
+      highlight: (data.system?.pendingStaleCount || 0) > 0,
+    },
   ];
 
   return (
@@ -567,14 +642,25 @@ export default function SuperAdminPage() {
                   ? "Persetujuan & riwayat tagihan SaaS"
                   : tab === "jobs"
                   ? "Monitor aktivitas cetak global"
-                  : "Manajemen prospek permintaan demo"}
+                  : tab === "demos"
+                  ? "Manajemen prospek permintaan demo"
+                  : "Status sistem & utilitas platform"}
               </h1>
               <p className="mt-0.5 text-xs text-[#737373]">
                 Pusat kendali operasional Ngeprint by Gellona Teknologi
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {tab === "shops" && (
+                <button
+                  onClick={() => openCreateShopModal()}
+                  className="btn-action inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[#d9381e] px-3.5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                  <span>Tambah toko</span>
+                </button>
+              )}
               {tab === "shops" && (
                 <button
                   onClick={() =>
@@ -1296,12 +1382,16 @@ export default function SuperAdminPage() {
                             </p>
                             <span
                               className={`rounded px-2 py-0.5 font-mono-num text-[10px] font-medium ${
-                                d.status === "CONTACTED"
+                                d.status === "CONVERTED"
+                                  ? "bg-[#171717] text-white"
+                                  : d.status === "CONTACTED"
                                   ? "bg-[#16a34a]/10 text-[#16a34a]"
                                   : "bg-[#b45309]/10 text-[#b45309]"
                               }`}
                             >
-                              {d.status === "CONTACTED"
+                              {d.status === "CONVERTED"
+                                ? "Sudah jadi toko"
+                                : d.status === "CONTACTED"
                                 ? "Sudah dihubungi"
                                 : "Prospek baru"}
                             </span>
@@ -1321,6 +1411,25 @@ export default function SuperAdminPage() {
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2">
+                          {d.status !== "CONVERTED" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openCreateShopModal({
+                                  name: d.shopName,
+                                  ownerName: d.name,
+                                  email: d.email || "",
+                                  phone: d.whatsapp,
+                                  address: d.address || "",
+                                  demoId: d.id,
+                                })
+                              }
+                              className="btn-action inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90"
+                            >
+                              <UserPlus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                              <span>Buatkan akun</span>
+                            </button>
+                          )}
                           <a
                             href={`https://wa.me/${waNum}?text=${encodeURIComponent(
                               `Halo Kak ${d.name}, saya dari tim Ngeprint (Gellona Teknologi) menindaklanjuti permintaan demo untuk ${d.shopName}.`
@@ -1375,6 +1484,116 @@ export default function SuperAdminPage() {
                   })}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 6: SYSTEM & PLATFORM UTILITIES */}
+          {tab === "system" && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-[#171717]/8 bg-white p-4">
+                  <p className="text-xs text-[#737373]">Domain Produksi</p>
+                  <p className="font-mono-num mt-2 truncate text-sm font-medium text-[#171717]">
+                    {(data.system?.appUrl || "https://ngeprint.gellona.web.id").replace(
+                      /^https?:\/\//,
+                      ""
+                    )}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#16a34a]">
+                    SSL HTTPS aktif
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[#171717]/8 bg-white p-4">
+                  <p className="text-xs text-[#737373]">Mesin Database</p>
+                  <p className="font-mono-num mt-2 text-sm font-medium text-[#171717]">
+                    {data.system?.dbEngine || "SQLite"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#737373]">
+                    Terhubung &amp; backup harian aktif
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[#171717]/8 bg-white p-4">
+                  <p className="text-xs text-[#737373]">QRIS Platform SaaS</p>
+                  <p className="font-mono-num mt-2 text-sm font-medium text-[#171717]">
+                    {data.system?.hasPlatformMidtrans
+                      ? "Midtrans Aktif"
+                      : data.system?.hasPlatformStaticQris
+                      ? "QRIS Merchant Aktif"
+                      : "Konfirmasi Manual"}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#737373]">
+                    Atur via <code className="font-mono-num">PLATFORM_STATIC_QRIS</code> di .env
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[#171717]/8 bg-white p-4">
+                  <p className="text-xs text-[#737373]">Antrean Terbengkalai (&gt;30m)</p>
+                  <p className="font-mono-num mt-2 text-2xl font-medium text-[#171717]">
+                    {data.system?.pendingStaleCount ?? 0}
+                  </p>
+                  <p className="mt-1 text-[11px] text-[#737373]">
+                    Siap dibersihkan otomatis
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-xl border border-[#171717]/8 bg-white p-5">
+                  <h3 className="text-sm font-medium text-[#171717]">
+                    Pemeliharaan Antrean &amp; File Sampah
+                  </h3>
+                  <p className="mt-1 text-xs leading-relaxed text-[#525252]">
+                    Batalkan semua pesanan cetak yang masih <strong>Menunggu Pembayaran</strong> lebih dari 30 menit di seluruh mitra toko dan hapus file fisiknya dari disk server.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={busyId === "cleanup_stale"}
+                    onClick={() =>
+                      runAdminAction("cleanup_stale", {
+                        action: "CLEANUP_STALE_JOBS",
+                      })
+                    }
+                    className="btn-action mt-4 inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-[#171717] px-4 text-xs font-medium text-white hover:bg-[#171717]/90 disabled:opacity-60"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    <span>
+                      {busyId === "cleanup_stale"
+                        ? "Membersihkan..."
+                        : "Bersihkan antrean terbengkalai sekarang"}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="rounded-xl border border-[#171717]/8 bg-white p-5">
+                  <h3 className="text-sm font-medium text-[#171717]">
+                    Distribusi Aplikasi &amp; Diagnostik
+                  </h3>
+                  <p className="mt-1 text-xs leading-relaxed text-[#525252]">
+                    Tautan resmi untuk dibagikan ke mitra toko baru atau pemeriksaan cepat kondisi server produksi.
+                  </p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <a
+                      href="/downloads/ngeprint-listener.apk"
+                      download="ngeprint-listener.apk"
+                      className="btn-action inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#d9381e] px-3.5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                    >
+                      <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <span>Unduh Ngeprint Listener v1.1 (.apk)</span>
+                    </a>
+                    <a
+                      href="/api/health"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-action inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-[#fafafa] px-3.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <span>Cek /api/health</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -1520,6 +1739,46 @@ export default function SuperAdminPage() {
 
                 <div className="pt-2">
                   <label className="mb-1 block text-[11px] text-[#737373]">
+                    Ubah kode URL portal pelanggan (/s/...)
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editSlugInput}
+                      onChange={(e) =>
+                        setEditSlugInput(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_-]/g, "-")
+                        )
+                      }
+                      placeholder={selectedShop.shopCode}
+                      className="font-mono-num h-9 flex-1 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                    />
+                    <button
+                      disabled={
+                        busyId === "modal_slug" || !editSlugInput.trim()
+                      }
+                      onClick={() =>
+                        runAdminAction(
+                          "modal_slug",
+                          {
+                            action: "UPDATE_SHOP_PROFILE",
+                            shopId: selectedShop.id,
+                            shopCode: editSlugInput.trim(),
+                          },
+                          () => setEditSlugInput("")
+                        )
+                      }
+                      className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+                    >
+                      <span>Simpan URL</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <label className="mb-1 block text-[11px] text-[#737373]">
                     Atur ulang kata sandi pemilik toko
                   </label>
                   <div className="flex gap-2">
@@ -1629,6 +1888,165 @@ export default function SuperAdminPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE NEW SHOP MODAL (Manual Onboarding / Demo Lead Conversion) */}
+      {createOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-2xl border border-[#171717]/10 bg-white p-6 shadow-2xl">
+            <button
+              type="button"
+              onClick={() => setCreateOpen(false)}
+              aria-label="Tutup dialog"
+              className="absolute top-4 right-4 cursor-pointer rounded-lg p-1.5 text-[#737373] hover:bg-[#f4f4f5] hover:text-[#171717]"
+            >
+              <X className="h-4 w-4" strokeWidth={1.5} />
+            </button>
+
+            <p className="font-mono-num text-xs text-[#d9381e]">
+              {createForm.demoId
+                ? "Konversi prospek demo → akun toko"
+                : "Onboarding mitra toko baru"}
+            </p>
+            <h2 className="mt-1 text-lg font-medium text-[#171717]">
+              Buat akun toko secara manual
+            </h2>
+
+            <form onSubmit={handleCreateShop} className="mt-4 space-y-3">
+              {createError && (
+                <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3 text-xs font-medium text-[#dc2626]">
+                  {createError}
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Nama toko
+                  </label>
+                  <input
+                    required
+                    value={createForm.name}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, name: e.target.value })
+                    }
+                    placeholder="Fotokopi Sinar Jaya"
+                    className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Nama pemilik
+                  </label>
+                  <input
+                    required
+                    value={createForm.ownerName}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, ownerName: e.target.value })
+                    }
+                    placeholder="Budi Santoso"
+                    className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Email login
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    value={createForm.email}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, email: e.target.value })
+                    }
+                    placeholder="pemilik@toko.com"
+                    className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Nomor WhatsApp
+                  </label>
+                  <input
+                    required
+                    value={createForm.phone}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, phone: e.target.value })
+                    }
+                    placeholder="08123456789"
+                    className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Kode URL (opsional)
+                  </label>
+                  <input
+                    value={createForm.shopCode}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        shopCode: e.target.value
+                          .toLowerCase()
+                          .replace(/[^a-z0-9_-]/g, "-"),
+                      })
+                    }
+                    placeholder="otomatis dari nama toko"
+                    className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Kata sandi awal (min. 6)
+                  </label>
+                  <input
+                    required
+                    minLength={6}
+                    value={createForm.password}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, password: e.target.value })
+                    }
+                    className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs text-[#525252]">
+                    Aktifkan paket langsung
+                  </label>
+                  <select
+                    value={createForm.plan}
+                    onChange={(e) =>
+                      setCreateForm({ ...createForm, plan: e.target.value })
+                    }
+                    className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                  >
+                    <option value="DEMO">Demo 24 Jam (Gratis)</option>
+                    <option value="BULANAN">Bulanan (Rp 79.000 · 30 hari)</option>
+                    <option value="PRO">Pro Tahunan (Rp 349.000 · 365 hari)</option>
+                    <option value="PREMIUM">Premium Tahunan (Rp 599.000 · 365 hari)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCreateOpen(false)}
+                  className="h-9 cursor-pointer rounded-lg border border-[#171717]/12 px-4 text-xs text-[#525252] hover:text-[#171717]"
+                >
+                  Batal
+                </button>
+                <button
+                  disabled={creatingShop}
+                  type="submit"
+                  className="btn-action h-9 cursor-pointer rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
+                >
+                  {creatingShop ? "Membuat akun..." : "Buat akun toko"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

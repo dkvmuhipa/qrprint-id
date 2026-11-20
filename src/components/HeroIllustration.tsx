@@ -30,7 +30,7 @@ export function HeroIllustration() {
             <div className="flex h-28 w-28 shrink-0 flex-col items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] p-2">
               <QrCode className="h-20 w-20 text-[#1f1b16]" strokeWidth={1.5} />
               <span className="font-mono-num mt-1 text-[11px] text-[#7b7266]">
-                TOKO_482910
+                /s/sinar-kampus
               </span>
             </div>
 
