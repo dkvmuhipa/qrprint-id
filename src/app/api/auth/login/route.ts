@@ -2,9 +2,20 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { setShopSession } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const rl = checkRateLimit("auth_login", req, 10, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak percobaan login. Coba lagi dalam ${rl.retryAfterSec} detik.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const identifier = (body.identifier || body.shopCode || body.email || "").trim();
     const password = body.password || "";

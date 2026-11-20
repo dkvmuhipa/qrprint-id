@@ -48,6 +48,8 @@ export async function GET(
           job.fileName
         )}"`,
         "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "sandbox",
       },
     });
   } catch {

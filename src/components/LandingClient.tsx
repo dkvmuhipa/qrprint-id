@@ -200,7 +200,7 @@ export function LandingClient() {
 
       {/* Product Switcher Bar */}
       <div className="border-b border-[#ece3d2] bg-white/80 backdrop-blur-xs">
-        <div className="mx-auto flex max-w-6xl items-center justify-center gap-2 overflow-x-auto px-4 py-2.5 sm:px-6">
+        <div className="no-scrollbar mx-auto flex max-w-6xl items-center justify-start gap-2 overflow-x-auto px-4 py-2.5 sm:justify-center sm:px-6">
           {PRODUCTS.map((item) => {
             const Icon = item.icon;
             const active = item.id === activeTab;
@@ -281,22 +281,22 @@ export function LandingClient() {
             </div>
 
             {/* Primary CTAs */}
-            <div className="mt-7 flex flex-wrap items-center gap-3">
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <a
                 href="#harga"
-                className="btn-glossy inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-[#ff2e63]/25"
+                className="btn-glossy inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-[#ff2e63]/25 sm:w-auto"
               >
                 Lihat Harga Setup ↓
               </a>
               <button
                 onClick={() => setDemoOpen(true)}
-                className="inline-flex items-center gap-2 rounded-full border-2 border-[#ff2e63] bg-white px-6 py-3 text-sm font-extrabold text-[#ff2e63] hover:bg-[#ff2e63]/5 transition-colors"
+                className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full border-2 border-[#ff2e63] bg-white px-6 py-3 text-sm font-extrabold text-[#ff2e63] transition-colors hover:bg-[#ff2e63]/5 sm:w-auto"
               >
                 Coba Demo Gratis
               </button>
               <Link
                 href="/register"
-                className="inline-flex items-center gap-1.5 rounded-full bg-[#17171b] px-5 py-3.5 text-sm font-bold text-white hover:bg-[#17171b]/90 transition-colors"
+                className="inline-flex min-h-[46px] w-full items-center justify-center gap-1.5 rounded-full bg-[#17171b] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#17171b]/90 sm:w-auto"
               >
                 <QrCode className="h-4 w-4 text-[#ffd22e]" />
                 Buat QR Toko Sekarang

@@ -1,8 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   try {
+    const rl = checkRateLimit("demo_request", req, 5, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: "Permintaan terlalu cepat. Coba lagi nanti." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const { name, whatsapp, shopName, address, email } = body;
 

@@ -32,6 +32,61 @@
   font-family: var(--font-jakarta), system-ui, sans-serif;
 }
 
+html,
+body {
+  overflow-x: clip;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Accessible keyboard focus states */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+/* Clean horizontal scroll strips on mobile */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Respect OS reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-laser,
+  .animate-paper-out,
+  .animate-float,
+  .animate-fly-packet,
+  .animate-pulse {
+    animation: none !important;
+  }
+  .btn-glossy::after {
+    display: none;
+  }
+}
+
+/* Clean QR Poster printing */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-poster {
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    max-width: 440px !important;
+    break-inside: avoid;
+  }
+}
+
 /* Warm ambient paper dot-grid background */
 .bg-ambient {
   background-color: var(--paper);

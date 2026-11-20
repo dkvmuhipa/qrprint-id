@@ -904,20 +904,20 @@ function CustomerScanPortalContent({
             </div>
 
             {/* Sticky Price Summary & Submit */}
-            <div className="rounded-3xl border-2 border-[#17171b] bg-[#17171b] p-5 text-white shadow-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-[11px] font-semibold text-white/70">
-                    Estimasi Biaya ({priceCalc.effectivePages} hal × {copies}x)
+            <div className="sticky bottom-3 z-20 rounded-3xl border-2 border-[#17171b] bg-[#17171b]/95 p-4 text-white shadow-2xl backdrop-blur sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-[11px] font-semibold text-white/70">
+                    Estimasi ({priceCalc.effectivePages} hal × {copies}x)
                   </p>
-                  <p className="font-display text-2xl font-extrabold text-[#ffd22e]">
+                  <p className="font-display text-xl font-extrabold text-[#ffd22e] sm:text-2xl">
                     {formatRupiah(priceCalc.totalPrice)}
                   </p>
                 </div>
                 <button
                   disabled={!file || submitting}
                   type="submit"
-                  className="btn-glossy rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-6 py-3.5 text-sm font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+                  className="btn-glossy min-h-[46px] shrink-0 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-5 py-3 text-xs font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:text-sm"
                 >
                   {submitting ? "Mengunggah..." : "Lanjut Bayar →"}
                 </button>

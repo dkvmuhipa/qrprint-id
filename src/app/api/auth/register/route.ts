@@ -2,10 +2,21 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { setShopSession } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { generateAgentKey, generateShopCode } from "@/lib/utils";
 
 export async function POST(req: Request) {
   try {
+    const rl = checkRateLimit("auth_register", req, 5, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak pendaftaran dari perangkat ini. Coba lagi dalam ${rl.retryAfterSec} detik.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const {
       name,

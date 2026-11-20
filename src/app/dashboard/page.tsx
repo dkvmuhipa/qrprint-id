@@ -245,7 +245,7 @@ export default function DashboardPage() {
   return (
     <div className="bg-ambient min-h-screen pb-14">
       {/* Top Bar */}
-      <header className="sticky top-0 z-30 border-b border-[#ece3d2] bg-[#fffdf8]/95 backdrop-blur">
+      <header className="no-print sticky top-0 z-30 border-b border-[#ece3d2] bg-[#fffdf8]/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <Link
@@ -289,7 +289,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Sub-navigation Tabs */}
-        <div className="mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
+        <div className="no-scrollbar mx-auto flex max-w-6xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6">
           {[
             { id: "queue" as const, label: "Antrean Cetak", icon: Printer, badge: stats.activeQueue },
             { id: "qr" as const, label: "Poster QR Toko", icon: QrCode },
@@ -323,7 +323,7 @@ export default function DashboardPage() {
 
       <main className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
         {/* KPI Stats Row */}
-        <div className="mb-6 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
+        <div className="no-print mb-6 grid grid-cols-2 gap-3.5 lg:grid-cols-4">
           <div className="rounded-2xl border border-[#ece3d2] bg-white p-4 shadow-xs">
             <p className="text-[11px] font-bold text-[#6b7280]">Omzet Hari Ini</p>
             <p className="font-display mt-1 text-xl font-extrabold text-[#111114] sm:text-2xl">
@@ -535,7 +535,7 @@ export default function DashboardPage() {
         {/* TAB 2: SHOP QR POSTER */}
         {tab === "qr" && (
           <div className="grid gap-6 md:grid-cols-12">
-            <div className="flex flex-col items-center rounded-3xl border-2 border-[#17171b] bg-white p-8 text-center shadow-xl md:col-span-6">
+            <div className="print-poster flex flex-col items-center rounded-3xl border-2 border-[#17171b] bg-white p-6 text-center shadow-xl sm:p-8 md:col-span-6">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffd22e] px-3.5 py-1 text-xs font-extrabold text-[#111114]">
                 SCAN • UPLOAD • BAYAR • CETAK
               </span>
@@ -567,7 +567,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="space-y-4 rounded-3xl border border-[#ece3d2] bg-white p-6 shadow-sm md:col-span-6">
+            <div className="no-print space-y-4 rounded-3xl border border-[#ece3d2] bg-white p-6 shadow-sm md:col-span-6">
               <h3 className="font-display text-lg font-extrabold text-[#111114]">
                 Bagikan & Cetak Poster Meja Kasir
               </h3>

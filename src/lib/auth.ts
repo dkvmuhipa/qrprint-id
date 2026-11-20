@@ -3,11 +3,21 @@ import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
 const SESSION_COOKIE = "qrprint_session";
-const SECRET =
-  process.env.SESSION_SECRET || "qrprint-id-super-secret-session-key-2026";
+
+const EPHEMERAL_FALLBACK = crypto.randomBytes(32).toString("hex");
+function getSessionSecret(): string {
+  const envSecret = process.env.SESSION_SECRET?.trim();
+  if (envSecret && envSecret.length >= 24) {
+    return envSecret;
+  }
+  return EPHEMERAL_FALLBACK;
+}
 
 function sign(payload: string): string {
-  return crypto.createHmac("sha256", SECRET).update(payload).digest("hex");
+  return crypto
+    .createHmac("sha256", getSessionSecret())
+    .update(payload)
+    .digest("hex");
 }
 
 export function createSessionToken(shopId: string): string {

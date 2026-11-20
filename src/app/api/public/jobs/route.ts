@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
-import { saveUploadedFile } from "@/lib/storage";
+import { detectVerifiedFileType, saveUploadedFile } from "@/lib/storage";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { calculatePrintPrice, generateJobCode } from "@/lib/utils";
 import {
   createMidtransQrisCharge,
@@ -18,6 +19,16 @@ const ALLOWED_TYPES = [
 
 export async function POST(req: Request) {
   try {
+    const rl = checkRateLimit("public_upload", req, 20, 15 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json(
+        {
+          error: `Terlalu banyak permintaan unggah. Coba lagi dalam ${rl.retryAfterSec} detik.`,
+        },
+        { status: 429 }
+      );
+    }
+
     const formData = await req.formData();
     const shopCode = String(formData.get("shopCode") || "").toUpperCase();
     const file = formData.get("file") as File | null;
@@ -70,8 +81,19 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    const verifiedType = detectVerifiedFileType(buffer);
+    if (!verifiedType) {
+      return NextResponse.json(
+        {
+          error:
+            "Isi file tidak valid. Pastikan file benar-benar PDF, JPG, PNG, atau WEBP.",
+        },
+        { status: 400 }
+      );
+    }
+
     let pageCount = 1;
-    if (file.type === "application/pdf") {
+    if (verifiedType.mimeType === "application/pdf") {
       try {
         const pdfDoc = await PDFDocument.load(buffer, {
           ignoreEncryption: true,
@@ -95,7 +117,8 @@ export async function POST(req: Request) {
       duplexDiscount: shop.duplexDiscount,
     });
 
-    const storedFilePath = await saveUploadedFile(buffer, file.name);
+    const storedFilePath = await saveUploadedFile(buffer, verifiedType.ext);
+    const safeDisplayName = file.name.replace(/[\r\n<>:"/\\|?*]+/g, "_").slice(0, 120);
     const jobCode = generateJobCode();
 
     let paymentProvider = paymentMethod === "CASH" ? "CASH" : "SIMULATION";
@@ -126,10 +149,10 @@ export async function POST(req: Request) {
       data: {
         jobCode,
         shopId: shop.id,
-        customerName,
-        fileName: file.name,
+        customerName: customerName.slice(0, 60),
+        fileName: safeDisplayName,
         storedFilePath,
-        mimeType: file.type,
+        mimeType: verifiedType.mimeType,
         fileSize: file.size,
         pageCount,
         copies,

@@ -55,15 +55,34 @@ async function detectWindowsPrinters() {
   }
 }
 
-async function sendToWindowsPrinter(filePath, printerName, copies) {
-  const escapedFile = filePath.replace(/'/g, "''");
-  const escapedPrinter = (printerName || "").replace(/'/g, "''");
+const ALLOWED_EXTS = new Set([".pdf", ".jpg", ".jpeg", ".png", ".webp"]);
 
-  for (let i = 0; i < Math.max(1, copies); i++) {
-    const cmd =
-      escapedPrinter && escapedPrinter !== "Default Printer"
-        ? `Start-Process -FilePath '${escapedFile}' -Verb PrintTo -ArgumentList '"${escapedPrinter}"' -WindowStyle Hidden`
-        : `Start-Process -FilePath '${escapedFile}' -Verb Print -WindowStyle Hidden`;
+function getSafeExtension(fileName, mimeType) {
+  if (mimeType === "application/pdf") return ".pdf";
+  if (mimeType === "image/jpeg") return ".jpg";
+  if (mimeType === "image/png") return ".png";
+  if (mimeType === "image/webp") return ".webp";
+  const ext = path.extname(String(fileName || "")).toLowerCase();
+  return ALLOWED_EXTS.has(ext) ? ext : ".pdf";
+}
+
+async function sendToWindowsPrinter(filePath, printerName, copies, allowedPrinters) {
+  // Ensure targetPrinter strictly matches one of the locally detected Windows printers
+  const verifiedPrinter =
+    printerName &&
+    printerName !== "Default Printer" &&
+    Array.isArray(allowedPrinters) &&
+    allowedPrinters.includes(printerName)
+      ? printerName
+      : "";
+
+  const escapedFile = filePath.replace(/'/g, "''");
+  const escapedPrinter = verifiedPrinter.replace(/['"`$;&|]/g, "");
+
+  for (let i = 0; i < Math.min(50, Math.max(1, copies)); i++) {
+    const cmd = escapedPrinter
+      ? `Start-Process -FilePath '${escapedFile}' -Verb PrintTo -ArgumentList '"${escapedPrinter}"' -WindowStyle Hidden`
+      : `Start-Process -FilePath '${escapedFile}' -Verb Print -WindowStyle Hidden`;
 
     await execFileAsync("powershell.exe", ["-NoProfile", "-Command", cmd], {
       timeout: 15000,
@@ -156,15 +175,16 @@ async function main() {
             });
             if (fileRes.ok) {
               const buf = Buffer.from(await fileRes.arrayBuffer());
-              const ext = path.extname(job.fileName) || ".pdf";
-              localPath = path.join(tempDir, `${job.jobCode}${ext}`);
+              const ext = getSafeExtension(job.fileName, job.mimeType);
+              const safeCode = String(job.jobCode || "JOB").replace(/[^A-Z0-9-]/gi, "");
+              localPath = path.join(tempDir, `${safeCode}${ext}`);
               await fs.writeFile(localPath, buf);
             }
           }
 
           if (config.live && localPath) {
             log(`Mengirim ke printer Windows: ${job.targetPrinter}...`);
-            await sendToWindowsPrinter(localPath, job.targetPrinter, job.copies);
+            await sendToWindowsPrinter(localPath, job.targetPrinter, job.copies, printers);
             await new Promise((r) => setTimeout(r, 2000));
           } else {
             log(`[SIMULASI] Mencetak "${job.fileName}" (${job.copies} rangkap)...`);
