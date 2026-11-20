@@ -1734,6 +1734,15 @@ function DashboardContent() {
               </div>
 
               <div className="space-y-3">
+                <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-4 text-xs">
+                  <p className="font-medium text-[#171717]">
+                    SumatraPDF Precision Engine (Disarankan)
+                  </p>
+                  <p className="mt-1 leading-relaxed text-[#525252]">
+                    Jalankan <code className="font-mono-num rounded bg-white px-1.5 py-0.5 border border-[#171717]/10">print-agent\install-sumatra.bat</code> sekali saja di PC kasir agar Print Agent dapat mengeksekusi <strong>rentang halaman (misal 1-3)</strong>, <strong>mode Hitam Putih / Warna</strong>, <strong>bolak-balik (Duplex)</strong>, dan <strong>ukuran kertas A4/F4/4×6</strong> secara presisi ke printer fisik.
+                  </p>
+                </div>
+
                 <div>
                   <p className="mb-1.5 text-xs font-medium text-[#171717]">
                     1. Mode simulasi (uji alur tanpa mengeluarkan kertas)
