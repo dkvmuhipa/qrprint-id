@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getPlanDef } from "@/lib/plans";
 
 export async function POST(req: Request) {
   const agentKey = req.headers.get("x-agent-key");
@@ -12,9 +13,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid agent key" }, { status: 401 });
   }
 
+  const planDef = getPlanDef(shop.plan);
+  const maxAllowedPrinters = planDef.maxPrinters ?? 20;
+
   const body = await req.json().catch(() => ({}));
   const printers = Array.isArray(body.printers)
-    ? body.printers.map((p: unknown) => String(p)).slice(0, 20)
+    ? body.printers
+        .map((p: unknown) => String(p))
+        .slice(0, maxAllowedPrinters)
     : undefined;
 
   await prisma.shop.update({
@@ -29,7 +35,13 @@ export async function POST(req: Request) {
     ok: true,
     shopCode: shop.shopCode,
     shopName: shop.name,
+    plan: planDef.id,
+    maxPrinters: planDef.maxPrinters,
     bwPrinter: shop.bwPrinter,
-    colorPrinter: shop.colorPrinter,
+    colorPrinter: planDef.maxPrinters === 1 ? shop.bwPrinter : shop.colorPrinter,
+    photoPrinter:
+      planDef.maxPrinters && planDef.maxPrinters < 3
+        ? shop.colorPrinter
+        : shop.photoPrinter,
   });
 }

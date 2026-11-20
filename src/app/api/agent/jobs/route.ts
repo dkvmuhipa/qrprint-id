@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getPlanDef } from "@/lib/plans";
 
 export async function GET(req: Request) {
   const agentKey = req.headers.get("x-agent-key");
@@ -11,6 +12,8 @@ export async function GET(req: Request) {
   if (!shop) {
     return NextResponse.json({ error: "Invalid agent key" }, { status: 401 });
   }
+
+  const planDef = getPlanDef(shop.plan);
 
   await prisma.shop.update({
     where: { id: shop.id },
@@ -27,10 +30,32 @@ export async function GET(req: Request) {
     take: 5,
   });
 
+  function resolveTargetPrinter(job: {
+    colorMode: string;
+    paperSize: string;
+  }): string {
+    // DEMO plan (1 printer): all jobs route to bwPrinter
+    if (planDef.maxPrinters === 1) {
+      return shop.bwPrinter;
+    }
+    // PRO / PREMIUM / LIFETIME (3+ printers): PHOTO_4X6 routes to dedicated photoPrinter if set
+    if (
+      job.paperSize === "PHOTO_4X6" &&
+      (planDef.maxPrinters === null || planDef.maxPrinters >= 3) &&
+      shop.photoPrinter &&
+      shop.photoPrinter !== "Default Printer"
+    ) {
+      return shop.photoPrinter;
+    }
+    return job.colorMode === "COLOR" ? shop.colorPrinter : shop.bwPrinter;
+  }
+
   return NextResponse.json({
     shopCode: shop.shopCode,
+    plan: planDef.id,
     bwPrinter: shop.bwPrinter,
     colorPrinter: shop.colorPrinter,
+    photoPrinter: shop.photoPrinter,
     jobs: jobs.map((j) => ({
       id: j.id,
       jobCode: j.jobCode,
@@ -41,7 +66,7 @@ export async function GET(req: Request) {
       paperSize: j.paperSize,
       duplex: j.duplex,
       pageRange: j.pageRange,
-      targetPrinter: j.colorMode === "COLOR" ? shop.colorPrinter : shop.bwPrinter,
+      targetPrinter: resolveTargetPrinter(j),
       hasFile: Boolean(j.storedFilePath),
     })),
   });

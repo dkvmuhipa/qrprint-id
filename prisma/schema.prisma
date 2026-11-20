@@ -28,6 +28,7 @@ model Shop {
   agentPrinters     String                @default("[]")
   bwPrinter         String                @default("Default Printer")
   colorPrinter      String                @default("Default Printer")
+  photoPrinter      String                @default("Default Printer")
   qrisName          String                @default("QRIS Toko")
   midtransServerKey String?
   midtransIsProd    Boolean               @default(false)

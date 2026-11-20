@@ -47,6 +47,7 @@ interface ShopInfo {
   printers: string[];
   bwPrinter: string;
   colorPrinter: string;
+  photoPrinter?: string;
   qrisName: string;
   hasMidtransKey?: boolean;
   midtransServerKeyMasked?: string;
@@ -159,6 +160,7 @@ function DashboardContent() {
     duplexDiscount: 10,
     bwPrinter: "Default Printer",
     colorPrinter: "Default Printer",
+    photoPrinter: "Default Printer",
     midtransServerKey: "",
     midtransIsProd: false,
   });
@@ -187,6 +189,7 @@ function DashboardContent() {
             duplexDiscount: json.shop.duplexDiscount,
             bwPrinter: json.shop.bwPrinter,
             colorPrinter: json.shop.colorPrinter,
+            photoPrinter: json.shop.photoPrinter || "Default Printer",
             midtransServerKey: "",
             midtransIsProd: Boolean(json.shop.midtransIsProd),
           });
@@ -319,6 +322,7 @@ function DashboardContent() {
         duplexDiscount: settingsForm.duplexDiscount,
         bwPrinter: settingsForm.bwPrinter,
         colorPrinter: settingsForm.colorPrinter,
+        photoPrinter: settingsForm.photoPrinter,
         midtransIsProd: settingsForm.midtransIsProd,
       };
       if (settingsForm.midtransServerKey.trim() !== "") {
@@ -1436,12 +1440,18 @@ function DashboardContent() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[#171717]">
-                    Tarif Foto 4×6 (Rp/lembar)
+                    Tarif Foto 4×6 (Rp/lembar){" "}
+                    {!entitlement.plan.allowExtraPaper && (
+                      <span className="font-normal text-[#d9381e]">
+                        (Terkunci di paket Demo)
+                      </span>
+                    )}
                   </label>
                   <input
                     type="number"
                     min={500}
                     step={500}
+                    disabled={!entitlement.plan.allowExtraPaper}
                     value={settingsForm.photoPrice}
                     onChange={(e) =>
                       setSettingsForm({
@@ -1449,17 +1459,23 @@ function DashboardContent() {
                         photoPrice: Number(e.target.value),
                       })
                     }
-                    className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm font-medium outline-none focus:border-[#171717] focus:bg-white"
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm font-medium outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[#171717]">
-                    Potongan bolak-balik / duplex (%)
+                    Potongan bolak-balik / duplex (%){" "}
+                    {!entitlement.plan.allowDuplex && (
+                      <span className="font-normal text-[#d9381e]">
+                        (Terkunci di paket Demo)
+                      </span>
+                    )}
                   </label>
                   <input
                     type="number"
                     min={0}
                     max={50}
+                    disabled={!entitlement.plan.allowDuplex}
                     value={settingsForm.duplexDiscount}
                     onChange={(e) =>
                       setSettingsForm({
@@ -1467,13 +1483,13 @@ function DashboardContent() {
                         duplexDiscount: Number(e.target.value),
                       })
                     }
-                    className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm font-medium outline-none focus:border-[#171717] focus:bg-white"
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm font-medium outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
 
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[#171717]">
-                    Printer Hitam Putih (Windows)
+                    1. Printer Hitam Putih (Utama)
                   </label>
                   <select
                     value={settingsForm.bwPrinter}
@@ -1495,19 +1511,63 @@ function DashboardContent() {
                 </div>
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[#171717]">
-                    Printer Warna (Windows)
+                    2. Printer Warna Terpisah{" "}
+                    {entitlement.plan.maxPrinters === 1 && (
+                      <span className="font-normal text-[#d9381e]">
+                        (Mulai paket Bulanan)
+                      </span>
+                    )}
                   </label>
                   <select
-                    value={settingsForm.colorPrinter}
+                    disabled={entitlement.plan.maxPrinters === 1}
+                    value={
+                      entitlement.plan.maxPrinters === 1
+                        ? settingsForm.bwPrinter
+                        : settingsForm.colorPrinter
+                    }
                     onChange={(e) =>
                       setSettingsForm({
                         ...settingsForm,
                         colorPrinter: e.target.value,
                       })
                     }
-                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <option value="Default Printer">Default Printer</option>
+                    {shop.printers.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-[#171717]">
+                    3. Printer Khusus Foto 4×6 & Kertas F4{" "}
+                    {entitlement.plan.maxPrinters !== null &&
+                      entitlement.plan.maxPrinters < 3 && (
+                        <span className="font-normal text-[#d9381e]">
+                          (Tersedia mulai paket Pro Tahunan — 3+ printer)
+                        </span>
+                      )}
+                  </label>
+                  <select
+                    disabled={
+                      entitlement.plan.maxPrinters !== null &&
+                      entitlement.plan.maxPrinters < 3
+                    }
+                    value={settingsForm.photoPrinter}
+                    onChange={(e) =>
+                      setSettingsForm({
+                        ...settingsForm,
+                        photoPrinter: e.target.value,
+                      })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="Default Printer">
+                      Ikuti Printer Warna / Default
+                    </option>
                     {shop.printers.map((p) => (
                       <option key={p} value={p}>
                         {p}

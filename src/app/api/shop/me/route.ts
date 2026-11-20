@@ -84,9 +84,13 @@ export async function GET() {
       agentKey: shop.agentKey,
       agentLastSeen: shop.agentLastSeen,
       isAgentOnline,
-      printers,
+      printers:
+        entitlement.plan.maxPrinters !== null
+          ? printers.slice(0, entitlement.plan.maxPrinters)
+          : printers,
       bwPrinter: shop.bwPrinter,
       colorPrinter: shop.colorPrinter,
+      photoPrinter: shop.photoPrinter,
       qrisName: shop.qrisName,
       hasMidtransKey: Boolean(shop.midtransServerKey),
       midtransServerKeyMasked: shop.midtransServerKey
@@ -141,6 +145,9 @@ export async function PATCH(req: Request) {
         colorPrinter: body.colorPrinter
           ? String(body.colorPrinter)
           : shop.colorPrinter,
+        photoPrinter: body.photoPrinter
+          ? String(body.photoPrinter)
+          : shop.photoPrinter,
         qrisName: body.qrisName ? String(body.qrisName).trim() : shop.qrisName,
         ...(body.midtransServerKey !== undefined
           ? {
