@@ -1939,10 +1939,27 @@ function DashboardContent() {
                       }
                       className="h-10 w-full rounded-lg border border-[#171717]/12 bg-white px-3.5 text-sm outline-none focus:border-[#171717]"
                     />
-                    <p className="mt-1 text-[11px] text-[#737373]">
-                      Biarkan kosong jika tidak ingin mengganti kunci yang sudah
-                      tersimpan
-                    </p>
+                    <div className="mt-1 flex items-center justify-between text-[11px] text-[#737373]">
+                      <span>
+                        Biarkan kosong jika tidak ingin mengganti kunci
+                      </span>
+                      {shop.hasMidtransKey && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await fetch("/api/shop/me", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ midtransServerKey: "" }),
+                            });
+                            await fetchDashboard();
+                          }}
+                          className="ml-2 shrink-0 cursor-pointer font-medium text-[#dc2626] hover:underline"
+                        >
+                          Hapus Key Midtrans
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   <div>

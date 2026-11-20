@@ -163,22 +163,37 @@ export async function POST(req: Request) {
 
     if (paymentMethod === "QRIS") {
       const midtransConfig = resolveMidtransConfig(shop);
+      let midtransSucceeded = false;
+
       if (midtransConfig) {
-        const orderId = `${jobCode}-${Date.now().toString().slice(-6)}`;
-        const charge = await createMidtransQrisCharge(midtransConfig, {
-          orderId,
-          grossAmount: pricing.totalPrice,
-          customerName,
-          itemName: `Cetak ${file.name}`,
-        });
-        paymentProvider = "MIDTRANS";
-        paymentOrderId = charge.orderId;
-        qrisUrl = charge.qrisUrl;
-        qrisString = charge.qrisString;
-        midtransIsProd = midtransConfig.isProduction;
-      } else if (shop.staticQrisString && isValidStaticQris(shop.staticQrisString)) {
-        // GoPay Merchant / Static QRIS -> Auto-Dynamic QRIS + Unique 1-99 Rupiah Code
-        // so Notification Listener (MacroDroid/Tasker) can auto-match without collision!
+        try {
+          const orderId = `${jobCode}-${Date.now().toString().slice(-6)}`;
+          const charge = await createMidtransQrisCharge(midtransConfig, {
+            orderId,
+            grossAmount: pricing.totalPrice,
+            customerName,
+            itemName: `Cetak ${file.name}`,
+          });
+          paymentProvider = "MIDTRANS";
+          paymentOrderId = charge.orderId;
+          qrisUrl = charge.qrisUrl;
+          qrisString = charge.qrisString;
+          midtransIsProd = midtransConfig.isProduction;
+          midtransSucceeded = true;
+        } catch (midErr) {
+          console.error(
+            "Midtrans charge failed, falling back to Merchant QRIS / Simulation:",
+            midErr instanceof Error ? midErr.message : midErr
+          );
+        }
+      }
+
+      if (
+        !midtransSucceeded &&
+        shop.staticQrisString &&
+        isValidStaticQris(shop.staticQrisString)
+      ) {
+        // GoPay Merchant / Static QRIS -> Auto-Dynamic QRIS + Unique 11-99 Rupiah Code
         const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
         const recentPending = await prisma.printJob.findMany({
           where: {
