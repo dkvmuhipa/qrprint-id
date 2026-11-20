@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * QRPrint.id — Windows Print Agent
+ * Ngeprint (by Gellona Teknologi) — Windows Print Agent
  * Mendeteksi printer Windows secara otomatis, memantau antrean cetak dari server,
  * mencetak file ke printer lokal, lalu langsung menghapus file (Privacy by Design).
  *
@@ -20,8 +20,8 @@ const execFileAsync = promisify(execFile);
 function parseArgs() {
   const args = process.argv.slice(2);
   const config = {
-    url: process.env.QRPRINT_URL || "http://localhost:3000",
-    key: process.env.QRPRINT_AGENT_KEY || "",
+    url: process.env.NGEPRINT_URL || process.env.QRPRINT_URL || "http://localhost:3000",
+    key: process.env.NGEPRINT_AGENT_KEY || process.env.QRPRINT_AGENT_KEY || "",
     live: false,
     pollMs: 3000,
   };
@@ -98,18 +98,18 @@ function log(msg) {
 async function main() {
   const config = parseArgs();
   if (!config.key) {
-    console.error("ERROR: Agent Key wajib diisi! Gunakan --key=AGT_KEY_TOKO_ANDA atau env QRPRINT_AGENT_KEY.");
+    console.error("ERROR: Agent Key wajib diisi! Gunakan --key=AGT_KEY_TOKO_ANDA atau env NGEPRINT_AGENT_KEY.");
     process.exit(1);
   }
-  const tempDir = path.join(os.tmpdir(), "qrprint-id-agent");
+  const tempDir = path.join(os.tmpdir(), "ngeprint-agent");
   await fs.mkdir(tempDir, { recursive: true });
 
-  console.log("================================================");
-  console.log("  QRPrint.id — Windows Print Agent v1.0");
-  console.log("================================================");
+  console.log("=========================================================");
+  console.log("  Ngeprint (by Gellona Teknologi) — Windows Print Agent");
+  console.log("=========================================================");
   console.log(`Server : ${config.url}`);
   console.log(`Mode   : ${config.live ? "LIVE (Cetak ke Printer Fisik)" : "DRY-RUN (Simulasi Aman Tanpa Kertas)"}`);
-  console.log("------------------------------------------------");
+  console.log("---------------------------------------------------------");
 
   const printers = await detectWindowsPrinters();
   log(`Printer terdeteksi (${printers.length}): ${printers.join(", ")}`);

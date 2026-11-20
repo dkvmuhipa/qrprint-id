@@ -7,7 +7,10 @@ import {
 import { deleteUploadedFile } from "@/lib/storage";
 
 export async function GET() {
-  return NextResponse.json({ ok: true, service: "QRPrint.id Midtrans Webhook" });
+  return NextResponse.json({
+    ok: true,
+    service: "Ngeprint (by Gellona Teknologi) Midtrans Webhook",
+  });
 }
 
 export async function POST(req: Request) {

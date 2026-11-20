@@ -15,9 +15,14 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
             <QrCode className="h-5 w-5" />
           </div>
           <div className="leading-tight">
-            <span className="font-display text-lg font-extrabold tracking-tight text-[#111114]">
-              QRPrint<span className="text-[#ff2e63]">.id</span>
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="font-display text-lg font-extrabold tracking-tight text-[#111114]">
+                Ngeprint
+              </span>
+              <span className="rounded-md bg-[#fff9ec] px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide text-[#ff2e63] ring-1 ring-[#ff2e63]/20">
+                by Gellona
+              </span>
+            </div>
             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#6b7280]">
               Scan • Upload • Cetak
             </p>

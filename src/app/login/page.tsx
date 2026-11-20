@@ -64,9 +64,14 @@ export default function LoginPage() {
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35]">
                 <QrCode className="h-5 w-5 text-white" />
               </div>
-              <span className="font-display text-xl font-extrabold">
-                QRPrint<span className="text-[#ffd22e]">.id</span>
-              </span>
+              <div className="leading-tight">
+                <span className="font-display text-xl font-extrabold">
+                  Ngeprint
+                </span>
+                <p className="text-[10px] font-bold tracking-wider text-[#ffd22e] uppercase">
+                  by Gellona Teknologi
+                </p>
+              </div>
             </div>
             <h1 className="font-display mt-6 text-2xl leading-snug font-extrabold">
               Dashboard Pemilik Toko Fotokopi

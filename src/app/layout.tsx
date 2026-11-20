@@ -15,9 +15,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "QRPrint.id — Scan • Upload • Bayar • Cetak Otomatis",
+  title: "Ngeprint by Gellona Teknologi — Scan • Upload • Bayar • Cetak Otomatis",
   description:
-    "Solusi cetak mandiri berbasis QR untuk toko fotokopi, percetakan, dan warnet Indonesia. Tanpa WhatsApp, tanpa flashdisk, bayar QRIS, langsung tercetak & file otomatis terhapus.",
+    "Ngeprint (ngeprint.id) adalah solusi cetak mandiri berbasis QR dari Gellona Teknologi untuk toko fotokopi, percetakan, dan warnet Indonesia. Tanpa WhatsApp, tanpa flashdisk, bayar QRIS, langsung tercetak & file otomatis terhapus.",
 };
 
 export default function RootLayout({

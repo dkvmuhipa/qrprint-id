@@ -32,12 +32,12 @@ import { HeroIllustration } from "./HeroIllustration";
 const PRODUCTS = [
   {
     id: "windows",
-    label: "QRPrint Windows Agent",
+    label: "Ngeprint Windows Agent",
     icon: Monitor,
     badge: "Paling Populer untuk Fotokopi & Percetakan",
     headline: "Dari HP Pelanggan, Langsung Keluar di Printer Anda",
     subline: "Tanpa WhatsApp • Tanpa Flashdisk • Tanpa Ribet Transfer File",
-    desc: "Cukup jalankan QRPrint Agent di Windows 10/11. Pelanggan scan QR di meja kasir, upload PDF/foto, bayar QRIS, dan dokumen langsung tercetak otomatis ke printer USB Anda.",
+    desc: "Cukup jalankan Ngeprint Agent di Windows 10/11. Pelanggan scan QR di meja kasir, upload PDF/foto, bayar QRIS, dan dokumen langsung tercetak otomatis ke printer USB Anda.",
   },
   {
     id: "kasir",
@@ -50,7 +50,7 @@ const PRODUCTS = [
   },
   {
     id: "android",
-    label: "QRPrint Android OTG",
+    label: "Ngeprint Android OTG",
     icon: Smartphone,
     badge: "Cetak Mandiri Tanpa PC/Laptop",
     headline: "Ubah HP Android + Kabel OTG Jadi Mesin Cetak Mandiri",
@@ -314,7 +314,8 @@ export function LandingClient() {
       <section className="border-y border-[#ece3d2] bg-[#fff9ec]/90 py-8">
         <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
           <p className="font-display text-sm font-bold text-[#111114] sm:text-base">
-            Solusi Cetak Mandiri Pintar untuk{" "}
+            Solusi Cetak Mandiri Pintar dari{" "}
+            <span className="text-[#7c3aed]">Gellona Teknologi</span> untuk{" "}
             <span className="text-[#ff2e63]">
               Toko Fotokopi, Percetakan, Warnet & Koperasi Kampus
             </span>
@@ -369,7 +370,7 @@ export function LandingClient() {
       <section id="fitur" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-block rounded-full bg-[#ff2e63]/10 px-3.5 py-1 text-xs font-extrabold text-[#ff2e63]">
-            KENAPA PINDAH KE QRPRINT.ID?
+            KENAPA PINDAH KE NGEPRINT?
           </span>
           <h2 className="font-display mt-3 text-2xl font-extrabold text-[#111114] sm:text-4xl">
             Tinggalkan Cara Lama yang Bikin Kasir Kewalahan
@@ -400,7 +401,7 @@ export function LandingClient() {
           <div className="rounded-3xl border-2 border-[#7c3aed]/30 bg-white p-6 shadow-md sm:p-8">
             <h3 className="font-display flex items-center gap-2 text-lg font-extrabold text-[#7c3aed]">
               <BadgeCheck className="h-5 w-5" />
-              Dengan QRPrint.id (Otomatis)
+              Dengan Ngeprint (Otomatis)
             </h3>
             <ul className="mt-5 space-y-3.5 text-sm text-[#111114]">
               {[
@@ -450,7 +451,7 @@ export function LandingClient() {
               {
                 num: "03",
                 title: "Jalankan Print Agent",
-                desc: "Jalankan QRPrint Agent di PC Windows — otomatis mendeteksi printer USB Anda.",
+                desc: "Jalankan Ngeprint Agent di PC Windows — otomatis mendeteksi printer USB Anda.",
               },
               {
                 num: "04",
@@ -702,12 +703,17 @@ export function LandingClient() {
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35] text-white">
                 <QrCode className="h-5 w-5" />
               </div>
-              <span className="font-display text-lg font-extrabold text-[#111114]">
-                QRPrint<span className="text-[#ff2e63]">.id</span>
-              </span>
+              <div className="leading-tight">
+                <span className="font-display text-lg font-extrabold text-[#111114]">
+                  Ngeprint
+                </span>
+                <span className="ml-1.5 rounded-md bg-[#fff9ec] px-1.5 py-0.5 text-[9px] font-extrabold text-[#ff2e63] ring-1 ring-[#ff2e63]/20">
+                  by Gellona
+                </span>
+              </div>
             </div>
             <p className="mt-3 text-xs leading-relaxed text-[#6b7280]">
-              Platform cetak mandiri berbasis QR untuk toko fotokopi & percetakan modern di Indonesia. Scan, Upload, Bayar QRIS, Langsung Cetak.
+              Produk resmi <strong>Gellona Teknologi</strong>. Platform cetak mandiri berbasis QR untuk toko fotokopi & percetakan modern di Indonesia. Scan, Upload, Bayar QRIS, Langsung Cetak.
             </p>
           </div>
 
@@ -763,7 +769,7 @@ export function LandingClient() {
           </div>
         </div>
         <div className="mx-auto mt-10 max-w-6xl border-t border-[#ece3d2] px-4 pt-6 text-center text-xs text-[#6b7280] sm:px-6">
-          © 2026 QRPrint.id — Remake Full-Stack Lokal untuk Ekosistem Fotokopi & Percetakan Indonesia.
+          © 2026 <strong>Ngeprint</strong> (ngeprint.id) — Produk dari <strong>Gellona Teknologi</strong> untuk Ekosistem Fotokopi & Percetakan Indonesia.
         </div>
       </footer>
 
@@ -787,7 +793,7 @@ export function LandingClient() {
               DEMO GRATIS 24 JAM
             </span>
             <h3 className="font-display mt-2 text-xl font-extrabold text-[#111114]">
-              Coba QRPrint.id di Toko Anda
+              Coba Ngeprint di Toko Anda
             </h3>
 
             {demoSuccess ? (

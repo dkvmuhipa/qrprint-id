@@ -1,10 +1,10 @@
-# QRPrint.id — Windows Print Agent
+# Ngeprint (by Gellona Teknologi) — Windows Print Agent
 
-Print Agent ringan berbasis Node.js (tanpa perlu install dependency tambahan) untuk menghubungkan komputer toko Windows dengan server **QRPrint.id**.
+Print Agent ringan berbasis Node.js (tanpa perlu install dependency tambahan) untuk menghubungkan komputer toko Windows dengan server **Ngeprint** (`ngeprint.id`).
 
 ## Cara Menjalankan
 
-1. Pastikan server web QRPrint.id sudah berjalan (`http://localhost:3000`).
+1. Pastikan server web Ngeprint sudah berjalan (`http://localhost:3000`).
 2. Salin **Agent Key** dari menu **Dashboard Toko -> Setup Print Agent**.
 3. Jalankan salah satu perintah berikut di terminal:
 
@@ -19,5 +19,5 @@ node print-agent/agent.mjs --url=http://localhost:3000 --key=AGT_KEY_TOKO_ANDA -
 ```
 
 ## Fitur Privasi
-- File dokumen hanya disimpan sementara di folder `%TEMP%\qrprint-id-agent`.
+- File dokumen hanya disimpan sementara di folder `%TEMP%\ngeprint-agent`.
 - Begitu perintah cetak selesai dikirim ke spooler Windows, file lokal dan file di server **langsung dihapus otomatis**.

@@ -123,7 +123,7 @@ function CustomerScanPortalContent({
     }
     const payload =
       activeJob.qrisString ||
-      `00020101021226580016ID.QRPRINT.WWW0215${shop?.shopCode || "TOKO"}520459995303360540${activeJob.totalPrice}5802ID5918${(shop?.qrisName || "QRPRINT ID").slice(0, 18)}62120508${activeJob.jobCode}`;
+      `00020101021226580016ID.NGEPRINT.WWW0215${shop?.shopCode || "TOKO"}520459995303360540${activeJob.totalPrice}5802ID5918${(shop?.qrisName || "NGEPRINT ID").slice(0, 18)}62120508${activeJob.jobCode}`;
     QRCode.toDataURL(payload, {
       width: 240,
       margin: 2,
@@ -331,7 +331,8 @@ function CustomerScanPortalContent({
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6b7280] hover:text-[#111114]"
           >
             <ArrowLeft className="h-4 w-4" />
-            QRPrint.id
+            <span>Ngeprint</span>
+            <span className="text-[10px] font-semibold text-[#ff2e63]">by Gellona</span>
           </Link>
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold ${
