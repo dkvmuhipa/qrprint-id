@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Printer, Check } from "lucide-react";
@@ -10,33 +10,41 @@ const PLAN_OPTIONS = [
     id: "DEMO",
     name: "Demo 24 Jam",
     price: "Rp 0 · Kuota 10 cetakan",
+    detail: "Langsung aktif untuk uji coba",
   },
   {
     id: "BULANAN",
     name: "Bulanan",
     price: "Rp 49.000/bulan",
+    detail: "Unlimited cetak · 5 printer",
   },
   {
     id: "PRO",
     name: "Pro Tahunan",
     price: "Rp 149.000/tahun",
+    detail: "Unlimited cetak · 2 printer",
   },
   {
     id: "PREMIUM",
     name: "Premium Tahunan",
     price: "Rp 249.000/tahun",
+    detail: "Unlimited cetak · 5 printer",
   },
   {
     id: "LIFETIME",
     name: "Seumur Hidup",
     price: "Rp 399.000 sekali bayar",
+    detail: "Aktif selamanya · Unlimited printer",
   },
 ];
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialPlan = (searchParams.get("plan") || "PRO").toUpperCase();
+  const planParam = (searchParams.get("plan") || "").toUpperCase();
+  const resolvedInitialPlan = PLAN_OPTIONS.some((p) => p.id === planParam)
+    ? planParam
+    : "PRO";
 
   const [form, setForm] = useState({
     name: "",
@@ -47,10 +55,20 @@ function RegisterForm() {
     password: "",
     bwPrice: 500,
     colorPrice: 1500,
-    plan: PLAN_OPTIONS.some((p) => p.id === initialPlan) ? initialPlan : "PRO",
+    plan: resolvedInitialPlan,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (planParam && PLAN_OPTIONS.some((p) => p.id === planParam)) {
+      setForm((prev) => ({ ...prev, plan: planParam }));
+    }
+  }, [planParam]);
+
+  function handleSelectPlan(planId: string) {
+    setForm((prev) => ({ ...prev, plan: planId }));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,6 +97,9 @@ function RegisterForm() {
       setLoading(false);
     }
   }
+
+  const activePlanObj =
+    PLAN_OPTIONS.find((p) => p.id === form.plan) || PLAN_OPTIONS[2];
 
   return (
     <div className="bg-ambient min-h-screen px-6 py-10">
@@ -135,7 +156,9 @@ function RegisterForm() {
                     required
                     placeholder="Fotokopi Sinar Jaya"
                     value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
                     className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                   />
                 </div>
@@ -148,7 +171,10 @@ function RegisterForm() {
                     placeholder="Budi Santoso"
                     value={form.ownerName}
                     onChange={(e) =>
-                      setForm({ ...form, ownerName: e.target.value })
+                      setForm((prev) => ({
+                        ...prev,
+                        ownerName: e.target.value,
+                      }))
                     }
                     className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                   />
@@ -162,7 +188,9 @@ function RegisterForm() {
                     type="email"
                     placeholder="nama@tokoanda.com"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, email: e.target.value }))
+                    }
                     className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                   />
                 </div>
@@ -174,7 +202,9 @@ function RegisterForm() {
                     required
                     placeholder="08123456789"
                     value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, phone: e.target.value }))
+                    }
                     className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                   />
                 </div>
@@ -187,7 +217,7 @@ function RegisterForm() {
                     placeholder="Jl. Kampus Raya No. 14, Kecamatan..."
                     value={form.address}
                     onChange={(e) =>
-                      setForm({ ...form, address: e.target.value })
+                      setForm((prev) => ({ ...prev, address: e.target.value }))
                     }
                     className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                   />
@@ -203,7 +233,7 @@ function RegisterForm() {
                     placeholder="Buat kata sandi"
                     value={form.password}
                     onChange={(e) =>
-                      setForm({ ...form, password: e.target.value })
+                      setForm((prev) => ({ ...prev, password: e.target.value }))
                     }
                     className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                   />
@@ -227,7 +257,10 @@ function RegisterForm() {
                     step={100}
                     value={form.bwPrice}
                     onChange={(e) =>
-                      setForm({ ...form, bwPrice: Number(e.target.value) })
+                      setForm((prev) => ({
+                        ...prev,
+                        bwPrice: Number(e.target.value),
+                      }))
                     }
                     className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
@@ -242,7 +275,10 @@ function RegisterForm() {
                     step={100}
                     value={form.colorPrice}
                     onChange={(e) =>
-                      setForm({ ...form, colorPrice: Number(e.target.value) })
+                      setForm((prev) => ({
+                        ...prev,
+                        colorPrice: Number(e.target.value),
+                      }))
                     }
                     className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
@@ -252,46 +288,73 @@ function RegisterForm() {
 
             {/* Step 3: Choose Plan */}
             <div>
-              <h2 className="text-sm font-medium text-[#1f1b16]">
-                3. Pilih paket langganan
-              </h2>
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-medium text-[#1f1b16]">
+                  3. Pilih paket langganan
+                </h2>
+                <span className="font-mono-num text-xs font-medium text-[#d9381e]">
+                  Terpilih: {activePlanObj.name}
+                </span>
+              </div>
               <p className="mt-0.5 text-xs text-[#7b7266]">
-                Jika memilih paket berbayar, tagihan QRIS akan disiapkan di menu Langganan & Paket
+                Klik salah satu paket di bawah untuk mengganti pilihan Anda
               </p>
-              <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
+
+              <div
+                role="radiogroup"
+                aria-label="Pilih paket langganan"
+                className="mt-3 grid gap-2.5 sm:grid-cols-2"
+              >
                 {PLAN_OPTIONS.map((p) => {
                   const selected = form.plan === p.id;
                   return (
-                    <button
-                      type="button"
+                    <label
                       key={p.id}
-                      onClick={() => setForm({ ...form, plan: p.id })}
-                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-3.5 text-left transition-colors ${
+                      onClick={() => handleSelectPlan(p.id)}
+                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-3.5 text-left transition-colors select-none ${
                         selected
-                          ? "border-[#1f1b16] bg-white"
-                          : "border-[#1f1b16]/10 bg-[#f7f4ee]/60 hover:bg-[#efe9df]/60"
+                          ? "border-2 border-[#d9381e] bg-white"
+                          : "border-[#1f1b16]/12 bg-[#f7f4ee]/60 hover:border-[#1f1b16]/30 hover:bg-[#efe9df]/60"
                       }`}
                     >
+                      <input
+                        type="radio"
+                        name="plan"
+                        value={p.id}
+                        checked={selected}
+                        onChange={() => handleSelectPlan(p.id)}
+                        className="sr-only"
+                      />
                       <div>
-                        <p className="text-sm font-medium text-[#1f1b16]">
-                          {p.name}
-                        </p>
-                        <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-[#1f1b16]">
+                            {p.name}
+                          </p>
+                          {selected && (
+                            <span className="rounded bg-[#d9381e]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#d9381e]">
+                              Dipilih
+                            </span>
+                          )}
+                        </div>
+                        <p className="font-mono-num mt-0.5 text-xs font-medium text-[#1f1b16]">
                           {p.price}
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[#7b7266]">
+                          {p.detail}
                         </p>
                       </div>
                       <div
-                        className={`flex h-5 w-5 items-center justify-center rounded-md ${
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md ${
                           selected
-                            ? "bg-[#1f1b16] text-white"
-                            : "border border-[#1f1b16]/15"
+                            ? "bg-[#d9381e] text-white"
+                            : "border border-[#1f1b16]/20 bg-white"
                         }`}
                       >
                         {selected && (
-                          <Check className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          <Check className="h-3.5 w-3.5" strokeWidth={2} />
                         )}
                       </div>
-                    </button>
+                    </label>
                   );
                 })}
               </div>
@@ -306,7 +369,7 @@ function RegisterForm() {
                 ? "Membuat akun toko..."
                 : form.plan === "DEMO"
                 ? "Mulai Demo 24 Jam & buka dashboard"
-                : "Buat toko & lanjutkan ke pembayaran paket"}
+                : `Buat toko dengan paket ${activePlanObj.name} →`}
             </button>
           </form>
         </div>
