@@ -7,8 +7,15 @@ export async function GET(
   context: { params: Promise<{ shopCode: string }> }
 ) {
   const { shopCode } = await context.params;
-  const shop = await prisma.shop.findUnique({
-    where: { shopCode: shopCode.toUpperCase() },
+  const rawCode = String(shopCode || "").trim();
+  const shop = await prisma.shop.findFirst({
+    where: {
+      OR: [
+        { shopCode: rawCode },
+        { shopCode: rawCode.toLowerCase() },
+        { shopCode: rawCode.toUpperCase() },
+      ],
+    },
   });
 
   if (!shop) {

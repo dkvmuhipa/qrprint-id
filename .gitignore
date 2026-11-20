@@ -51,3 +51,6 @@ next-env.d.ts
 /android-listener/.dart_tool/
 /android-listener/android/.gradle/
 /android-listener/android/local.properties
+/android-listener/android/key.properties
+*.jks
+*.keystore

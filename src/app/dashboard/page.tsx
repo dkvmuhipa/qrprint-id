@@ -26,6 +26,8 @@ import {
   AlertTriangle,
   Volume2,
   VolumeX,
+  Search,
+  Lock,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 
@@ -206,6 +208,10 @@ interface DashboardData {
   stats: {
     todayRevenue: number;
     totalRevenue: number;
+    qrisRevenue?: number;
+    cashRevenue?: number;
+    totalPagesPrinted?: number;
+    dailyRevenue7d?: Array<{ date: string; revenue: number; jobs: number }>;
     activeQueue: number;
     completedCount: number;
   };
@@ -236,6 +242,7 @@ function DashboardContent() {
   const [billingMsg, setBillingMsg] = useState<string | null>(null);
 
   const [settingsForm, setSettingsForm] = useState({
+    shopCode: "",
     name: "",
     address: "",
     qrisName: "",
@@ -255,6 +262,244 @@ function DashboardContent() {
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
   const [decodingQris, setDecodingQris] = useState(false);
   const [qrisDecodeMsg, setQrisDecodeMsg] = useState<string | null>(null);
+
+  // Queue filter, search, onboarding, & password state
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobFilter, setJobFilter] = useState<
+    "ALL" | "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED"
+  >("ALL");
+  const [hideOnboarding, setHideOnboarding] = useState(false);
+  const [pwForm, setPwForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [savingPw, setSavingPw] = useState(false);
+  const [pwMsg, setPwMsg] = useState<string | null>(null);
+  const [pwIsError, setPwIsError] = useState(false);
+  const [posterSize, setPosterSize] = useState<"A5" | "A4">("A5");
+  const [downloadingPoster, setDownloadingPoster] = useState(false);
+
+  async function handleDownloadPosterPng() {
+    if (!data?.shop || !qrImage) return;
+    setDownloadingPoster(true);
+    try {
+      const s = data.shop;
+      const W = posterSize === "A4" ? 1654 : 1200;
+      const H = posterSize === "A4" ? 2339 : 1697;
+      const scale = W / 1200;
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      ctx.scale(scale, scale);
+
+      // Warm Paper background
+      ctx.fillStyle = "#F7F4EE";
+      ctx.fillRect(0, 0, 1200, 1697);
+
+      // Outer white card with subtle ink border
+      ctx.fillStyle = "#FDFBF7";
+      ctx.strokeStyle = "#1F1B16";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(60, 60, 1080, 1577, 28);
+      ctx.fill();
+      ctx.stroke();
+
+      // Top Vermilion brand pill
+      ctx.fillStyle = "#D9381E";
+      ctx.beginPath();
+      ctx.roundRect(380, 118, 440, 52, 26);
+      ctx.fill();
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "600 22px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("NGEPRINT  ·  CETAK MANDIRI QR", 600, 152);
+
+      // Shop Name
+      ctx.fillStyle = "#1F1B16";
+      ctx.font = "700 54px system-ui, -apple-system, sans-serif";
+      ctx.fillText(s.name.slice(0, 32), 600, 248);
+
+      // Shop Address
+      ctx.fillStyle = "#6B6257";
+      ctx.font = "400 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText((s.address || "Layanan Cetak Cepat Self-Service").slice(0, 64), 600, 294);
+
+      // QR Frame
+      ctx.fillStyle = "#FFFFFF";
+      ctx.strokeStyle = "#E4DDD2";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.roundRect(310, 344, 580, 580, 24);
+      ctx.fill();
+      ctx.stroke();
+
+      // Draw QR Image
+      const qrImgEl = new Image();
+      await new Promise<void>((resolve, reject) => {
+        qrImgEl.onload = () => resolve();
+        qrImgEl.onerror = () => reject(new Error("QR load failed"));
+        qrImgEl.src = qrImage;
+      });
+      ctx.drawImage(qrImgEl, 345, 379, 510, 510);
+
+      // Scan prompt
+      ctx.fillStyle = "#1F1B16";
+      ctx.font = "600 32px system-ui, -apple-system, sans-serif";
+      ctx.fillText("SCAN QR UNTUK CETAK DOKUMEN", 600, 990);
+
+      // 3-Step Cards
+      const steps = [
+        { num: "1", title: "Scan QR & Upload", desc: "Pilih PDF atau foto dari HP" },
+        { num: "2", title: "Atur & Bayar QRIS", desc: "Nominal otomatis tanpa antre" },
+        { num: "3", title: "Langsung Tercetak", desc: "Ambil kertas & file terhapus" },
+      ];
+      steps.forEach((st, idx) => {
+        const x = 110 + idx * 336;
+        ctx.fillStyle = "#F7F4EE";
+        ctx.strokeStyle = "#E4DDD2";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(x, 1036, 308, 176, 18);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#1F1B16";
+        ctx.beginPath();
+        ctx.arc(x + 154, 1082, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "700 22px system-ui, sans-serif";
+        ctx.fillText(st.num, x + 154, 1090);
+
+        ctx.fillStyle = "#1F1B16";
+        ctx.font = "600 23px system-ui, sans-serif";
+        ctx.fillText(st.title, x + 154, 1144);
+        ctx.fillStyle = "#6B6257";
+        ctx.font = "400 19px system-ui, sans-serif";
+        ctx.fillText(st.desc, x + 154, 1180);
+      });
+
+      // Tariff Box
+      ctx.fillStyle = "#1F1B16";
+      ctx.beginPath();
+      ctx.roundRect(110, 1256, 980, 150, 20);
+      ctx.fill();
+
+      ctx.fillStyle = "#A39B8F";
+      ctx.font = "500 20px system-ui, sans-serif";
+      ctx.fillText("TARIF CETAK PER LEMBAR (A4)", 600, 1302);
+
+      ctx.fillStyle = "#FDFBF7";
+      ctx.font = "700 36px ui-monospace, monospace";
+      ctx.fillText(
+        `Hitam Putih ${formatRupiah(s.bwPrice)}   ·   Warna ${formatRupiah(s.colorPrice)}`,
+        600,
+        1366
+      );
+
+      // Privacy & URL Footer
+      ctx.fillStyle = "#15803D";
+      ctx.font = "600 22px system-ui, sans-serif";
+      ctx.fillText(
+        "✓  Privasi Terjaga — Dokumen otomatis dihapus permanen setelah selesai dicetak",
+        600,
+        1476
+      );
+
+      ctx.fillStyle = "#6B6257";
+      ctx.font = "500 22px ui-monospace, monospace";
+      ctx.fillText(qrUrl.replace(/^https?:\/\//, ""), 600, 1538);
+
+      ctx.fillStyle = "#A39B8F";
+      ctx.font = "400 18px system-ui, sans-serif";
+      ctx.fillText(`Ngeprint by Gellona Teknologi  ·  Ukuran ${posterSize}`, 600, 1588);
+
+      const pngUrl = canvas.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = pngUrl;
+      a.download = `Poster-QR-${s.shopCode}-${posterSize}.png`;
+      a.click();
+    } finally {
+      setDownloadingPoster(false);
+    }
+  }
+
+  function handleDownloadAgentEnv() {
+    if (!data?.shop) return;
+    const serverUrl =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://ngeprint.gellona.web.id";
+    const envContent = [
+      "# Konfigurasi Otomatis Windows Print Agent — Ngeprint",
+      `# Toko: ${data.shop.name} (${data.shop.shopCode})`,
+      `SERVER_URL=${serverUrl}`,
+      `AGENT_KEY=${data.shop.agentKey}`,
+      "POLL_INTERVAL_MS=3000",
+      "DRY_RUN=false",
+      "",
+    ].join("\r\n");
+
+    const blob = new Blob([envContent], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ".env";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleChangePassword(e: React.FormEvent) {
+    e.preventDefault();
+    setPwMsg(null);
+    setPwIsError(false);
+
+    if (pwForm.newPassword.length < 6) {
+      setPwIsError(true);
+      setPwMsg("Kata sandi baru minimal 6 karakter.");
+      return;
+    }
+    if (pwForm.newPassword !== pwForm.confirmPassword) {
+      setPwIsError(true);
+      setPwMsg("Konfirmasi kata sandi baru tidak cocok.");
+      return;
+    }
+
+    setSavingPw(true);
+    try {
+      const res = await fetch("/api/shop/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CHANGE_PASSWORD",
+          currentPassword: pwForm.currentPassword,
+          newPassword: pwForm.newPassword,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setPwIsError(true);
+        setPwMsg(json.error || "Gagal mengganti kata sandi.");
+      } else {
+        setPwIsError(false);
+        setPwMsg(json.message || "Kata sandi berhasil diperbarui.");
+        setPwForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      }
+    } catch {
+      setPwIsError(true);
+      setPwMsg("Tidak dapat terhubung ke server.");
+    } finally {
+      setSavingPw(false);
+    }
+  }
 
   async function handleDecodeQrisImage(file: File | null) {
     if (!file) return;
@@ -328,6 +573,7 @@ function DashboardContent() {
         setData(json);
         if (!settingsInitialized) {
           setSettingsForm({
+            shopCode: json.shop.shopCode,
             name: json.shop.name,
             address: json.shop.address,
             qrisName: json.shop.qrisName,
@@ -462,6 +708,7 @@ function DashboardContent() {
     setSettingsMsg(null);
     try {
       const payload: Record<string, unknown> = {
+        shopCode: settingsForm.shopCode,
         name: settingsForm.name,
         address: settingsForm.address,
         qrisName: settingsForm.qrisName,
@@ -904,24 +1151,338 @@ function DashboardContent() {
           </div>
 
           {/* TAB 1: PRINT QUEUE */}
-          {tab === "queue" && (
-            <div className="rounded-xl border border-[#171717]/8 bg-white">
-              {jobs.length === 0 ? (
-                <div className="py-16 text-center">
-                  <Printer
-                    className="mx-auto h-8 w-8 text-[#737373]/50"
-                    strokeWidth={1.5}
-                  />
-                  <p className="mt-3 text-sm font-medium text-[#171717]">
-                    Belum ada antrean cetak masuk
-                  </p>
-                  <p className="mt-1 text-xs text-[#737373]">
-                    Buka portal pelanggan untuk menguji unggah dokumen dan pembayaran QRIS
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y divide-[#171717]/8">
-                  {jobs.map((job) => {
+          {tab === "queue" && (() => {
+            const hasPaymentReady = shop.hasStaticQris || shop.hasMidtransKey;
+            const hasAgentEverConnected = Boolean(shop.agentLastSeen);
+            const showOnboarding =
+              !hideOnboarding && (!hasPaymentReady || !hasAgentEverConnected);
+
+            const q = jobSearch.trim().toLowerCase();
+            const counts = {
+              ALL: jobs.length,
+              PENDING: jobs.filter((j) => j.printStatus === "WAITING_PAYMENT")
+                .length,
+              ACTIVE: jobs.filter(
+                (j) =>
+                  j.printStatus === "QUEUED" || j.printStatus === "PRINTING"
+              ).length,
+              COMPLETED: jobs.filter((j) => j.printStatus === "COMPLETED")
+                .length,
+              CANCELLED: jobs.filter((j) => j.printStatus === "CANCELLED")
+                .length,
+            };
+
+            const filteredJobs = jobs.filter((j) => {
+              if (
+                jobFilter === "PENDING" &&
+                j.printStatus !== "WAITING_PAYMENT"
+              )
+                return false;
+              if (
+                jobFilter === "ACTIVE" &&
+                j.printStatus !== "QUEUED" &&
+                j.printStatus !== "PRINTING"
+              )
+                return false;
+              if (jobFilter === "COMPLETED" && j.printStatus !== "COMPLETED")
+                return false;
+              if (jobFilter === "CANCELLED" && j.printStatus !== "CANCELLED")
+                return false;
+              if (q) {
+                const hay =
+                  `${j.jobCode} ${j.customerName} ${j.fileName}`.toLowerCase();
+                if (!hay.includes(q)) return false;
+              }
+              return true;
+            });
+
+            const dailySeries = stats.dailyRevenue7d || [];
+            const maxDayRev = Math.max(
+              1,
+              ...dailySeries.map((d) => d.revenue)
+            );
+            const qrisRev = stats.qrisRevenue || 0;
+            const cashRev = stats.cashRevenue || 0;
+            const totalMethodRev = Math.max(1, qrisRev + cashRev);
+            const qrisPct = Math.round((qrisRev / totalMethodRev) * 100);
+
+            return (
+              <div className="space-y-4">
+                {/* Onboarding Checklist (auto-hides when setup is complete) */}
+                {showOnboarding && (
+                  <div className="no-print rounded-xl border border-[#171717]/10 bg-white p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-[#171717]">
+                          Checklist persiapan toko baru
+                        </p>
+                        <p className="mt-0.5 text-xs text-[#737373]">
+                          Selesaikan 3 langkah ini agar pelanggan bisa scan QR, bayar otomatis, dan langsung mencetak
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHideOnboarding(true)}
+                        className="shrink-0 cursor-pointer text-xs text-[#737373] hover:text-[#171717]"
+                      >
+                        Sembunyikan
+                      </button>
+                    </div>
+                    <div className="mt-4 grid gap-2.5 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={() => setTab("settings")}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-left transition-colors ${
+                          hasPaymentReady
+                            ? "border-[#16a34a]/25 bg-[#16a34a]/5"
+                            : "border-[#171717]/10 bg-[#fafafa] hover:border-[#171717]/30"
+                        }`}
+                      >
+                        <CheckCircle2
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${
+                            hasPaymentReady
+                              ? "text-[#16a34a]"
+                              : "text-[#737373]/40"
+                          }`}
+                          strokeWidth={1.5}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-[#171717]">
+                            1. Pasang QRIS GoPay Merchant
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-[#737373]">
+                            {hasPaymentReady
+                              ? "QRIS sudah terpasang"
+                              : "Unggah foto QRIS toko Anda →"}
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setTab("agent")}
+                        className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-left transition-colors ${
+                          hasAgentEverConnected
+                            ? "border-[#16a34a]/25 bg-[#16a34a]/5"
+                            : "border-[#171717]/10 bg-[#fafafa] hover:border-[#171717]/30"
+                        }`}
+                      >
+                        <CheckCircle2
+                          className={`mt-0.5 h-4 w-4 shrink-0 ${
+                            hasAgentEverConnected
+                              ? "text-[#16a34a]"
+                              : "text-[#737373]/40"
+                          }`}
+                          strokeWidth={1.5}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-[#171717]">
+                            2. Jalankan Windows Print Agent
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-[#737373]">
+                            {hasAgentEverConnected
+                              ? "Print Agent sudah terhubung"
+                              : "Hubungkan printer komputer kasir →"}
+                          </p>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setTab("qr")}
+                        className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] p-3 text-left transition-colors hover:border-[#171717]/30"
+                      >
+                        <QrCode
+                          className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
+                          strokeWidth={1.5}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-[#171717]">
+                            3. Cetak Poster QR Meja Kasir
+                          </p>
+                          <p className="mt-0.5 text-[11px] text-[#737373]">
+                            Unduh PNG atau cetak langsung →
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 7-Day Revenue & Payment Split Analytics */}
+                {dailySeries.length > 0 && (
+                  <div className="no-print grid gap-3 lg:grid-cols-12">
+                    <div className="rounded-xl border border-[#171717]/8 bg-white p-4 lg:col-span-8">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-[#171717]">
+                          Tren omzet 7 hari terakhir
+                        </p>
+                        <span className="font-mono-num text-[11px] text-[#737373]">
+                          Total {stats.totalPagesPrinted || 0} lembar tercetak
+                        </span>
+                      </div>
+                      <div className="mt-4 grid h-24 grid-cols-7 items-end gap-2">
+                        {dailySeries.map((day) => {
+                          const hPct =
+                            day.revenue > 0
+                              ? Math.max(12, Math.round((day.revenue / maxDayRev) * 100))
+                              : 4;
+                          return (
+                            <div
+                              key={day.date}
+                              className="flex h-full flex-col items-center justify-end gap-1"
+                              title={`${day.date}: ${formatRupiah(day.revenue)} (${day.jobs} transaksi)`}
+                            >
+                              <div className="flex w-full flex-1 items-end">
+                                <div
+                                  style={{ height: `${hPct}%` }}
+                                  className={`w-full rounded-t-md transition-all ${
+                                    day.revenue > 0
+                                      ? "bg-[#171717]"
+                                      : "bg-[#171717]/8"
+                                  }`}
+                                />
+                              </div>
+                              <span className="font-mono-num text-[10px] text-[#737373]">
+                                {day.date}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col justify-between rounded-xl border border-[#171717]/8 bg-white p-4 lg:col-span-4">
+                      <p className="text-xs font-medium text-[#171717]">
+                        Komposisi pembayaran (Lunas)
+                      </p>
+                      <div className="mt-3 space-y-2.5 text-xs">
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#525252]">QRIS</span>
+                            <span className="font-mono-num font-medium text-[#171717]">
+                              {formatRupiah(qrisRev)}
+                            </span>
+                          </div>
+                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#171717]/8">
+                            <div
+                              style={{
+                                width: `${qrisRev + cashRev > 0 ? qrisPct : 0}%`,
+                              }}
+                              className="h-full rounded-full bg-[#d9381e]"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[#525252]">Tunai Kasir</span>
+                            <span className="font-mono-num font-medium text-[#171717]">
+                              {formatRupiah(cashRev)}
+                            </span>
+                          </div>
+                          <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#171717]/8">
+                            <div
+                              style={{
+                                width: `${
+                                  qrisRev + cashRev > 0 ? 100 - qrisPct : 0
+                                }%`,
+                              }}
+                              className="h-full rounded-full bg-[#171717]"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Queue List Card with Search & Filter Bar */}
+                <div className="rounded-xl border border-[#171717]/8 bg-white">
+                  {jobs.length > 0 && (
+                    <div className="no-print flex flex-col gap-3 border-b border-[#171717]/8 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(
+                          [
+                            { id: "ALL", label: "Semua" },
+                            { id: "PENDING", label: "Menunggu Bayar" },
+                            { id: "ACTIVE", label: "Antrean & Cetak" },
+                            { id: "COMPLETED", label: "Selesai" },
+                            { id: "CANCELLED", label: "Dibatalkan" },
+                          ] as const
+                        ).map((f) => {
+                          const active = jobFilter === f.id;
+                          return (
+                            <button
+                              key={f.id}
+                              type="button"
+                              onClick={() => setJobFilter(f.id)}
+                              className={`cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                                active
+                                  ? "bg-[#171717] text-white"
+                                  : "bg-[#fafafa] text-[#525252] hover:bg-[#f4f4f5] hover:text-[#171717]"
+                              }`}
+                            >
+                              {f.label}{" "}
+                              <span
+                                className={`font-mono-num ml-1 ${
+                                  active ? "text-white/75" : "text-[#737373]"
+                                }`}
+                              >
+                                {counts[f.id]}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="relative w-full sm:w-60">
+                        <Search
+                          className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[#737373]"
+                          strokeWidth={1.5}
+                        />
+                        <input
+                          type="text"
+                          value={jobSearch}
+                          onChange={(e) => setJobSearch(e.target.value)}
+                          placeholder="Cari kode job, nama, file..."
+                          className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] pr-3 pl-8 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {jobs.length === 0 ? (
+                    <div className="py-16 text-center">
+                      <Printer
+                        className="mx-auto h-8 w-8 text-[#737373]/50"
+                        strokeWidth={1.5}
+                      />
+                      <p className="mt-3 text-sm font-medium text-[#171717]">
+                        Belum ada antrean cetak masuk
+                      </p>
+                      <p className="mt-1 text-xs text-[#737373]">
+                        Buka portal pelanggan untuk menguji unggah dokumen dan pembayaran QRIS
+                      </p>
+                    </div>
+                  ) : filteredJobs.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <p className="text-sm font-medium text-[#171717]">
+                        Tidak ada pesanan yang cocok dengan filter ini
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setJobFilter("ALL");
+                          setJobSearch("");
+                        }}
+                        className="mt-2 cursor-pointer text-xs font-medium text-[#d9381e] hover:underline"
+                      >
+                        Reset filter & pencarian
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-[#171717]/8">
+                      {filteredJobs.map((job) => {
                     const busy = busyJobId === job.id;
                     return (
                       <div
@@ -1079,8 +1640,10 @@ function DashboardContent() {
                   })}
                 </div>
               )}
-            </div>
-          )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* TAB 2: SHOP QR POSTER */}
           {tab === "qr" && (
@@ -1150,24 +1713,61 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  {qrImage && (
-                    <a
-                      href={qrImage}
-                      download={`QR-${shop.shopCode}.png`}
-                      className="btn-action inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17]"
-                    >
-                      <Download className="h-4 w-4" strokeWidth={1.5} />
-                      <span>Unduh PNG</span>
-                    </a>
-                  )}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between gap-2 rounded-lg border border-[#171717]/8 bg-[#fafafa] px-3 py-2 text-xs">
+                    <span className="text-[#525252]">Ukuran poster unduhan</span>
+                    <div className="flex gap-1.5">
+                      {(["A5", "A4"] as const).map((sz) => (
+                        <button
+                          key={sz}
+                          type="button"
+                          onClick={() => setPosterSize(sz)}
+                          className={`cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium ${
+                            posterSize === sz
+                              ? "bg-[#171717] text-white"
+                              : "bg-white text-[#525252] border border-[#171717]/12 hover:text-[#171717]"
+                          }`}
+                        >
+                          {sz === "A5" ? "A5 Meja" : "A4 Dinding"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <button
-                    onClick={() => window.print()}
-                    className="btn-action inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#171717]/15 bg-white text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                    type="button"
+                    disabled={downloadingPoster || !qrImage}
+                    onClick={handleDownloadPosterPng}
+                    className="btn-action inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
                   >
-                    <Printer className="h-4 w-4" strokeWidth={1.5} />
-                    <span>Cetak poster</span>
+                    <Download className="h-4 w-4" strokeWidth={1.5} />
+                    <span>
+                      {downloadingPoster
+                        ? "Menyiapkan poster resolusi tinggi..."
+                        : `Unduh Poster Standee Utuh (${posterSize} PNG)`}
+                    </span>
                   </button>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {qrImage && (
+                      <a
+                        href={qrImage}
+                        download={`QR-${shop.shopCode}.png`}
+                        className="btn-action inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                      >
+                        <QrCode className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        <span>Unduh QR saja</span>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                    >
+                      <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <span>Cetak langsung</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1530,10 +2130,11 @@ function DashboardContent() {
 
           {/* TAB 4: SETTINGS & PRICING */}
           {tab === "settings" && (
-            <form
-              onSubmit={handleSaveSettings}
-              className="rounded-xl border border-[#171717]/8 bg-white p-6"
-            >
+            <div className="space-y-6">
+              <form
+                onSubmit={handleSaveSettings}
+                className="rounded-xl border border-[#171717]/8 bg-white p-6"
+              >
               <h2 className="text-base font-medium text-[#171717]">
                 Konfigurasi tarif cetak & pemetaan printer
               </h2>
@@ -1549,6 +2150,38 @@ function DashboardContent() {
               )}
 
               <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-[#171717]">
+                    URL Portal Pelanggan (Kode Toko)
+                  </label>
+                  <div className="flex items-center overflow-hidden rounded-lg border border-[#171717]/12 bg-[#fafafa] focus-within:border-[#171717] focus-within:bg-white">
+                    <span className="font-mono-num shrink-0 border-r border-[#171717]/10 bg-[#f4f4f5] px-3 py-2.5 text-xs text-[#525252]">
+                      {origin.replace(/^https?:\/\//, "")}/s/
+                    </span>
+                    <input
+                      value={settingsForm.shopCode}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          shopCode: e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_-]/g, "-"),
+                        })
+                      }
+                      maxLength={32}
+                      placeholder="fotokopi-sinar-jaya"
+                      className="font-mono-num h-10 w-full bg-transparent px-3 text-sm font-medium text-[#171717] outline-none"
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-[#737373]">
+                    Gunakan huruf kecil, angka, atau tanda hubung (contoh:{" "}
+                    <code className="font-mono-num text-[#171717]">
+                      sinar-jaya
+                    </code>
+                    ). Jika diubah, unduh &amp; cetak ulang Poster QR meja kasir Anda.
+                  </p>
+                </div>
+
                 <div>
                   <label className="mb-1 block text-xs font-medium text-[#171717]">
                     Nama toko
@@ -2054,6 +2687,96 @@ function DashboardContent() {
                 {savingSettings ? "Menyimpan..." : "Simpan pengaturan"}
               </button>
             </form>
+
+            {/* Security & Change Password Card */}
+            <form
+              onSubmit={handleChangePassword}
+              className="rounded-xl border border-[#171717]/8 bg-white p-6"
+            >
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-[#171717]" strokeWidth={1.5} />
+                <h2 className="text-base font-medium text-[#171717]">
+                  Keamanan & ganti kata sandi akun
+                </h2>
+              </div>
+              <p className="mt-0.5 text-xs text-[#737373]">
+                Gunakan kata sandi minimal 6 karakter untuk melindungi akses Dashboard toko Anda
+              </p>
+
+              {pwMsg && (
+                <div
+                  className={`mt-4 rounded-lg border p-3 text-xs font-medium ${
+                    pwIsError
+                      ? "border-[#dc2626]/25 bg-[#dc2626]/10 text-[#dc2626]"
+                      : "border-[#16a34a]/30 bg-[#16a34a]/10 text-[#16a34a]"
+                  }`}
+                >
+                  {pwMsg}
+                </div>
+              )}
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[#171717]">
+                    Kata sandi saat ini
+                  </label>
+                  <input
+                    required
+                    type="password"
+                    autoComplete="current-password"
+                    placeholder="Sandi lama"
+                    value={pwForm.currentPassword}
+                    onChange={(e) =>
+                      setPwForm({ ...pwForm, currentPassword: e.target.value })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[#171717]">
+                    Kata sandi baru (min. 6)
+                  </label>
+                  <input
+                    required
+                    type="password"
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder="Sandi baru"
+                    value={pwForm.newPassword}
+                    onChange={(e) =>
+                      setPwForm({ ...pwForm, newPassword: e.target.value })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-[#171717]">
+                    Ulangi sandi baru
+                  </label>
+                  <input
+                    required
+                    type="password"
+                    minLength={6}
+                    autoComplete="new-password"
+                    placeholder="Ketik ulang"
+                    value={pwForm.confirmPassword}
+                    onChange={(e) =>
+                      setPwForm({ ...pwForm, confirmPassword: e.target.value })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <button
+                disabled={savingPw}
+                type="submit"
+                className="btn-action mt-4 h-9 cursor-pointer rounded-lg border border-[#171717]/15 bg-[#fafafa] px-4 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-60"
+              >
+                {savingPw ? "Memperbarui..." : "Perbarui kata sandi"}
+              </button>
+            </form>
+            </div>
           )}
 
           {/* TAB 5: WINDOWS PRINT AGENT */}
@@ -2101,6 +2824,26 @@ function DashboardContent() {
                     </span>
                   </button>
                 </div>
+              </div>
+
+              {/* 1-Click .env Download for Print Agent */}
+              <div className="flex flex-col justify-between gap-3 rounded-lg border border-[#d9381e]/20 bg-[#d9381e]/5 p-4 sm:flex-row sm:items-center">
+                <div className="text-xs">
+                  <p className="font-medium text-[#171717]">
+                    Konfigurasi Cepat 1-Klik (File .env Siap Pakai)
+                  </p>
+                  <p className="mt-0.5 text-[#525252]">
+                    Unduh file <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">.env</code> yang sudah terisi URL server &amp; Agent Key toko Anda, lalu letakkan di dalam folder <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">print-agent\</code> dan klik ganda <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">start-agent.bat</code>.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadAgentEnv}
+                  className="btn-action inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#d9381e] px-3.5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                >
+                  <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span>Unduh .env Siap Pakai</span>
+                </button>
               </div>
 
               <div className="space-y-3">

@@ -203,6 +203,10 @@ class _ListenerHomePageState extends State<ListenerHomePage>
     await _channel.invokeMethod('openNotificationAccessSettings');
   }
 
+  Future<void> _openAppInfoSettings() async {
+    await _channel.invokeMethod('openAppInfoSettings');
+  }
+
   Future<void> _openBatterySettings() async {
     await _channel.invokeMethod('openBatterySettings');
   }
@@ -285,7 +289,7 @@ class _ListenerHomePageState extends State<ListenerHomePage>
                   ),
                 ),
                 Text(
-                  'Otomatisasi QRIS • by Gellona Teknologi',
+                  'Otomatisasi QRIS v1.1 • by Gellona Teknologi',
                   style: TextStyle(
                     fontSize: 11,
                     color: NgeprintPalette.muted,
@@ -441,6 +445,25 @@ class _ListenerHomePageState extends State<ListenerHomePage>
                             fontSize: 12.5, fontWeight: FontWeight.w500),
                       ),
                     ),
+                    if (!_hasPermission)
+                      OutlinedButton.icon(
+                        onPressed: _openAppInfoSettings,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: NgeprintPalette.ink,
+                          side: const BorderSide(color: NgeprintPalette.border),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        icon: const Icon(Icons.tune_rounded, size: 16),
+                        label: const Text(
+                          'Buka Info Aplikasi (Setelan Terbatas)',
+                          style: TextStyle(
+                              fontSize: 12.5, fontWeight: FontWeight.w500),
+                        ),
+                      ),
                     OutlinedButton.icon(
                       onPressed: _openBatterySettings,
                       style: OutlinedButton.styleFrom(

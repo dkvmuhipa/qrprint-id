@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { evaluateShopEntitlement, SAAS_PLANS } from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
+import { isValidShopSlug, sanitizeShopSlug } from "@/lib/utils";
 
 export async function GET() {
   const shop = await getCurrentShop();
@@ -45,9 +47,35 @@ export async function GET() {
     .filter((j) => j.paymentStatus === "PAID" && j.createdAt >= todayStart)
     .reduce((acc, j) => acc + j.totalPrice, 0);
 
-  const totalRevenue = jobs
-    .filter((j) => j.paymentStatus === "PAID")
+  const paidJobs = jobs.filter((j) => j.paymentStatus === "PAID");
+  const totalRevenue = paidJobs.reduce((acc, j) => acc + j.totalPrice, 0);
+  const qrisRevenue = paidJobs
+    .filter((j) => j.paymentMethod === "QRIS")
     .reduce((acc, j) => acc + j.totalPrice, 0);
+  const cashRevenue = paidJobs
+    .filter((j) => j.paymentMethod !== "QRIS")
+    .reduce((acc, j) => acc + j.totalPrice, 0);
+  const totalPagesPrinted = paidJobs.reduce(
+    (acc, j) => acc + j.pageCount * j.copies,
+    0
+  );
+
+  // Build 7-day daily revenue & order count series
+  const dailyRevenue7d = Array.from({ length: 7 }, (_, idx) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (6 - idx));
+    const nextD = new Date(d);
+    nextD.setDate(nextD.getDate() + 1);
+    const dayJobs = paidJobs.filter(
+      (j) => j.createdAt >= d && j.createdAt < nextD
+    );
+    return {
+      date: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
+      revenue: dayJobs.reduce((acc, j) => acc + j.totalPrice, 0),
+      jobs: dayJobs.length,
+    };
+  });
 
   const activeQueue = jobs.filter(
     (j) =>
@@ -112,6 +140,10 @@ export async function GET() {
     stats: {
       todayRevenue,
       totalRevenue,
+      qrisRevenue,
+      cashRevenue,
+      totalPagesPrinted,
+      dailyRevenue7d,
       activeQueue,
       completedCount,
     },
@@ -127,6 +159,72 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
+
+    if (body.action === "CHANGE_PASSWORD") {
+      const currentPassword = String(body.currentPassword || "");
+      const newPassword = String(body.newPassword || "");
+
+      if (!currentPassword || newPassword.length < 6) {
+        return NextResponse.json(
+          { error: "Kata sandi lama wajib diisi dan sandi baru minimal 6 karakter." },
+          { status: 400 }
+        );
+      }
+
+      const valid = await bcrypt.compare(currentPassword, shop.passwordHash);
+      if (!valid) {
+        return NextResponse.json(
+          { error: "Kata sandi saat ini tidak cocok." },
+          { status: 400 }
+        );
+      }
+
+      const nextHash = await bcrypt.hash(newPassword, 10);
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { passwordHash: nextHash },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        message: "Kata sandi akun toko berhasil diperbarui.",
+      });
+    }
+
+    let nextShopCode: string | undefined = undefined;
+    if (body.shopCode !== undefined) {
+      const cleanedSlug = sanitizeShopSlug(String(body.shopCode));
+      if (!isValidShopSlug(cleanedSlug)) {
+        return NextResponse.json(
+          {
+            error:
+              "Kode URL toko tidak valid. Gunakan 3–32 karakter huruf kecil, angka, tanda hubung (-), atau garis bawah (_).",
+          },
+          { status: 400 }
+        );
+      }
+      if (cleanedSlug.toLowerCase() !== shop.shopCode.toLowerCase()) {
+        const conflict = await prisma.shop.findFirst({
+          where: {
+            id: { not: shop.id },
+            OR: [
+              { shopCode: cleanedSlug },
+              { shopCode: cleanedSlug.toUpperCase() },
+            ],
+          },
+          select: { id: true },
+        });
+        if (conflict) {
+          return NextResponse.json(
+            {
+              error: `URL "/s/${cleanedSlug}" sudah dipakai toko lain. Silakan pilih nama lain.`,
+            },
+            { status: 409 }
+          );
+        }
+      }
+      nextShopCode = cleanedSlug;
+    }
 
     let nextStaticQris: string | null | undefined = undefined;
     let detectedQrisMerchant: string | null = null;
@@ -152,6 +250,7 @@ export async function PATCH(req: Request) {
     const updated = await prisma.shop.update({
       where: { id: shop.id },
       data: {
+        ...(nextShopCode ? { shopCode: nextShopCode } : {}),
         name: body.name ? String(body.name).trim() : shop.name,
         address: body.address ? String(body.address).trim() : shop.address,
         phone: body.phone ? String(body.phone).trim() : shop.phone,

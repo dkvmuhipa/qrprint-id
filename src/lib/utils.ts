@@ -13,6 +13,41 @@ export function generateShopCode(): string {
   return `TOKO_${digits}`;
 }
 
+const RESERVED_SHOP_SLUGS = new Set([
+  "admin",
+  "api",
+  "login",
+  "register",
+  "dashboard",
+  "downloads",
+  "health",
+  "s",
+  "static",
+]);
+
+export function sanitizeShopSlug(raw: string): string {
+  return String(raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-_]+|[-_]+$/g, "")
+    .slice(0, 32);
+}
+
+export function isValidShopSlug(slug: string): boolean {
+  if (slug.length < 3 || slug.length > 32) return false;
+  if (!/^[a-z0-9][a-z0-9_-]*[a-z0-9]$/.test(slug)) return false;
+  if (RESERVED_SHOP_SLUGS.has(slug)) return false;
+  return true;
+}
+
+export function generateShopSlugFromName(name: string): string {
+  const base = sanitizeShopSlug(name);
+  if (isValidShopSlug(base)) return base;
+  return `toko-${crypto.randomInt(1000, 9999)}`;
+}
+
 export function generateJobCode(): string {
   const digits = crypto.randomInt(1000, 9999);
   const letters = "ABCDEFGHJKLMNPQRSTUVWXYZ";

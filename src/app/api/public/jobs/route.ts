@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     }
 
     const formData = await req.formData();
-    const shopCode = String(formData.get("shopCode") || "").toUpperCase();
+    const shopCode = String(formData.get("shopCode") || "").trim();
     const file = formData.get("file") as File | null;
     const customerName =
       String(formData.get("customerName") || "").trim() || "Pelanggan";
@@ -72,7 +72,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const shop = await prisma.shop.findUnique({ where: { shopCode } });
+    const shop = await prisma.shop.findFirst({
+      where: {
+        OR: [
+          { shopCode },
+          { shopCode: shopCode.toLowerCase() },
+          { shopCode: shopCode.toUpperCase() },
+        ],
+      },
+    });
     if (!shop) {
       return NextResponse.json(
         { error: "Toko tidak ditemukan." },

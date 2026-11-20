@@ -3,7 +3,10 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { setShopSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { generateAgentKey, generateShopCode } from "@/lib/utils";
+import {
+  generateAgentKey,
+  generateShopSlugFromName,
+} from "@/lib/utils";
 import {
   calculateNewExpiryDate,
   generateInvoiceCode,
@@ -13,6 +16,16 @@ import {
   createMidtransQrisCharge,
   resolveMidtransConfig,
 } from "@/lib/midtrans";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizeIndonesiaPhone(raw: string): string {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.startsWith("62")) {
+    return "0" + digits.slice(2);
+  }
+  return digits;
+}
 
 export async function POST(req: Request) {
   try {
@@ -39,15 +52,43 @@ export async function POST(req: Request) {
       plan,
     } = body;
 
-    if (!name || !email || !phone || !password || password.length < 4) {
+    const cleanName = String(name || "").trim().slice(0, 80);
+    const cleanOwner = String(ownerName || cleanName).trim().slice(0, 80);
+    const cleanEmail = String(email || "").trim().toLowerCase().slice(0, 120);
+    const cleanPhone = normalizeIndonesiaPhone(String(phone || ""));
+    const cleanAddress = String(address || "").trim().slice(0, 200) || "Indonesia";
+    const rawPassword = String(password || "");
+
+    if (!cleanName) {
       return NextResponse.json(
-        { error: "Mohon lengkapi semua data wajib (kata sandi minimal 4 karakter)." },
+        { error: "Nama toko wajib diisi." },
+        { status: 400 }
+      );
+    }
+
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
+      return NextResponse.json(
+        { error: "Format email tidak valid. Contoh: nama@tokoanda.com" },
+        { status: 400 }
+      );
+    }
+
+    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+      return NextResponse.json(
+        { error: "Nomor WhatsApp tidak valid (9–15 digit angka, misal 08123456789)." },
+        { status: 400 }
+      );
+    }
+
+    if (rawPassword.length < 6) {
+      return NextResponse.json(
+        { error: "Kata sandi minimal 6 karakter agar akun kasir aman." },
         { status: 400 }
       );
     }
 
     const existing = await prisma.shop.findUnique({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: cleanEmail },
     });
     if (existing) {
       return NextResponse.json(
@@ -56,32 +97,48 @@ export async function POST(req: Request) {
       );
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const shopCode = generateShopCode();
+    const passwordHash = await bcrypt.hash(rawPassword, 10);
+    let shopCode = generateShopSlugFromName(cleanName);
+    const slugTaken = await prisma.shop.findFirst({
+      where: {
+        OR: [
+          { shopCode },
+          { shopCode: shopCode.toUpperCase() },
+        ],
+      },
+      select: { id: true },
+    });
+    if (slugTaken) {
+      shopCode = `${shopCode.slice(0, 26)}-${Math.floor(100 + Math.random() * 900)}`;
+    }
     const agentKey = generateAgentKey();
 
-    const requestedPlan = getPlanDef(plan);
+    const requestedPlan = getPlanDef(plan || "DEMO");
     // Standard SaaS onboarding: every new shop starts on active DEMO 24-hour trial immediately,
-    // and if they selected a paid plan (BULANAN / PRO / PREMIUM / LIFETIME), an invoice is created
+    // and if they selected a paid plan (BULANAN / PRO / PREMIUM), an invoice is created
     // so they can complete payment in the Dashboard Billing tab to unlock that tier.
     const demoExpiry = calculateNewExpiryDate(null, 1);
+
+    const parsedBw = Math.round(Number(bwPrice));
+    const parsedColor = Math.round(Number(colorPrice));
 
     const shop = await prisma.shop.create({
       data: {
         shopCode,
-        name: name.trim(),
-        ownerName: (ownerName || name).trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        address: (address || "Indonesia").trim(),
+        name: cleanName,
+        ownerName: cleanOwner,
+        email: cleanEmail,
+        phone: cleanPhone,
+        address: cleanAddress,
         passwordHash,
         plan: "DEMO",
         planStatus: "ACTIVE",
         planExpiresAt: demoExpiry,
-        bwPrice: Math.max(100, Number(bwPrice) || 500),
-        colorPrice: Math.max(200, Number(colorPrice) || 1500),
+        bwPrice: Number.isFinite(parsedBw) && parsedBw >= 100 ? parsedBw : 500,
+        colorPrice:
+          Number.isFinite(parsedColor) && parsedColor >= 100 ? parsedColor : 1500,
         agentKey,
-        qrisName: `QRIS ${name.trim().toUpperCase()}`,
+        qrisName: `QRIS ${cleanName.toUpperCase()}`,
       },
     });
 

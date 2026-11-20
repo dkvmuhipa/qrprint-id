@@ -20,7 +20,7 @@ object ListenerPrefs {
     private const val KEY_ENABLED = "enabled"
     private const val KEY_FILTER_ALL_RP = "filter_all_rp"
     private const val KEY_LOGS = "logs_json"
-    private const val DEFAULT_SERVER_URL = "https://western-oxide-swaziland-pal.trycloudflare.com"
+    private const val DEFAULT_SERVER_URL = "https://ngeprint.gellona.web.id"
     private const val MAX_LOGS = 50
 
     fun getServerUrl(context: Context): String {
