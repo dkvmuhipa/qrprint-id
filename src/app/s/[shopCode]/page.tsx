@@ -861,9 +861,16 @@ function CustomerScanPortalContent({
 
               {/* Paper Size */}
               <div>
-                <label className="mb-1.5 block text-xs text-[#5e554a]">
-                  Ukuran kertas
-                </label>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label className="block text-xs text-[#5e554a]">
+                    Ukuran kertas
+                  </label>
+                  {shop.allowExtraPaper === false && (
+                    <span className="text-[11px] text-[#7b7266]">
+                      F4 &amp; Foto 4×6 tersedia mulai paket berbayar
+                    </span>
+                  )}
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   {[
                     { id: "A4" as const, label: "A4 Standar", locked: false },
@@ -883,13 +890,18 @@ function CustomerScanPortalContent({
                       key={s.id}
                       disabled={s.locked}
                       onClick={() => setPaperSize(s.id)}
-                      className={`h-9 cursor-pointer rounded-lg border text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
+                      className={`flex min-h-[38px] cursor-pointer flex-col items-center justify-center rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                         paperSize === s.id
                           ? "border-[#1f1b16] bg-[#1f1b16] text-[#fdfbf7]"
                           : "border-[#1f1b16]/12 bg-white text-[#1f1b16] hover:bg-[#efe9df]"
                       }`}
                     >
-                      {s.label}
+                      <span>{s.label}</span>
+                      {s.locked && (
+                        <span className="text-[10px] font-normal text-[#7b7266]">
+                          Paket Pro
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
