@@ -28,9 +28,12 @@ import { HeroIllustration } from "./HeroIllustration";
 const PRODUCTS = [
   {
     id: "windows",
-    label: "Ngeprint Windows Agent",
+    label: "Windows Print Agent",
+    shortDesc: "Cetak otomatis via PC/Laptop",
+    status: "Tersedia",
+    requirement: "Perangkat: PC/Laptop Windows 10/11 + Printer USB standar",
     icon: Monitor,
-    context: "Untuk toko fotokopi & percetakan dengan PC Windows",
+    context: "Mode 1 · Untuk toko fotokopi & percetakan dengan komputer kasir",
     headline: "Dari HP pelanggan, langsung keluar di printer meja Anda",
     subline: "Tanpa simpan nomor WhatsApp dan tanpa colok flashdisk",
     desc: "Jalankan Ngeprint Agent di Windows 10/11. Pelanggan memindai QR di meja kasir, mengunggah PDF atau foto, membayar via QRIS, dan dokumen langsung tercetak ke printer USB Anda.",
@@ -38,17 +41,23 @@ const PRODUCTS = [
   {
     id: "kasir",
     label: "Dashboard Kasir & Tarif",
+    shortDesc: "Antrean, tarif & omzet harian",
+    status: "Tersedia",
+    requirement: "Perangkat: Browser HP, Tablet, atau PC kasir tanpa instalasi",
     icon: Layers,
-    context: "Untuk pembukuan harian & manajemen antrean otomatis",
+    context: "Mode 2 · Untuk pembukuan harian & manajemen antrean otomatis",
     headline: "Hitung halaman PDF dan rekap omzet cetak secara otomatis",
     subline: "Atur tarif per lembar sendiri dan pisahkan printer hitam-putih serta warna",
     desc: "Tidak perlu menghitung lembar manual atau mencatat di buku kas. Semua pesanan, tarif Hitam Putih, Warna, Bolak-balik, dan status pembayaran QRIS tercatat langsung di dashboard.",
   },
   {
     id: "android",
-    label: "Ngeprint Android OTG",
+    label: "Android OTG",
+    shortDesc: "Cetak mandiri tanpa komputer",
+    status: "Segera",
+    requirement: "Perangkat: HP Android 7.0+ + Kabel USB OTG + Printer USB",
     icon: Smartphone,
-    context: "Untuk usaha cetak rumahan & koperasi tanpa komputer",
+    context: "Mode 3 (Segera Hadir) · Untuk usaha cetak rumahan & koperasi tanpa PC",
     headline: "Ubah HP Android dan kabel OTG menjadi mesin cetak mandiri",
     subline: "Mendukung Android 7.0+ dan kabel USB OTG standar",
     desc: "Solusi hemat daya untuk konter pulsa atau koperasi kampus. Sambungkan printer USB langsung ke HP Android dan terima pesanan cetak mandiri sepanjang hari.",
@@ -189,27 +198,54 @@ export function LandingClient() {
     <div className="bg-ambient min-h-screen">
       <Navbar onOpenDemo={() => setDemoOpen(true)} />
 
-      {/* Quiet Mode Selector Bar */}
+      {/* Quiet Mode Selector Bar with Clear Context */}
       <div className="border-b border-[#1f1b16]/8 bg-[#fdfbf7]">
-        <div className="no-scrollbar mx-auto flex max-w-6xl items-center justify-start gap-2 overflow-x-auto px-6 py-2.5">
-          {PRODUCTS.map((item) => {
-            const Icon = item.icon;
-            const active = item.id === activeTab;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`inline-flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3.5 text-xs font-medium transition-colors duration-150 ${
-                  active
-                    ? "bg-[#1f1b16] text-[#fdfbf7]"
-                    : "text-[#5e554a] hover:bg-[#efe9df] hover:text-[#1f1b16]"
-                }`}
-              >
-                <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-2.5 sm:flex-row sm:items-center sm:gap-4">
+          <span className="shrink-0 text-xs text-[#7b7266]">
+            Pilih modul sistem:
+          </span>
+          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
+            {PRODUCTS.map((item) => {
+              const Icon = item.icon;
+              const active = item.id === activeTab;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`inline-flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-1.5 text-left transition-colors duration-150 ${
+                    active
+                      ? "border-[#1f1b16] bg-[#1f1b16] text-[#fdfbf7]"
+                      : "border-[#1f1b16]/8 bg-[#f7f4ee]/60 text-[#5e554a] hover:bg-[#efe9df] hover:text-[#1f1b16]"
+                  }`}
+                >
+                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+                  <div className="leading-tight">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-medium">{item.label}</span>
+                      {item.status === "Segera" && (
+                        <span
+                          className={`rounded px-1.5 py-0.5 font-mono-num text-[10px] ${
+                            active
+                              ? "bg-white/15 text-[#fdfbf7]"
+                              : "bg-[#efe9df] text-[#7b7266]"
+                          }`}
+                        >
+                          Segera
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`text-[11px] ${
+                        active ? "text-[#fdfbf7]/75" : "text-[#7b7266]"
+                      }`}
+                    >
+                      {item.shortDesc}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -231,6 +267,10 @@ export function LandingClient() {
 
             <p className="mt-2 max-w-xl text-base leading-relaxed text-[#5e554a]">
               {currentProduct.desc}
+            </p>
+
+            <p className="font-mono-num mt-4 inline-block rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] px-3 py-1.5 text-xs text-[#5e554a]">
+              {currentProduct.requirement}
             </p>
 
             {/* Primary & Secondary Action (Strictly 2 actions per Unslop Layout Pass) */}
