@@ -89,6 +89,6 @@ export function calculatePrintPrice(params: {
   return {
     effectivePages,
     unitPrice,
-    totalPrice: Math.max(500, rawTotal),
+    totalPrice: Math.max(100, rawTotal),
   };
 }

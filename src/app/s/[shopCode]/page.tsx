@@ -1000,7 +1000,7 @@ function CustomerScanPortalContent({
             <div className="sticky bottom-3 z-20 rounded-xl border border-[#1f1b16]/15 bg-[#161513] p-4 text-[#efe9de] shadow-lg">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="font-mono-num truncate text-xs text-[#aaa398]">
+                  <p className="font-mono-num text-xs whitespace-nowrap text-[#aaa398]">
                     Total ({priceCalc.effectivePages} hal × {copies})
                   </p>
                   <p className="font-mono-num mt-0.5 text-xl font-medium text-[#efe9de]">
@@ -1010,9 +1010,13 @@ function CustomerScanPortalContent({
                 <button
                   disabled={!file || submitting || shop.canAcceptJobs === false}
                   type="submit"
-                  className="btn-action h-11 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
+                  className="btn-action h-11 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17] disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-sm"
                 >
-                  {submitting ? "Mengunggah..." : "Lanjut pembayaran →"}
+                  {submitting
+                    ? "Mengunggah..."
+                    : !file
+                    ? "Pilih file dulu"
+                    : "Lanjut pembayaran →"}
                 </button>
               </div>
             </div>
