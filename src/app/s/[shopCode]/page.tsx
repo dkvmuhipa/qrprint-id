@@ -154,9 +154,13 @@ function CustomerScanPortalContent({
       return;
     }
 
+    const jobCodeToPoll = activeJob.jobCode;
     const timer = setInterval(async () => {
       try {
-        const res = await fetch(`/api/public/jobs/${activeJob.jobCode}`);
+        const res = await fetch(
+          `/api/public/jobs/${jobCodeToPoll}?t=${Date.now()}`,
+          { cache: "no-store" }
+        );
         if (res.ok) {
           const data = await res.json();
           setActiveJob(data.job);
@@ -167,7 +171,7 @@ function CustomerScanPortalContent({
     }, 2500);
 
     return () => clearInterval(timer);
-  }, [activeJob]);
+  }, [activeJob?.jobCode, activeJob?.printStatus]);
 
   async function handleFileSelect(selected: File | null) {
     setSubmitError(null);
@@ -191,6 +195,7 @@ function CustomerScanPortalContent({
       }
     } else {
       setDetectedPages(1);
+      setPageRange("ALL");
     }
   }
 
@@ -237,6 +242,9 @@ function CustomerScanPortalContent({
         setSubmitError(data.error || "Gagal mengunggah dokumen");
       } else {
         setActiveJob(data.job);
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
       }
     } catch {
       setSubmitError("Gagal mengirim dokumen ke server");
@@ -255,7 +263,10 @@ function CustomerScanPortalContent({
         body: JSON.stringify({ action: "SIMULATE_PAY" }),
       });
       if (res.ok) {
-        const refreshed = await fetch(`/api/public/jobs/${activeJob.jobCode}`);
+        const refreshed = await fetch(
+          `/api/public/jobs/${activeJob.jobCode}?t=${Date.now()}`,
+          { cache: "no-store" }
+        );
         if (refreshed.ok) {
           const data = await refreshed.json();
           setActiveJob(data.job);
@@ -336,7 +347,7 @@ function CustomerScanPortalContent({
   }
 
   return (
-    <div className="bg-ambient min-h-screen pb-16">
+    <div className="bg-ambient min-h-screen pb-28">
       {/* Compact Top Bar */}
       <header className="sticky top-0 z-30 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
         <div className="mx-auto flex h-13 max-w-xl items-center justify-between px-4">
@@ -798,53 +809,55 @@ function CustomerScanPortalContent({
                 />
               </div>
 
-              {/* Color Mode — Line Icons Instead of Emojis */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setColorMode("BW")}
-                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
-                    colorMode === "BW"
-                      ? "border-[#1f1b16] bg-white"
-                      : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
-                  }`}
-                >
-                  <FileText
-                    className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
-                    strokeWidth={1.5}
-                  />
-                  <div>
-                    <p className="text-xs font-medium text-[#1f1b16]">
-                      Hitam Putih
-                    </p>
-                    <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
-                      {formatRupiah(shop.bwPrice)}/lembar
-                    </p>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setColorMode("COLOR")}
-                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
-                    colorMode === "COLOR"
-                      ? "border-[#1f1b16] bg-white"
-                      : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
-                  }`}
-                >
-                  <Palette
-                    className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
-                    strokeWidth={1.5}
-                  />
-                  <div>
-                    <p className="text-xs font-medium text-[#1f1b16]">
-                      Warna
-                    </p>
-                    <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
-                      {formatRupiah(shop.colorPrice)}/lembar
-                    </p>
-                  </div>
-                </button>
-              </div>
+              {/* Color Mode — Hidden when PHOTO_4X6 since Photo uses fixed photoPrice */}
+              {paperSize !== "PHOTO_4X6" && (
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setColorMode("BW")}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
+                      colorMode === "BW"
+                        ? "border-2 border-[#1f1b16] bg-white"
+                        : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
+                    }`}
+                  >
+                    <FileText
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
+                      strokeWidth={1.5}
+                    />
+                    <div>
+                      <p className="text-xs font-medium text-[#1f1b16]">
+                        Hitam Putih
+                      </p>
+                      <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
+                        {formatRupiah(shop.bwPrice)}/lembar
+                      </p>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setColorMode("COLOR")}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
+                      colorMode === "COLOR"
+                        ? "border-2 border-[#d9381e] bg-white"
+                        : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
+                    }`}
+                  >
+                    <Palette
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
+                      strokeWidth={1.5}
+                    />
+                    <div>
+                      <p className="text-xs font-medium text-[#1f1b16]">
+                        Warna
+                      </p>
+                      <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
+                        {formatRupiah(shop.colorPrice)}/lembar
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              )}
 
               {/* Paper Size */}
               <div>
@@ -996,14 +1009,14 @@ function CustomerScanPortalContent({
               </div>
             </div>
 
-            {/* Sticky Price Summary & Submit */}
-            <div className="sticky bottom-3 z-20 rounded-xl border border-[#1f1b16]/15 bg-[#161513] p-4 text-[#efe9de] shadow-lg">
-              <div className="flex items-center justify-between gap-3">
+            {/* Sticky Price Summary & Submit — Fixed cleanly at bottom so it never covers form options */}
+            <div className="fixed right-0 bottom-0 left-0 z-30 border-t border-[#1f1b16]/15 bg-[#161513]/98 px-4 py-3 text-[#efe9de] backdrop-blur-sm">
+              <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-mono-num text-xs whitespace-nowrap text-[#aaa398]">
                     Total ({priceCalc.effectivePages} hal × {copies})
                   </p>
-                  <p className="font-mono-num mt-0.5 text-xl font-medium text-[#efe9de]">
+                  <p className="font-mono-num mt-0.5 text-lg font-medium text-[#efe9de] sm:text-xl">
                     {formatRupiah(priceCalc.totalPrice)}
                   </p>
                 </div>
