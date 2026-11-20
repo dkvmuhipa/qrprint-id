@@ -92,5 +92,6 @@ model DemoRequest {
   shopName  String
   address   String
   email     String
+  status    String   @default("NEW")
   createdAt DateTime @default(now())
 }
