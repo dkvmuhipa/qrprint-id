@@ -30,24 +30,28 @@ export async function GET(req: Request) {
     take: 5,
   });
 
+  const bwPrinter = shop.bwPrinter;
+  const colorPrinter = shop.colorPrinter;
+  const photoPrinter = shop.photoPrinter;
+
   function resolveTargetPrinter(job: {
     colorMode: string;
     paperSize: string;
   }): string {
     // DEMO plan (1 printer): all jobs route to bwPrinter
     if (planDef.maxPrinters === 1) {
-      return shop.bwPrinter;
+      return bwPrinter;
     }
-    // PRO / PREMIUM / LIFETIME (3+ printers): PHOTO_4X6 routes to dedicated photoPrinter if set
+    // PRO / PREMIUM (3+ printers): PHOTO_4X6 routes to dedicated photoPrinter if set
     if (
       job.paperSize === "PHOTO_4X6" &&
       (planDef.maxPrinters === null || planDef.maxPrinters >= 3) &&
-      shop.photoPrinter &&
-      shop.photoPrinter !== "Default Printer"
+      photoPrinter &&
+      photoPrinter !== "Default Printer"
     ) {
-      return shop.photoPrinter;
+      return photoPrinter;
     }
-    return job.colorMode === "COLOR" ? shop.colorPrinter : shop.bwPrinter;
+    return job.colorMode === "COLOR" ? colorPrinter : bwPrinter;
   }
 
   return NextResponse.json({

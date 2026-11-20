@@ -1,8 +1,14 @@
 import fs from "fs/promises";
 import path from "path";
+import os from "os";
 import crypto from "crypto";
 
-const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+// On Vercel / read-only serverless filesystems, process.cwd() is read-only; use /tmp or UPLOADS_DIR env
+const UPLOADS_DIR =
+  process.env.UPLOADS_DIR ||
+  (process.env.VERCEL
+    ? path.join(os.tmpdir(), "ngeprint-uploads")
+    : path.join(process.cwd(), "uploads"));
 
 export interface VerifiedFileType {
   mimeType: "application/pdf" | "image/jpeg" | "image/png" | "image/webp";
