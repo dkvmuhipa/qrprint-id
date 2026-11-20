@@ -16,6 +16,7 @@ import {
   createMidtransQrisCharge,
   resolveMidtransConfig,
 } from "@/lib/midtrans";
+import { convertStaticQrisToDynamic, isValidStaticQris } from "@/lib/qris";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -150,6 +151,7 @@ export async function POST(req: Request) {
       let paymentOrderId: string | null = null;
       let qrisUrl: string | null = null;
       let qrisString: string | null = null;
+      let finalAmount = requestedPlan.price;
 
       const platformMidtrans = resolveMidtransConfig({});
       if (platformMidtrans) {
@@ -166,8 +168,20 @@ export async function POST(req: Request) {
           qrisUrl = charge.qrisUrl;
           qrisString = charge.qrisString;
         } catch {
-          // Fallback to simulation QRIS if Midtrans charge fails
+          // Fallback to platform static QRIS or simulation QRIS
         }
+      }
+
+      const platformStaticQris = (process.env.PLATFORM_STATIC_QRIS || "").trim();
+      if (
+        paymentProvider === "SIMULATION" &&
+        platformStaticQris &&
+        isValidStaticQris(platformStaticQris)
+      ) {
+        const uniqueOffset = Math.floor(11 + Math.random() * 88);
+        finalAmount = requestedPlan.price + uniqueOffset;
+        qrisString = convertStaticQrisToDynamic(platformStaticQris, finalAmount);
+        paymentProvider = "MERCHANT_QRIS";
       }
 
       const inv = await prisma.subscriptionInvoice.create({
@@ -175,7 +189,7 @@ export async function POST(req: Request) {
           invoiceCode,
           shopId: shop.id,
           plan: requestedPlan.id,
-          amount: requestedPlan.price,
+          amount: finalAmount,
           durationDays: requestedPlan.durationDays,
           paymentProvider,
           paymentOrderId,

@@ -17,12 +17,14 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const identifier = (body.identifier || body.shopCode || body.email || "").trim();
-    const password = body.password || "";
+    const identifier = String(
+      body.identifier || body.shopCode || body.email || ""
+    ).trim();
+    const password = String(body.password || "");
 
     if (!identifier || !password) {
       return NextResponse.json(
-        { error: "Masukkan ID Toko / Email dan password." },
+        { error: "Masukkan kode toko / email dan kata sandi." },
         { status: 400 }
       );
     }
@@ -30,6 +32,8 @@ export async function POST(req: Request) {
     const shop = await prisma.shop.findFirst({
       where: {
         OR: [
+          { shopCode: identifier },
+          { shopCode: identifier.toLowerCase() },
           { shopCode: identifier.toUpperCase() },
           { email: identifier.toLowerCase() },
         ],
@@ -38,7 +42,7 @@ export async function POST(req: Request) {
 
     if (!shop) {
       return NextResponse.json(
-        { error: "ID Toko atau Email tidak ditemukan." },
+        { error: "Kode toko atau email tidak ditemukan." },
         { status: 401 }
       );
     }
@@ -46,7 +50,7 @@ export async function POST(req: Request) {
     const valid = await bcrypt.compare(password, shop.passwordHash);
     if (!valid) {
       return NextResponse.json(
-        { error: "Password salah. Silakan coba lagi." },
+        { error: "Kata sandi salah. Silakan coba lagi." },
         { status: 401 }
       );
     }

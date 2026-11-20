@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
+  const [showForgotHelp, setShowForgotHelp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -98,7 +99,7 @@ export default function LoginPage() {
             Masuk ke dashboard
           </h2>
           <p className="mt-1 text-xs text-[#7b7266]">
-            Gunakan ID Toko (contoh: TOKO_123456) atau alamat email terdaftar
+            Gunakan kode toko (contoh: sinar-jaya) atau alamat email terdaftar
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -110,24 +111,35 @@ export default function LoginPage() {
 
             <div>
               <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
-                ID Toko atau email
+                Kode toko atau email
               </label>
               <input
                 required
+                autoComplete="username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="TOKO_123456 atau email@tokoanda.com"
+                placeholder="sinar-jaya atau email@tokoanda.com"
                 className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
-                Kata sandi
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-[#1f1b16]">
+                  Kata sandi
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotHelp((v) => !v)}
+                  className="cursor-pointer text-[11px] font-medium text-[#7b7266] hover:text-[#d9381e]"
+                >
+                  Lupa kata sandi?
+                </button>
+              </div>
               <div className="relative">
                 <input
                   required
+                  autoComplete="current-password"
                   type={showPass ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -147,6 +159,23 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+              {showForgotHelp && (
+                <div className="mt-2 rounded-lg border border-[#1f1b16]/10 bg-[#f7f4ee] p-3 text-xs text-[#5e554a]">
+                  <p className="font-medium text-[#1f1b16]">
+                    Bantuan Reset Kata Sandi
+                  </p>
+                  <p className="mt-0.5 leading-relaxed">
+                    Demi keamanan akun toko, reset kata sandi diproses langsung oleh tim <strong>Gellona Teknologi</strong>. Kirimkan email atau kode toko Anda ke{" "}
+                    <a
+                      href="mailto:admin@gellona.id?subject=Reset%20Kata%20Sandi%20Ngeprint"
+                      className="font-medium text-[#d9381e] underline"
+                    >
+                      admin@gellona.id
+                    </a>{" "}
+                    untuk mendapatkan kata sandi sementara.
+                  </p>
+                </div>
+              )}
             </div>
 
             <button
