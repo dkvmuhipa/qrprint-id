@@ -122,32 +122,15 @@ const PLANS = [
     price: "Rp 599.000",
     period: "/tahun",
     featured: false,
-    note: "Untuk percetakan ramai (6 printer)",
+    note: "Untuk percetakan ramai (Unlimited printer)",
     features: [
       "Seluruh fitur pada paket Pro",
-      "Hingga 6 printer aktif bersamaan",
+      "Jumlah printer terhubung tanpa batas",
       "Dukungan kertas A4, F4 & Foto 4×6",
       "Prioritas bantuan remote AnyDesk",
       "Pembaruan fitur berikutnya gratis",
     ],
     cta: "Pilih Premium",
-    action: "register" as const,
-  },
-  {
-    id: "LIFETIME",
-    name: "Seumur Hidup",
-    price: "Rp 999.000",
-    period: "sekali bayar",
-    featured: false,
-    note: "Bebas tagihan tahunan selamanya",
-    features: [
-      "Seluruh fitur Premium selamanya",
-      "Tanpa biaya perpanjangan tahunan",
-      "Jumlah printer tanpa batas",
-      "Jalur dukungan teknis VIP prioritas",
-      "Akses awal ke pembaruan sistem",
-    ],
-    cta: "Ambil Seumur Hidup",
     action: "register" as const,
   },
 ];
@@ -534,7 +517,7 @@ export function LandingClient() {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => (
             <div
               key={plan.id}

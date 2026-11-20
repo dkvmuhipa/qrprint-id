@@ -1,6 +1,6 @@
 import crypto from "crypto";
 
-export type PlanId = "DEMO" | "BULANAN" | "PRO" | "PREMIUM" | "LIFETIME";
+export type PlanId = "DEMO" | "BULANAN" | "PRO" | "PREMIUM";
 
 export interface PlanDefinition {
   id: PlanId;
@@ -81,35 +81,16 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     periodLabel: "365 hari",
     durationDays: 365,
     maxJobs: null,
-    maxPrinters: 6,
-    allowExtraPaper: true,
-    allowDuplex: true,
-    description: "Kapasitas tinggi untuk percetakan ramai & multi-printer",
-    features: [
-      "Cetak dokumen tanpa batas 1 tahun penuh",
-      "Hingga 6 printer aktif bersamaan",
-      "Mendukung kertas A4, F4 & Foto 4×6",
-      "Prioritas bantuan kendala via AnyDesk",
-      "Seluruh pembaruan fitur berikutnya",
-    ],
-  },
-  LIFETIME: {
-    id: "LIFETIME",
-    name: "Seumur Hidup",
-    price: 999000,
-    periodLabel: "selamanya",
-    durationDays: null,
-    maxJobs: null,
     maxPrinters: null,
     allowExtraPaper: true,
     allowDuplex: true,
-    description: "Sekali bayar tanpa tagihan tahunan selamanya",
+    description: "Kapasitas penuh untuk percetakan ramai & multi-printer",
     features: [
-      "Aktif selamanya tanpa biaya perpanjangan",
-      "Cetak dokumen tanpa batas kuota",
+      "Cetak dokumen tanpa batas 1 tahun penuh",
       "Jumlah printer terhubung tanpa batas",
-      "Mendukung seluruh ukuran kertas & Duplex",
-      "Jalur dukungan teknis VIP prioritas",
+      "Mendukung kertas A4, F4 & Foto 4×6",
+      "Prioritas bantuan teknis via AnyDesk",
+      "Seluruh pembaruan fitur berikutnya",
     ],
   },
 };
@@ -163,7 +144,7 @@ export function evaluateShopEntitlement(params: {
   let daysLeft: number | null = null;
   let hoursLeft: number | null = null;
 
-  if (plan.id !== "LIFETIME" && params.planExpiresAt) {
+  if (params.planExpiresAt) {
     const expMs = new Date(params.planExpiresAt).getTime();
     const diffMs = expMs - now;
     if (diffMs <= 0) {

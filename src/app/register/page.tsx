@@ -28,13 +28,7 @@ const PLAN_OPTIONS = [
     id: "PREMIUM",
     name: "Premium Tahunan",
     price: "Rp 599.000/tahun",
-    detail: "Maks. 6 printer · Support AnyDesk",
-  },
-  {
-    id: "LIFETIME",
-    name: "Seumur Hidup",
-    price: "Rp 999.000 sekali bayar",
-    detail: "Aktif selamanya · Unlimited printer",
+    detail: "Unlimited printer · Support AnyDesk",
   },
 ];
 
