@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Check,
   X,
-  Sparkles,
   Monitor,
   Smartphone,
   Layers,
@@ -18,13 +17,10 @@ import {
   Eye,
   ServerOff,
   ArrowRight,
-  Zap,
   WifiOff,
   Clock,
   FileCheck2,
   Users,
-  BadgeCheck,
-  KeyRound,
 } from "lucide-react";
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
@@ -34,28 +30,28 @@ const PRODUCTS = [
     id: "windows",
     label: "Ngeprint Windows Agent",
     icon: Monitor,
-    badge: "Paling Populer untuk Fotokopi & Percetakan",
-    headline: "Dari HP Pelanggan, Langsung Keluar di Printer Anda",
-    subline: "Tanpa WhatsApp • Tanpa Flashdisk • Tanpa Ribet Transfer File",
-    desc: "Cukup jalankan Ngeprint Agent di Windows 10/11. Pelanggan scan QR di meja kasir, upload PDF/foto, bayar QRIS, dan dokumen langsung tercetak otomatis ke printer USB Anda.",
+    context: "Untuk toko fotokopi & percetakan dengan PC Windows",
+    headline: "Dari HP pelanggan, langsung keluar di printer meja Anda",
+    subline: "Tanpa simpan nomor WhatsApp dan tanpa colok flashdisk",
+    desc: "Jalankan Ngeprint Agent di Windows 10/11. Pelanggan memindai QR di meja kasir, mengunggah PDF atau foto, membayar via QRIS, dan dokumen langsung tercetak ke printer USB Anda.",
   },
   {
     id: "kasir",
-    label: "Paket Kasir & Fotokopi",
+    label: "Dashboard Kasir & Tarif",
     icon: Layers,
-    badge: "Kelola Antrean & Pembukuan Otomatis",
-    headline: "Dashboard Antrean Cetak & Rekap Omzet Harian Real-Time",
-    subline: "Hitung Halaman Otomatis • Atur Tarif Sendiri • Pisah Printer B&W & Warna",
-    desc: "Tidak perlu lagi menghitung lembar manual atau mencatat di buku. Semua pesanan, tarif Hitam Putih/Warna/Bolak-balik, dan status pembayaran tercatat otomatis di dashboard.",
+    context: "Untuk pembukuan harian & manajemen antrean otomatis",
+    headline: "Hitung halaman PDF dan rekap omzet cetak secara otomatis",
+    subline: "Atur tarif per lembar sendiri dan pisahkan printer hitam-putih serta warna",
+    desc: "Tidak perlu menghitung lembar manual atau mencatat di buku kas. Semua pesanan, tarif Hitam Putih, Warna, Bolak-balik, dan status pembayaran QRIS tercatat langsung di dashboard.",
   },
   {
     id: "android",
     label: "Ngeprint Android OTG",
     icon: Smartphone,
-    badge: "Cetak Mandiri Tanpa PC/Laptop",
-    headline: "Ubah HP Android + Kabel OTG Jadi Mesin Cetak Mandiri",
-    subline: "Android 7.0+ • Kabel USB OTG • Hemat Listrik & Modal Ringan",
-    desc: "Cocok untuk usaha print rumahan, koperasi kampus, atau konter pulsa. Sambungkan printer USB langsung ke HP Android dan terima order cetak otomatis 24 jam.",
+    context: "Untuk usaha cetak rumahan & koperasi tanpa komputer",
+    headline: "Ubah HP Android dan kabel OTG menjadi mesin cetak mandiri",
+    subline: "Mendukung Android 7.0+ dan kabel USB OTG standar",
+    desc: "Solusi hemat daya untuk konter pulsa atau koperasi kampus. Sambungkan printer USB langsung ke HP Android dan terima pesanan cetak mandiri sepanjang hari.",
   },
 ] as const;
 
@@ -65,17 +61,16 @@ const PLANS = [
     name: "Demo",
     price: "Rp 0",
     period: "24 jam",
-    strike: null,
-    badge: null,
-    highlight: "default",
+    featured: false,
+    note: "Uji coba langsung di printer toko",
     features: [
       "Aktif 24 jam penuh",
-      "Maksimal 10 kali cetak",
-      "Poster QR Toko siap cetak",
-      "Windows Print Agent",
-      "Auto-hapus file setelah cetak",
+      "Kuota 10 kali cetak dokumen",
+      "Poster QR toko siap cetak",
+      "Akses Windows Print Agent",
+      "Penghapusan file otomatis usai cetak",
     ],
-    cta: "Mulai Demo Gratis",
+    cta: "Mulai demo gratis",
     action: "demo" as const,
   },
   {
@@ -83,33 +78,31 @@ const PLANS = [
     name: "Bulanan",
     price: "Rp 49.000",
     period: "/bulan",
-    strike: "Rp 99.000",
-    badge: null,
-    highlight: "default",
+    featured: false,
+    note: "Fleksibel untuk toko baru",
     features: [
-      "Cetak Unlimited tanpa batas",
-      "Hingga 5 printer sekaligus",
-      "Fitur Duplex, F4 & Foto 4×6",
-      "Integrasi Pembayaran QRIS",
-      "Dukungan WhatsApp & AnyDesk",
+      "Cetak dokumen tanpa batas kuota",
+      "Hingga 5 printer terhubung",
+      "Mode Duplex, F4 & Foto 4×6",
+      "Integrasi pembayaran QRIS",
+      "Bantuan kendala via WhatsApp & AnyDesk",
     ],
     cta: "Pilih Bulanan",
     action: "register" as const,
   },
   {
     id: "PRO",
-    name: "Pro",
+    name: "Pro Tahunan",
     price: "Rp 149.000",
     period: "/tahun",
-    strike: "Rp 299.000",
-    badge: "POPULER",
-    highlight: "pink",
+    featured: true,
+    note: "Setara Rp 12.400 per bulan",
     features: [
-      "Cetak Unlimited 1 Tahun",
-      "2 Printer (1 B&W + 1 Warna)",
-      "Bantuan setup QRIS toko",
-      "Poster QR Counter custom",
-      "Prioritas perbaikan 2 jam",
+      "Cetak dokumen tanpa batas 1 tahun",
+      "2 printer aktif (1 B&W + 1 Warna)",
+      "Pendampingan integrasi QRIS toko",
+      "Desain poster QR meja kasir",
+      "Prioritas penanganan kendala teknis",
     ],
     cta: "Pilih Paket Pro",
     action: "register" as const,
@@ -119,35 +112,33 @@ const PLANS = [
     name: "Premium",
     price: "Rp 249.000",
     period: "/tahun",
-    strike: "Rp 449.000",
-    badge: null,
-    highlight: "orange",
+    featured: false,
+    note: "Untuk percetakan multi-printer",
     features: [
-      "Semua fitur paket Pro",
-      "Hingga 5 printer terhubung",
-      "Duplex, F4, A3 & Foto 4×6",
-      "Hitung halaman PDF otomatis",
-      "Semua update fitur baru gratis",
+      "Seluruh fitur pada paket Pro",
+      "Hingga 5 printer aktif bersamaan",
+      "Dukungan kertas A4, F4, A3 & Foto 4×6",
+      "Penghitung halaman PDF otomatis",
+      "Pembaruan fitur berikutnya tanpa biaya",
     ],
     cta: "Pilih Premium",
     action: "register" as const,
   },
   {
     id: "LIFETIME",
-    name: "Lifetime",
+    name: "Seumur Hidup",
     price: "Rp 399.000",
     period: "sekali bayar",
-    strike: "Rp 799.000",
-    badge: "PALING HEMAT",
-    highlight: "gold",
+    featured: false,
+    note: "Tanpa tagihan tahunan",
     features: [
-      "Semua fitur Premium selamanya",
+      "Seluruh fitur Premium selamanya",
       "Tanpa biaya perpanjangan tahunan",
-      "Multi-printer tanpa batas",
-      "Prioritas Support VIP",
-      "Akses awal fitur baru",
+      "Jumlah printer tanpa batas",
+      "Jalur dukungan teknis prioritas",
+      "Akses awal ke pembaruan sistem",
     ],
-    cta: "Ambil Lifetime",
+    cta: "Ambil Seumur Hidup",
     action: "register" as const,
   },
 ];
@@ -183,12 +174,12 @@ export function LandingClient() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setDemoError(data.error || "Gagal mengirim data demo.");
+        setDemoError(data.error || "Gagal mengirim permintaan demo");
       } else {
         setDemoSuccess(data.message);
       }
     } catch {
-      setDemoError("Terjadi kesalahan jaringan. Coba lagi.");
+      setDemoError("Terjadi gangguan jaringan, silakan coba kembali");
     } finally {
       setDemoLoading(false);
     }
@@ -198,9 +189,9 @@ export function LandingClient() {
     <div className="bg-ambient min-h-screen">
       <Navbar onOpenDemo={() => setDemoOpen(true)} />
 
-      {/* Product Switcher Bar */}
-      <div className="border-b border-[#ece3d2] bg-white/80 backdrop-blur-xs">
-        <div className="no-scrollbar mx-auto flex max-w-6xl items-center justify-start gap-2 overflow-x-auto px-4 py-2.5 sm:justify-center sm:px-6">
+      {/* Quiet Mode Selector Bar */}
+      <div className="border-b border-[#1f1b16]/8 bg-[#fdfbf7]">
+        <div className="no-scrollbar mx-auto flex max-w-6xl items-center justify-start gap-2 overflow-x-auto px-6 py-2.5">
           {PRODUCTS.map((item) => {
             const Icon = item.icon;
             const active = item.id === activeTab;
@@ -208,211 +199,205 @@ export function LandingClient() {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition-all sm:text-sm ${
+                className={`inline-flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3.5 text-xs font-medium transition-colors duration-150 ${
                   active
-                    ? "bg-[#fff9ec] text-[#111114] ring-2 ring-[#7c3aed] shadow-xs"
-                    : "text-[#6b7280] hover:bg-[#fff9ec]/70 hover:text-[#111114]"
+                    ? "bg-[#1f1b16] text-[#fdfbf7]"
+                    : "text-[#5e554a] hover:bg-[#efe9df] hover:text-[#1f1b16]"
                 }`}
               >
-                <Icon
-                  className={`h-4 w-4 ${
-                    active ? "text-[#7c3aed]" : "text-[#6b7280]"
-                  }`}
-                />
-                {item.label}
+                <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
+                <span>{item.label}</span>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* Hero Section */}
-      <section className="mx-auto max-w-6xl px-4 pt-10 pb-14 sm:px-6 lg:pt-16 lg:pb-20">
-        <div className="grid items-center gap-10 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#17171b] px-3.5 py-1.5 text-xs font-bold text-white shadow-sm">
-              <ShieldCheck className="h-4 w-4 text-[#ffd22e]" />
-              <span>PRIVACY BY DESIGN</span>
-              <span className="text-white/60">•</span>
-              <span className="font-medium text-white/90">
-                File langsung dihapus usai cetak
-              </span>
-            </div>
+      {/* Hero Section — Asymmetric Split with Calm Copy & Real Product Preview */}
+      <section className="mx-auto max-w-6xl px-6 pt-12 pb-16 lg:pt-20 lg:pb-24">
+        <div className="grid items-center gap-12 lg:grid-cols-12">
+          <div className="lg:col-span-6">
+            <p className="text-xs font-medium text-[#d9381e]">
+              {currentProduct.context}
+            </p>
 
-            <div className="mb-2 flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-[#7c3aed]">
-              <Sparkles className="h-3.5 w-3.5" />
-              {currentProduct.badge}
-            </div>
-
-            <h1 className="font-display text-3xl leading-[1.12] font-extrabold tracking-tight text-[#111114] sm:text-5xl">
+            <h1 className="mt-3 text-4xl leading-[1.08] font-medium tracking-[-0.02em] text-[#1f1b16] sm:text-5xl">
               {currentProduct.headline}
             </h1>
 
-            <p className="mt-4 inline-block rounded-xl bg-[#fff9ec] px-3.5 py-2 text-sm font-bold text-[#ff2e63] ring-1 ring-[#ff2e63]/20 sm:text-base">
+            <p className="mt-4 text-base font-medium text-[#1f1b16]">
               {currentProduct.subline}
             </p>
 
-            <p className="mt-4 max-w-xl text-sm leading-relaxed text-[#6b7280] sm:text-base">
+            <p className="mt-2 max-w-xl text-base leading-relaxed text-[#5e554a]">
               {currentProduct.desc}
             </p>
 
-            {/* 4-Step Mini Flow */}
-            <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            {/* Primary & Secondary Action (Strictly 2 actions per Unslop Layout Pass) */}
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Link
+                href="/register"
+                className="btn-action inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-5 text-sm font-medium text-white hover:bg-[#be2e17]"
+              >
+                <span>Buat QR toko sekarang</span>
+                <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+              </Link>
+              <button
+                onClick={() => setDemoOpen(true)}
+                className="btn-action inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] px-5 text-sm font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+              >
+                Uji coba demo 24 jam
+              </button>
+            </div>
+
+            {/* Quiet 4-Step Pipeline List */}
+            <div className="mt-10 grid grid-cols-2 gap-4 border-t border-[#1f1b16]/8 pt-6 sm:grid-cols-4">
               {[
-                { icon: QrCode, step: "1. SCAN", label: "Kode QR Toko", color: "text-[#7c3aed]" },
-                { icon: UploadCloud, step: "2. UPLOAD", label: "File PDF / Foto", color: "text-[#ff6b35]" },
-                { icon: CreditCard, step: "3. BAYAR", label: "QRIS / Tunai", color: "text-[#ff2e63]" },
-                { icon: Printer, step: "4. CETAK", label: "Otomatis Keluar", color: "text-emerald-600" },
+                { icon: QrCode, num: "1", title: "Scan QR meja", desc: "Kamera HP pelanggan" },
+                { icon: UploadCloud, num: "2", title: "Unggah dokumen", desc: "Hitung lembar otomatis" },
+                { icon: CreditCard, num: "3", title: "Bayar QRIS", desc: "Atau tunai di kasir" },
+                { icon: Printer, num: "4", title: "Keluar di printer", desc: "File langsung dihapus" },
               ].map((s) => {
                 const Icon = s.icon;
                 return (
-                  <div
-                    key={s.step}
-                    className="rounded-2xl border border-[#ece3d2] bg-white p-3 shadow-xs"
-                  >
-                    <Icon className={`h-5 w-5 ${s.color}`} />
-                    <p className="mt-1.5 text-[11px] font-extrabold tracking-wide text-[#111114]">
-                      {s.step}
+                  <div key={s.num} className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-[#7b7266]">
+                      <Icon className="h-4 w-4 text-[#5e554a]" strokeWidth={1.5} />
+                      <span className="font-mono-num">Langkah {s.num}</span>
+                    </div>
+                    <p className="text-sm font-medium text-[#1f1b16]">
+                      {s.title}
                     </p>
-                    <p className="text-[11px] text-[#6b7280]">{s.label}</p>
+                    <p className="text-xs text-[#7b7266]">{s.desc}</p>
                   </div>
                 );
               })}
             </div>
-
-            {/* Primary CTAs */}
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <a
-                href="#harga"
-                className="btn-glossy inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-6 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-[#ff2e63]/25 sm:w-auto"
-              >
-                Lihat Harga Setup ↓
-              </a>
-              <button
-                onClick={() => setDemoOpen(true)}
-                className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full border-2 border-[#ff2e63] bg-white px-6 py-3 text-sm font-extrabold text-[#ff2e63] transition-colors hover:bg-[#ff2e63]/5 sm:w-auto"
-              >
-                Coba Demo Gratis
-              </button>
-              <Link
-                href="/register"
-                className="inline-flex min-h-[46px] w-full items-center justify-center gap-1.5 rounded-full bg-[#17171b] px-5 py-3.5 text-sm font-bold text-white transition-colors hover:bg-[#17171b]/90 sm:w-auto"
-              >
-                <QrCode className="h-4 w-4 text-[#ffd22e]" />
-                Buat QR Toko Sekarang
-              </Link>
-            </div>
           </div>
 
-          <div className="lg:col-span-5">
+          <div className="lg:col-span-6">
             <HeroIllustration />
           </div>
         </div>
       </section>
 
-      {/* Capability Strip */}
-      <section className="border-y border-[#ece3d2] bg-[#fff9ec]/90 py-8">
-        <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
-          <p className="font-display text-sm font-bold text-[#111114] sm:text-base">
-            Solusi Cetak Mandiri Pintar dari{" "}
-            <span className="text-[#7c3aed]">Gellona Teknologi</span> untuk{" "}
-            <span className="text-[#ff2e63]">
-              Toko Fotokopi, Percetakan, Warnet & Koperasi Kampus
-            </span>
-          </p>
-          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+      {/* Capability Strip & Key Numbers */}
+      <section className="border-y border-[#1f1b16]/8 bg-[#fdfbf7] py-10">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: Printer, text: "Semua Merk Printer USB Didukung" },
-              { icon: WifiOff, text: "Tidak Wajib Printer Wi-Fi" },
-              { icon: FileCheck2, text: "Hitam Putih, Warna & Foto 4×6" },
-              { icon: Clock, text: "Setup Cepat 2 Menit" },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <span
-                  key={item.text}
-                  className="inline-flex items-center gap-2 rounded-full border border-[#ece3d2] bg-white px-4 py-2 text-xs font-bold text-[#111114] shadow-xs"
-                >
-                  <Icon className="h-3.5 w-3.5 text-[#ff6b35]" />
-                  {item.text}
-                </span>
-              );
-            })}
+              {
+                figure: "0%",
+                label: "Potongan transaksi cetak",
+                detail: "Pembayaran QRIS masuk penuh ke toko",
+              },
+              {
+                figure: "2 menit",
+                label: "Waktu koneksi Print Agent",
+                detail: "Deteksi otomatis semua printer USB Windows",
+              },
+              {
+                figure: "0 file",
+                label: "Tersimpan setelah tercetak",
+                detail: "Dihapus dari server dan folder PC kasir",
+              },
+              {
+                figure: "A4 · F4 · 4×6",
+                label: "Dukungan kertas & tarif",
+                detail: "Hitam putih, warna, dan diskon bolak-balik",
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className="rounded-xl border border-[#1f1b16]/8 bg-[#f7f4ee]/60 p-5"
+              >
+                <p className="font-mono-num text-2xl font-medium text-[#1f1b16]">
+                  {stat.figure}
+                </p>
+                <p className="mt-2 text-sm font-medium text-[#1f1b16]">
+                  {stat.label}
+                </p>
+                <p className="mt-1 text-xs text-[#7b7266]">{stat.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[#1f1b16]/8 pt-6 text-xs text-[#5e554a]">
+            <span>
+              Dirancang oleh <strong className="font-medium text-[#1f1b16]">Gellona Teknologi</strong> untuk toko fotokopi, percetakan, warnet, dan koperasi kampus
+            </span>
+            <div className="flex flex-wrap items-center gap-5">
+              <span className="inline-flex items-center gap-2">
+                <Printer className="h-4 w-4 text-[#7b7266]" strokeWidth={1.5} />
+                Semua merk printer USB
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <WifiOff className="h-4 w-4 text-[#7b7266]" strokeWidth={1.5} />
+                Tidak wajib printer Wi-Fi
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <FileCheck2 className="h-4 w-4 text-[#7b7266]" strokeWidth={1.5} />
+                PDF, JPG, PNG, WEBP
+              </span>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Highlights Row */}
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {[
-            { value: "0%", label: "Potongan Transaksi Cetak", accent: "text-[#ff2e63]" },
-            { value: "2 Menit", label: "Waktu Setup Print Agent", accent: "text-[#7c3aed]" },
-            { value: "100%", label: "File Dihapus Usai Cetak", accent: "text-[#ff6b35]" },
-            { value: "QRIS", label: "Mendukung QRIS & Tunai", accent: "text-[#111114]" },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="rounded-2xl border border-[#ece3d2] bg-white p-5 text-center shadow-xs"
-            >
-              <p className={`font-display text-2xl font-extrabold sm:text-3xl ${stat.accent}`}>
-                {stat.value}
-              </p>
-              <p className="mt-1 text-xs font-medium text-[#6b7280] sm:text-sm">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Pain Point vs Solution (#fitur) */}
-      <section id="fitur" className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-block rounded-full bg-[#ff2e63]/10 px-3.5 py-1 text-xs font-extrabold text-[#ff2e63]">
-            KENAPA PINDAH KE NGEPRINT?
-          </span>
-          <h2 className="font-display mt-3 text-2xl font-extrabold text-[#111114] sm:text-4xl">
-            Tinggalkan Cara Lama yang Bikin Kasir Kewalahan
+      <section id="fitur" className="mx-auto max-w-6xl px-6 py-20">
+        <div className="max-w-2xl">
+          <p className="text-xs font-medium text-[#d9381e]">
+            Perbandingan alur kerja kasir
+          </p>
+          <h2 className="mt-2 text-3xl font-medium tracking-[-0.02em] text-[#1f1b16]">
+            Mengapa toko fotokopi beralih ke Ngeprint
           </h2>
+          <p className="mt-2 text-sm text-[#5e554a]">
+            Mengurangi antrean di depan komputer operator tanpa perlu membeli mesin printer baru.
+          </p>
         </div>
 
-        <div className="mt-10 grid gap-5 md:grid-cols-2">
-          <div className="rounded-3xl border border-red-200/80 bg-red-50/40 p-6 sm:p-8">
-            <h3 className="font-display flex items-center gap-2 text-lg font-extrabold text-red-700">
-              <X className="h-5 w-5 rounded-full bg-red-100 p-0.5" />
-              Cara Manual (Lama)
+        <div className="mt-10 grid gap-6 md:grid-cols-2">
+          <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6">
+            <h3 className="text-base font-medium text-[#5e554a]">
+              Cara manual di meja operator
             </h3>
-            <ul className="mt-5 space-y-3.5 text-sm text-[#111114]/80">
+            <ul className="mt-5 space-y-3.5 text-sm text-[#5e554a]">
               {[
-                "Harus simpan nomor WA pelanggan satu per satu & chat menumpuk.",
-                "Colok flashdisk pelanggan bikin komputer kasir rawan virus shortcut/ransomware.",
-                "Antrean menumpuk karena kasir harus buka file, cek halaman, dan atur printer manual.",
-                "Sering lupa catat pemasukan print harian di buku nota.",
+                "Menyimpan atau menerima chat WhatsApp pelanggan satu per satu hingga memori PC penuh",
+                "Mencolokkan flashdisk pelanggan yang sering membawa virus shortcut atau malware ke PC kasir",
+                "Operator harus membuka file, menghitung halaman manual, dan mengatur dialog print berulang kali",
+                "Pemasukan cetak lembar harian sering terlewat karena tidak tercatat otomatis",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5">
-                  <X className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <li key={item} className="flex items-start gap-3">
+                  <X
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#dc2626]"
+                    strokeWidth={1.5}
+                  />
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="rounded-3xl border-2 border-[#7c3aed]/30 bg-white p-6 shadow-md sm:p-8">
-            <h3 className="font-display flex items-center gap-2 text-lg font-extrabold text-[#7c3aed]">
-              <BadgeCheck className="h-5 w-5" />
-              Dengan Ngeprint (Otomatis)
+          <div className="rounded-xl border border-[#1f1b16]/15 bg-[#ffffff] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+            <h3 className="text-base font-medium text-[#1f1b16]">
+              Otomatisasi dengan Ngeprint
             </h3>
-            <ul className="mt-5 space-y-3.5 text-sm text-[#111114]">
+            <ul className="mt-5 space-y-3.5 text-sm text-[#1f1b16]">
               {[
-                "Pelanggan cukup scan QR di meja — tanpa perlu minta nomor WA toko.",
-                "100% bebas flashdisk, komputer kasir aman dari virus selamanya.",
-                "Jumlah halaman PDF dihitung otomatis, harga langsung muncul, bayar QRIS langsung cetak.",
-                "Rekap omzet harian & riwayat transaksi tercatat otomatis di Dashboard Toko.",
+                "Pelanggan cukup memindai QR poster di meja kasir tanpa perlu chat WhatsApp toko",
+                "Bebas colok flashdisk sehingga komputer kasir tetap bersih dari virus",
+                "Jumlah halaman PDF dihitung otomatis di HP pelanggan, tarif langsung muncul dan siap dibayar via QRIS",
+                "Rekap omzet harian dan riwayat cetakan tersimpan rapi di dashboard pemilik toko",
               ].map((item) => (
-                <li key={item} className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                  <span className="font-medium">{item}</span>
+                <li key={item} className="flex items-start gap-3">
+                  <Check
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#16a34a]"
+                    strokeWidth={1.5}
+                  />
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
@@ -421,192 +406,174 @@ export function LandingClient() {
       </section>
 
       {/* Setup 2 Minutes Guide (#setup) */}
-      <section id="setup" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="rounded-3xl border border-[#ece3d2] bg-[#17171b] p-6 text-white shadow-xl sm:p-10">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffd22e] px-3.5 py-1 text-xs font-extrabold text-[#111114]">
-              <Zap className="h-3.5 w-3.5 fill-current" />
-              SETUP DALAM 2 MENIT
-            </span>
-            <h2 className="font-display mt-3 text-2xl font-extrabold sm:text-3xl">
-              Cara Mulai di Toko Fotokopi Anda
-            </h2>
-            <p className="mt-2 text-sm text-white/70">
-              Tidak perlu ganti printer baru. Cukup PC Windows yang sudah terhubung ke printer USB Anda.
+      <section id="setup" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#161513] p-8 text-[#efe9de] sm:p-10">
+          <div className="flex flex-col justify-between gap-4 border-b border-[#efe9de]/10 pb-6 md:flex-row md:items-end">
+            <div>
+              <p className="font-mono-num text-xs text-[#aaa398]">
+                Instalasi 4 langkah · ±2 menit
+              </p>
+              <h2 className="mt-2 text-2xl font-medium tracking-[-0.01em] text-[#efe9de] sm:text-3xl">
+                Cara mengaktifkan Ngeprint di toko Anda
+              </h2>
+            </div>
+            <p className="max-w-sm text-xs leading-relaxed text-[#aaa398]">
+              Bekerja dengan PC Windows dan printer USB yang sudah ada di meja kasir Anda saat ini.
             </p>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 num: "01",
-                title: "Daftar Akun Toko",
-                desc: "Isi nama toko, atur tarif Hitam Putih & Warna per lembar, langsung dapat ID Toko.",
+                title: "Daftarkan akun toko",
+                desc: "Masukkan nama toko serta tarif cetak Hitam Putih dan Warna per lembar untuk mendapatkan ID Toko",
               },
               {
                 num: "02",
-                title: "Cetak Poster QR",
-                desc: "Unduh poster QR unik toko Anda dari Dashboard lalu tempel di meja kasir.",
+                title: "Cetak poster QR kasir",
+                desc: "Unduh atau cetak langsung poster QR toko dari dashboard lalu letakkan di meja pelayanan",
               },
               {
                 num: "03",
-                title: "Jalankan Print Agent",
-                desc: "Jalankan Ngeprint Agent di PC Windows — otomatis mendeteksi printer USB Anda.",
+                title: "Hubungkan Print Agent",
+                desc: "Jalankan Ngeprint Agent di PC Windows kasir untuk mendeteksi daftar printer USB secara otomatis",
               },
               {
                 num: "04",
-                title: "Siap Cetak Otomatis",
-                desc: "Pelanggan scan QR, upload, bayar QRIS, dan printer langsung bekerja otomatis!",
+                title: "Terima pesanan otomatis",
+                desc: "Saat pelanggan selesai membayar QRIS, dokumen langsung dicetak dan dihapus setelah selesai",
               },
             ].map((s) => (
               <div
                 key={s.num}
-                className="rounded-2xl border border-white/10 bg-white/5 p-5"
+                className="rounded-xl border border-[#efe9de]/10 bg-[#1c1a18] p-5"
               >
-                <span className="font-display text-2xl font-extrabold text-[#ffd22e]">
-                  {s.num}
+                <span className="font-mono-num text-xs text-[#d9381e]">
+                  Langkah {s.num}
                 </span>
-                <h3 className="font-display mt-2 text-base font-bold text-white">
+                <h3 className="mt-2 text-base font-medium text-[#efe9de]">
                   {s.title}
                 </h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-white/70">
+                <p className="mt-1.5 text-xs leading-relaxed text-[#aaa398]">
                   {s.desc}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/register"
-              className="btn-glossy inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-6 py-3 text-sm font-extrabold text-white"
+              className="btn-action inline-flex h-10 items-center gap-2 rounded-lg bg-[#efe9de] px-5 text-sm font-medium text-[#161513] hover:bg-white"
             >
-              Daftarkan Toko Sekarang
-              <ArrowRight className="h-4 w-4" />
+              <span>Daftarkan toko sekarang</span>
+              <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
             <Link
               href="/dashboard"
-              className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-bold text-white hover:bg-white/15"
+              className="btn-action inline-flex h-10 items-center gap-2 rounded-lg border border-[#efe9de]/15 bg-[#262421] px-5 text-sm font-medium text-[#efe9de] hover:bg-[#262421]/80"
             >
-              Buka Dashboard Toko
+              Buka dashboard toko
             </Link>
           </div>
         </div>
       </section>
 
       {/* Pricing Plans (#harga) */}
-      <section id="harga" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="inline-block rounded-full bg-[#ffd22e]/40 px-3.5 py-1 text-xs font-extrabold text-[#111114]">
-            HARGA TRANSPARAN UNTUK UMKM
-          </span>
-          <h2 className="font-display mt-3 text-2xl font-extrabold text-[#111114] sm:text-4xl">
-            Pilih Paket Sesuai Skala Toko Anda
+      <section id="harga" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="max-w-2xl">
+          <p className="text-xs font-medium text-[#d9381e]">
+            Biaya berlangganan tetap
+          </p>
+          <h2 className="mt-2 text-3xl font-medium tracking-[-0.02em] text-[#1f1b16]">
+            Pilih paket sesuai skala toko Anda
           </h2>
-          <p className="mt-2 text-sm text-[#6b7280]">
-            0% potongan transaksi cetak. Seluruh uang pembayaran QRIS pelanggan masuk 100% ke rekening toko Anda.
+          <p className="mt-2 text-sm text-[#5e554a]">
+            Tanpa komisi per lembar. Seluruh pendapatan cetak dari pelanggan masuk 100% ke rekening toko Anda.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          {PLANS.map((plan) => {
-            const isPink = plan.highlight === "pink";
-            const isGold = plan.highlight === "gold";
-            const isOrange = plan.highlight === "orange";
-            return (
-              <div
-                key={plan.id}
-                className={`relative flex flex-col rounded-3xl bg-white p-5 transition-transform hover:-translate-y-1 ${
-                  isPink
-                    ? "border-2 border-[#ff2e63] shadow-xl shadow-[#ff2e63]/15"
-                    : isGold
-                    ? "border-2 border-amber-400 shadow-lg shadow-amber-500/10"
-                    : "border border-[#ece3d2] shadow-xs"
-                }`}
-              >
-                {plan.badge && (
-                  <span
-                    className={`absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-0.5 text-[10px] font-extrabold tracking-wider uppercase shadow-xs ${
-                      isPink
-                        ? "bg-[#ff2e63] text-white"
-                        : "bg-amber-400 text-[#111114]"
-                    }`}
-                  >
-                    {plan.badge}
-                  </span>
-                )}
-
-                <h3 className="font-display text-lg font-extrabold text-[#111114]">
-                  {plan.name}
-                </h3>
-
-                <div className="mt-3">
-                  {plan.strike && (
-                    <span className="block text-xs font-semibold text-[#6b7280] line-through">
-                      {plan.strike}
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {PLANS.map((plan) => (
+            <div
+              key={plan.id}
+              className={`flex flex-col justify-between rounded-xl p-5 ${
+                plan.featured
+                  ? "border-2 border-[#1f1b16] bg-[#ffffff] shadow-[0_8px_24px_rgba(0,0,0,0.05)]"
+                  : "border border-[#1f1b16]/10 bg-[#fdfbf7]"
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-base font-medium text-[#1f1b16]">
+                    {plan.name}
+                  </h3>
+                  {plan.featured && (
+                    <span className="rounded bg-[#1f1b16] px-2 py-0.5 text-[11px] font-medium text-[#fdfbf7]">
+                      Rekomendasi
                     </span>
                   )}
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-2xl font-extrabold text-[#111114]">
-                      {plan.price}
-                    </span>
-                    <span className="text-xs font-medium text-[#6b7280]">
-                      {plan.period}
-                    </span>
-                  </div>
                 </div>
 
-                <ul className="mt-5 flex-1 space-y-2.5 text-xs text-[#111114]/85">
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="font-mono-num text-2xl font-medium text-[#1f1b16]">
+                    {plan.price}
+                  </span>
+                  <span className="text-xs text-[#7b7266]">{plan.period}</span>
+                </div>
+                <p className="mt-1 text-xs text-[#7b7266]">{plan.note}</p>
+
+                <ul className="mt-5 space-y-2.5 border-t border-[#1f1b16]/8 pt-4 text-xs text-[#5e554a]">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2">
-                      <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                    <li key={f} className="flex items-start gap-2.5">
+                      <Check
+                        className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#16a34a]"
+                        strokeWidth={1.5}
+                      />
                       <span>{f}</span>
                     </li>
                   ))}
                 </ul>
-
-                {plan.action === "demo" ? (
-                  <button
-                    onClick={() => setDemoOpen(true)}
-                    className="mt-6 w-full rounded-full border-2 border-[#111114] bg-white py-2.5 text-xs font-extrabold text-[#111114] hover:bg-[#111114] hover:text-white transition-colors"
-                  >
-                    {plan.cta}
-                  </button>
-                ) : (
-                  <Link
-                    href={`/register?plan=${plan.id}`}
-                    className={`btn-glossy mt-6 block w-full rounded-full py-2.5 text-center text-xs font-extrabold text-white ${
-                      isPink
-                        ? "bg-gradient-to-r from-[#ff2e63] to-[#ff6b35]"
-                        : isOrange
-                        ? "bg-[#ff6b35]"
-                        : isGold
-                        ? "bg-[#17171b]"
-                        : "bg-[#7c3aed]"
-                    }`}
-                  >
-                    {plan.cta}
-                  </Link>
-                )}
               </div>
-            );
-          })}
+
+              {plan.action === "demo" ? (
+                <button
+                  onClick={() => setDemoOpen(true)}
+                  className="btn-action mt-6 h-9 w-full cursor-pointer rounded-lg border border-[#1f1b16]/15 bg-[#f7f4ee] text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                >
+                  {plan.cta}
+                </button>
+              ) : (
+                <Link
+                  href={`/register?plan=${plan.id}`}
+                  className={`btn-action mt-6 inline-flex h-9 w-full items-center justify-center rounded-lg text-xs font-medium ${
+                    plan.featured
+                      ? "bg-[#d9381e] text-white hover:bg-[#be2e17]"
+                      : "bg-[#1f1b16] text-[#fdfbf7] hover:bg-[#1f1b16]/90"
+                  }`}
+                >
+                  {plan.cta}
+                </Link>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Privacy by Design (#privasi) */}
-      <section id="privasi" className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="rounded-3xl border border-[#ece3d2] bg-white p-6 shadow-sm sm:p-10">
-          <div className="mx-auto max-w-2xl text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1 text-xs font-extrabold text-emerald-700 ring-1 ring-emerald-200">
-              <ShieldCheck className="h-4 w-4" />
-              PRIVACY BY DESIGN
-            </span>
-            <h2 className="font-display mt-3 text-2xl font-extrabold text-[#111114] sm:text-3xl">
-              Kami Tidak Pernah Menyimpan Dokumen Pelanggan
+      <section id="privasi" className="mx-auto max-w-6xl px-6 pb-20">
+        <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-8 sm:p-10">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#16a34a]">
+              <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
+              <span>Privasi dokumen otomatis</span>
+            </div>
+            <h2 className="mt-2 text-2xl font-medium tracking-[-0.01em] text-[#1f1b16] sm:text-3xl">
+              Dokumen pelanggan tidak pernah mengendap di komputer toko
             </h2>
-            <p className="mt-2 text-sm text-[#6b7280]">
-              KTP, KK, berkas lamaran kerja, dan skripsi pelanggan aman 100% — tidak tertinggal di WhatsApp atau folder Download PC toko.
+            <p className="mt-2 text-sm text-[#5e554a]">
+              KTP, Kartu Keluarga, kontrak kerja, dan tugas akhir pelanggan aman dari risiko tertinggal di riwayat chat atau folder unduhan publik.
             </p>
           </div>
 
@@ -614,33 +581,33 @@ export function LandingClient() {
             {[
               {
                 icon: Trash2,
-                title: "Terhapus dari PC Toko",
+                title: "Dihapus dari PC kasir",
                 desc: "Begitu dokumen masuk ke antrean spooler printer Windows, Print Agent langsung menghapus file sementara di komputer toko.",
               },
               {
                 icon: ServerOff,
-                title: "Terhapus dari Server",
-                desc: "Setelah status cetak selesai (COMPLETED), file pada server langsung dimusnahkan permanen dan tidak bisa diunduh lagi.",
+                title: "Dimusnahkan dari server",
+                desc: "Saat status cetak berubah menjadi selesai, file di server langsung dihapus permanen dan tautan unduhan ditutup.",
               },
               {
                 icon: Eye,
-                title: "Terpantau Real-Time",
-                desc: "Pelanggan bisa melihat langsung indikator 'File Dihapus dari Server' di layar HP mereka begitu cetakan selesai.",
+                title: "Bukti waktu hapus real-time",
+                desc: "Pelanggan melihat langsung jam penghapusan file di layar HP mereka tepat setelah kertas keluar dari printer.",
               },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div
                   key={item.title}
-                  className="rounded-2xl border border-[#ece3d2] bg-[#fff9ec]/60 p-5"
+                  className="rounded-xl border border-[#1f1b16]/8 bg-[#f7f4ee]/70 p-5"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#17171b] text-[#ffd22e]">
-                    <Icon className="h-5 w-5" />
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] text-[#1f1b16]">
+                    <Icon className="h-4 w-4" strokeWidth={1.5} />
                   </div>
-                  <h3 className="font-display mt-3 text-base font-extrabold text-[#111114]">
+                  <h3 className="mt-3 text-base font-medium text-[#1f1b16]">
                     {item.title}
                   </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#6b7280]">
+                  <p className="mt-1.5 text-xs leading-relaxed text-[#5e554a]">
                     {item.desc}
                   </p>
                 </div>
@@ -650,22 +617,22 @@ export function LandingClient() {
         </div>
       </section>
 
-      {/* Secure Payments + Agent Banner */}
-      <section className="mx-auto max-w-6xl space-y-6 px-4 pb-16 sm:px-6">
-        <div className="flex flex-col items-center justify-between gap-4 rounded-3xl border border-[#ece3d2] bg-[#fff9ec] px-6 py-6 sm:flex-row">
+      {/* QRIS & Referral Partner Row */}
+      <section className="mx-auto max-w-6xl space-y-4 px-6 pb-20">
+        <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 sm:flex-row sm:items-center">
           <div>
-            <p className="font-display text-base font-extrabold text-[#111114]">
-              100% Mendukung Pembayaran QRIS Nasional & Tunai
-            </p>
-            <p className="mt-1 text-xs text-[#6b7280]">
-              Terima pembayaran dari GoPay, OVO, DANA, ShopeePay, BCA Mobile, Livin&apos; Mandiri, BRImo, dan seluruh aplikasi bank/e-wallet Indonesia.
+            <h3 className="text-base font-medium text-[#1f1b16]">
+              Mendukung pembayaran QRIS standar nasional dan tunai kasir
+            </h3>
+            <p className="mt-1 text-xs text-[#5e554a]">
+              Menerima pembayaran dari GoPay, OVO, DANA, ShopeePay, BCA Mobile, Livin&apos; Mandiri, BRImo, dan seluruh aplikasi perbankan Indonesia.
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-extrabold">
-            {["QRIS", "GoPay", "OVO", "DANA", "BCA / BRI"].map((p) => (
+          <div className="flex flex-wrap items-center gap-2 font-mono-num text-xs text-[#5e554a]">
+            {["QRIS", "GoPay", "OVO", "DANA", "M-Banking"].map((p) => (
               <span
                 key={p}
-                className="rounded-xl border border-[#ece3d2] bg-white px-3 py-1.5 text-[#111114] shadow-2xs"
+                className="rounded-md border border-[#1f1b16]/10 bg-[#f7f4ee] px-2.5 py-1 text-[#1f1b16]"
               >
                 {p}
               </span>
@@ -673,207 +640,211 @@ export function LandingClient() {
           </div>
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-5 rounded-3xl bg-gradient-to-r from-[#17171b] via-[#27183b] to-[#17171b] px-6 py-8 text-white shadow-xl sm:flex-row sm:px-10">
-          <div>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold text-[#ffd22e]">
-              <Users className="h-3.5 w-3.5" />
-              PROGRAM MITRA AGEN
-            </span>
-            <h3 className="font-display mt-2 text-xl font-extrabold sm:text-2xl">
-              Rekomendasikan Toko, Dapatkan Komisi Rp 25.000/Toko
+        <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#efe9df] p-6 sm:flex-row sm:items-center">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#5e554a]">
+              <Users className="h-4 w-4" strokeWidth={1.5} />
+              <span>Program mitra lapangan</span>
+            </div>
+            <h3 className="text-base font-medium text-[#1f1b16]">
+              Rekomendasikan toko fotokopi, dapatkan komisi Rp 25.000 per toko aktif
             </h3>
-            <p className="mt-1 text-xs text-white/75 sm:text-sm">
-              Bagikan kode referral Anda ke pemilik fotokopi sekitar — komisi langsung cair via transfer bank / e-wallet.
+            <p className="text-xs text-[#5e554a]">
+              Bagikan kode mitra Anda ke pemilik fotokopi sekitar kampus atau kantor.
             </p>
           </div>
           <Link
             href="/register"
-            className="btn-glossy shrink-0 rounded-full bg-[#ffd22e] px-6 py-3 text-sm font-extrabold text-[#111114]"
+            className="btn-action inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-[#1f1b16] px-4 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
           >
-            Daftar Sekarang →
+            Daftar mitra toko
           </Link>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-[#ece3d2] bg-white py-12">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
+      <footer className="border-t border-[#1f1b16]/8 bg-[#fdfbf7] py-12">
+        <div className="mx-auto grid max-w-6xl gap-8 px-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35] text-white">
-                <QrCode className="h-5 w-5" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
+                <Printer className="h-4 w-4" strokeWidth={1.5} />
               </div>
-              <div className="leading-tight">
-                <span className="font-display text-lg font-extrabold text-[#111114]">
-                  Ngeprint
-                </span>
-                <span className="ml-1.5 rounded-md bg-[#fff9ec] px-1.5 py-0.5 text-[9px] font-extrabold text-[#ff2e63] ring-1 ring-[#ff2e63]/20">
-                  by Gellona
-                </span>
-              </div>
+              <span className="text-base font-semibold text-[#1f1b16]">
+                Ngeprint
+              </span>
+              <span className="font-mono-num text-xs text-[#7b7266]">
+                by Gellona
+              </span>
             </div>
-            <p className="mt-3 text-xs leading-relaxed text-[#6b7280]">
-              Produk resmi <strong>Gellona Teknologi</strong>. Platform cetak mandiri berbasis QR untuk toko fotokopi & percetakan modern di Indonesia. Scan, Upload, Bayar QRIS, Langsung Cetak.
+            <p className="mt-3 text-xs leading-relaxed text-[#5e554a]">
+              Produk dari <strong className="font-medium text-[#1f1b16]">Gellona Teknologi</strong>. Sistem antrean cetak mandiri berbasis QR untuk toko fotokopi dan percetakan di Indonesia.
             </p>
           </div>
 
           <div>
-            <h4 className="font-display text-sm font-extrabold text-[#111114]">
-              Akses Cepat
-            </h4>
-            <ul className="mt-3 space-y-2 text-xs text-[#6b7280]">
+            <h4 className="text-xs font-medium text-[#1f1b16]">Navigasi</h4>
+            <ul className="mt-3 space-y-2 text-xs text-[#5e554a]">
               <li>
-                <Link href="/register" className="hover:text-[#ff2e63]">
-                  Daftar Toko Baru
+                <Link href="/register" className="hover:text-[#1f1b16]">
+                  Pendaftaran toko baru
                 </Link>
               </li>
               <li>
-                <Link href="/login" className="hover:text-[#ff2e63]">
-                  Login Pemilik Toko
+                <Link href="/login" className="hover:text-[#1f1b16]">
+                  Masuk dashboard toko
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="hover:text-[#ff2e63]">
-                  Dashboard Antrean Cetak
+                <Link href="/dashboard" className="hover:text-[#1f1b16]">
+                  Panel antrean cetak
                 </Link>
               </li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-display text-sm font-extrabold text-[#111114]">
-              Keamanan & Privasi
+            <h4 className="text-xs font-medium text-[#1f1b16]">
+              Arsitektur & privasi
             </h4>
-            <ul className="mt-3 space-y-2 text-xs text-[#6b7280]">
-              <li>Auto-Hapus File Setelah Cetak</li>
-              <li>Enkripsi Koneksi Agent Key</li>
-              <li>Tanpa Penyimpanan Dokumen Permanen</li>
-              <li>Dukungan Printer USB Windows</li>
+            <ul className="mt-3 space-y-2 text-xs text-[#5e554a]">
+              <li>Penghapusan file otomatis usai cetak</li>
+              <li>Otentikasi kunci agen per toko</li>
+              <li>Tanpa penyimpanan dokumen permanen</li>
+              <li>Kompatibel printer USB Windows 10/11</li>
             </ul>
           </div>
 
           <div>
-            <h4 className="font-display text-sm font-extrabold text-[#111114]">
-              Mulai Sekarang
+            <h4 className="text-xs font-medium text-[#1f1b16]">
+              Mulai menggunakan
             </h4>
-            <p className="mt-3 text-xs text-[#6b7280]">
-              Daftarkan toko Anda untuk mendapatkan QR unik & Windows Print Agent.
+            <p className="mt-3 text-xs leading-relaxed text-[#5e554a]">
+              Buat akun toko dalam satu menit untuk mengunduh poster QR meja kasir.
             </p>
             <Link
               href="/register"
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#17171b] px-4 py-2 text-xs font-bold text-white hover:bg-[#17171b]/90"
+              className="btn-action mt-3 inline-flex h-8 items-center rounded-lg bg-[#1f1b16] px-3.5 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
             >
-              <KeyRound className="h-3.5 w-3.5 text-[#ffd22e]" />
-              Daftar Toko Baru
+              Buat akun toko
             </Link>
           </div>
         </div>
-        <div className="mx-auto mt-10 max-w-6xl border-t border-[#ece3d2] px-4 pt-6 text-center text-xs text-[#6b7280] sm:px-6">
-          © 2026 <strong>Ngeprint</strong> (ngeprint.id) — Produk dari <strong>Gellona Teknologi</strong> untuk Ekosistem Fotokopi & Percetakan Indonesia.
+
+        <div className="mx-auto mt-10 flex max-w-6xl flex-col items-center justify-between gap-2 border-t border-[#1f1b16]/8 px-6 pt-6 text-xs text-[#7b7266] sm:flex-row">
+          <span>
+            © 2026 Ngeprint (ngeprint.id) — Gellona Teknologi
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5" strokeWidth={1.5} />
+            Ekosistem cetak mandiri UMKM Indonesia
+          </span>
         </div>
       </footer>
 
       {/* Demo Modal */}
       {demoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-md rounded-3xl border border-[#ece3d2] bg-[#fffdf8] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-md rounded-2xl border border-[#1f1b16]/12 bg-[#fdfbf7] p-6 shadow-xl">
             <button
               onClick={() => {
                 setDemoOpen(false);
                 setDemoSuccess(null);
                 setDemoError(null);
               }}
-              aria-label="Tutup"
-              className="absolute top-4 right-4 rounded-full p-1.5 text-[#6b7280] hover:bg-[#ece3d2]/50"
+              aria-label="Tutup dialog"
+              className="absolute top-4 right-4 cursor-pointer rounded-lg p-1.5 text-[#7b7266] hover:bg-[#efe9df] hover:text-[#1f1b16]"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" strokeWidth={1.5} />
             </button>
 
-            <span className="inline-block rounded-full bg-[#ff2e63]/10 px-3 py-1 text-[11px] font-extrabold text-[#ff2e63]">
-              DEMO GRATIS 24 JAM
-            </span>
-            <h3 className="font-display mt-2 text-xl font-extrabold text-[#111114]">
-              Coba Ngeprint di Toko Anda
+            <p className="font-mono-num text-xs text-[#d9381e]">
+              Uji coba gratis 24 jam
+            </p>
+            <h3 className="mt-1 text-lg font-medium text-[#1f1b16]">
+              Coba Ngeprint di toko Anda
             </h3>
 
             {demoSuccess ? (
               <div className="mt-4 space-y-4">
-                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-                  <p className="font-bold">Berhasil Terdaftar!</p>
-                  <p className="mt-1 text-xs">{demoSuccess}</p>
+                <div className="rounded-xl border border-[#16a34a]/30 bg-[#16a34a]/10 p-4 text-xs text-[#1f1b16]">
+                  <p className="font-medium text-[#16a34a]">
+                    Permintaan demo tercatat
+                  </p>
+                  <p className="mt-1 text-[#5e554a]">{demoSuccess}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   <Link
                     href="/register"
-                    className="rounded-xl bg-[#7c3aed] py-2.5 text-center text-xs font-extrabold text-white"
+                    className="btn-action inline-flex h-9 items-center justify-center rounded-lg bg-[#d9381e] text-xs font-medium text-white"
                   >
-                    Buat Akun Toko
+                    Buat akun toko
                   </Link>
                   <Link
                     href="/login"
-                    className="rounded-xl bg-[#17171b] py-2.5 text-center text-xs font-extrabold text-white"
+                    className="btn-action inline-flex h-9 items-center justify-center rounded-lg bg-[#1f1b16] text-xs font-medium text-[#fdfbf7]"
                   >
-                    Login Toko
+                    Masuk toko
                   </Link>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleDemoSubmit} className="mt-4 space-y-3">
                 {demoError && (
-                  <p className="rounded-xl bg-red-50 p-3 text-xs font-semibold text-red-600">
+                  <p className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3 text-xs text-[#dc2626]">
                     {demoError}
                   </p>
                 )}
                 <input
                   required
-                  placeholder="Nama Lengkap Anda"
+                  placeholder="Nama lengkap"
                   value={demoForm.name}
                   onChange={(e) =>
                     setDemoForm({ ...demoForm, name: e.target.value })
                   }
-                  className="w-full rounded-xl border border-[#ece3d2] bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#ff2e63]"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <input
                   required
-                  placeholder="Nomor WhatsApp (cth: 08123456789)"
+                  placeholder="Nomor WhatsApp (0812xxxx)"
                   value={demoForm.whatsapp}
                   onChange={(e) =>
                     setDemoForm({ ...demoForm, whatsapp: e.target.value })
                   }
-                  className="w-full rounded-xl border border-[#ece3d2] bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#ff2e63]"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <input
                   required
-                  placeholder="Nama Toko Fotokopi / Percetakan"
+                  placeholder="Nama toko fotokopi / percetakan"
                   value={demoForm.shopName}
                   onChange={(e) =>
                     setDemoForm({ ...demoForm, shopName: e.target.value })
                   }
-                  className="w-full rounded-xl border border-[#ece3d2] bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#ff2e63]"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <input
-                  placeholder="Kota / Alamat Toko"
+                  placeholder="Kota / alamat toko"
                   value={demoForm.address}
                   onChange={(e) =>
                     setDemoForm({ ...demoForm, address: e.target.value })
                   }
-                  className="w-full rounded-xl border border-[#ece3d2] bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#ff2e63]"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <input
                   type="email"
-                  placeholder="Email (opsional)"
+                  placeholder="Alamat email (opsional)"
                   value={demoForm.email}
                   onChange={(e) =>
                     setDemoForm({ ...demoForm, email: e.target.value })
                   }
-                  className="w-full rounded-xl border border-[#ece3d2] bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#ff2e63]"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <button
                   disabled={demoLoading}
                   type="submit"
-                  className="btn-glossy w-full rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] py-3 text-sm font-extrabold text-white disabled:opacity-60"
+                  className="btn-action h-10 w-full cursor-pointer rounded-lg bg-[#d9381e] text-sm font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
                 >
-                  {demoLoading ? "Mengirim..." : "Mulai Demo Gratis →"}
+                  {demoLoading ? "Memproses..." : "Aktifkan demo 24 jam"}
                 </button>
               </form>
             )}

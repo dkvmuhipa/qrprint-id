@@ -4,11 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  QrCode,
+  Printer,
   Eye,
   EyeOff,
   ArrowLeft,
-  KeyRound,
   ShieldCheck,
 } from "lucide-react";
 
@@ -32,102 +31,99 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Login gagal.");
+        setError(data.error || "Gagal masuk ke akun toko");
       } else {
         router.push("/dashboard");
         router.refresh();
       }
     } catch {
-      setError("Gagal terhubung ke server.");
+      setError("Tidak dapat terhubung ke server");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="bg-ambient flex min-h-screen flex-col items-center justify-center p-4">
-      <div className="mb-6 w-full max-w-4xl">
+    <div className="bg-ambient flex min-h-screen flex-col items-center justify-center p-6">
+      <div className="mb-4 w-full max-w-4xl">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 rounded-full border border-[#ece3d2] bg-white px-4 py-2 text-xs font-bold text-[#111114] shadow-xs hover:border-[#ff2e63]/40"
+          className="inline-flex items-center gap-2 text-xs font-medium text-[#5e554a] transition-colors hover:text-[#1f1b16]"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Kembali ke Beranda
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+          <span>Kembali ke beranda</span>
         </Link>
       </div>
 
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-3xl border border-[#ece3d2] bg-white shadow-xl md:grid-cols-12">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] shadow-[0_8px_24px_rgba(0,0,0,0.05)] md:grid-cols-12">
         {/* Left Brand Panel */}
-        <div className="flex flex-col justify-between bg-[#17171b] p-8 text-white md:col-span-5">
+        <div className="flex flex-col justify-between bg-[#161513] p-8 text-[#efe9de] md:col-span-5">
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35]">
-                <QrCode className="h-5 w-5 text-white" />
+              <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#efe9de] text-[#161513]">
+                <Printer className="h-4 w-4" strokeWidth={1.5} />
               </div>
-              <div className="leading-tight">
-                <span className="font-display text-xl font-extrabold">
-                  Ngeprint
+              <div className="flex items-baseline gap-2">
+                <span className="text-base font-semibold">Ngeprint</span>
+                <span className="font-mono-num text-xs text-[#aaa398]">
+                  by Gellona
                 </span>
-                <p className="text-[10px] font-bold tracking-wider text-[#ffd22e] uppercase">
-                  by Gellona Teknologi
-                </p>
               </div>
             </div>
-            <h1 className="font-display mt-6 text-2xl leading-snug font-extrabold">
-              Dashboard Pemilik Toko Fotokopi
+            <h1 className="mt-8 text-2xl leading-snug font-medium text-[#efe9de]">
+              Panel kendali pemilik toko fotokopi
             </h1>
-            <p className="mt-2 text-xs leading-relaxed text-white/70">
-              Pantau antrean cetak secara real-time, atur tarif Hitam Putih & Warna, cetak poster QR meja kasir, dan hubungkan Windows Print Agent.
+            <p className="mt-2 text-xs leading-relaxed text-[#aaa398]">
+              Pantau antrean cetak masuk, atur tarif per lembar, cetak poster QR meja kasir, dan kelola koneksi Windows Print Agent.
             </p>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-4 text-xs">
-            <div className="flex items-center gap-2 font-bold text-[#ffd22e]">
-              <ShieldCheck className="h-4 w-4" />
-              Privasi & Keamanan Terjaga
+          <div className="mt-8 rounded-xl border border-[#efe9de]/10 bg-[#1c1a18] p-4 text-xs">
+            <div className="flex items-center gap-2 font-medium text-[#efe9de]">
+              <ShieldCheck className="h-4 w-4 text-[#4cc38a]" strokeWidth={1.5} />
+              <span>Penghapusan dokumen otomatis</span>
             </div>
-            <p className="mt-1.5 leading-relaxed text-white/75">
-              Seluruh dokumen pelanggan otomatis terhapus dari server dan komputer toko segera setelah proses cetak selesai.
+            <p className="mt-1.5 leading-relaxed text-[#aaa398]">
+              Seluruh file pelanggan dihapus dari server dan komputer kasir segera setelah proses cetak selesai.
             </p>
           </div>
         </div>
 
         {/* Right Login Form */}
         <div className="p-8 md:col-span-7">
-          <div className="flex items-center gap-2 text-xs font-extrabold text-[#7c3aed]">
-            <KeyRound className="h-4 w-4" />
-            LOGIN PEMILIK TOKO
-          </div>
-          <h2 className="font-display mt-1 text-2xl font-extrabold text-[#111114]">
-            Masuk ke Dashboard
+          <p className="text-xs font-medium text-[#d9381e]">
+            Akses pemilik toko
+          </p>
+          <h2 className="mt-1 text-2xl font-medium text-[#1f1b16]">
+            Masuk ke dashboard
           </h2>
-          <p className="mt-1 text-xs text-[#6b7280]">
-            Gunakan ID Toko (contoh: TOKO_123456) atau email terdaftar.
+          <p className="mt-1 text-xs text-[#7b7266]">
+            Gunakan ID Toko (contoh: TOKO_123456) atau alamat email terdaftar
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700">
+              <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 px-4 py-3 text-xs font-medium text-[#dc2626]">
                 {error}
               </div>
             )}
 
             <div>
-              <label className="mb-1.5 block text-xs font-bold text-[#111114]">
-                ID Toko atau Email
+              <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
+                ID Toko atau email
               </label>
               <input
                 required
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="TOKO_123456 atau email@tokoanda.com"
-                className="w-full rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm font-medium outline-none focus:border-[#7c3aed] focus:bg-white"
+                className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-bold text-[#111114]">
-                Password
+              <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
+                Kata sandi
               </label>
               <div className="relative">
                 <input
@@ -135,19 +131,19 @@ export default function LoginPage() {
                   type={showPass ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Masukkan password"
-                  className="w-full rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 pr-11 text-sm font-medium outline-none focus:border-[#7c3aed] focus:bg-white"
+                  placeholder="Masukkan kata sandi"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 pr-10 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  aria-label="Tampilkan password"
-                  className="absolute top-1/2 right-3 -translate-y-1/2 text-[#6b7280] hover:text-[#111114]"
+                  aria-label="Tampilkan kata sandi"
+                  className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-[#7b7266] hover:text-[#1f1b16]"
                 >
                   {showPass ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff className="h-4 w-4" strokeWidth={1.5} />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4" strokeWidth={1.5} />
                   )}
                 </button>
               </div>
@@ -156,19 +152,19 @@ export default function LoginPage() {
             <button
               disabled={loading}
               type="submit"
-              className="btn-glossy w-full rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] py-3.5 text-sm font-extrabold text-white shadow-lg shadow-[#ff2e63]/20 disabled:opacity-60"
+              className="btn-action h-10 w-full cursor-pointer rounded-lg bg-[#1f1b16] text-sm font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90 disabled:opacity-60"
             >
-              {loading ? "Memverifikasi..." : "Masuk ke Dashboard →"}
+              {loading ? "Memverifikasi..." : "Masuk ke dashboard"}
             </button>
           </form>
 
-          <p className="mt-6 text-center text-xs text-[#6b7280]">
-            Belum punya akun toko?{" "}
+          <p className="mt-6 text-center text-xs text-[#7b7266]">
+            Belum memiliki akun toko?{" "}
             <Link
               href="/register"
-              className="font-extrabold text-[#7c3aed] hover:underline"
+              className="font-medium text-[#d9381e] hover:underline"
             >
-              Daftar Toko Baru Gratis
+              Daftar toko baru
             </Link>
           </p>
         </div>

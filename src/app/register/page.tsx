@@ -3,13 +3,13 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, QrCode, Store, Banknote, Sparkles, Check } from "lucide-react";
+import { ArrowLeft, Printer, Check } from "lucide-react";
 
 const PLAN_OPTIONS = [
-  { id: "BULANAN", name: "Bulanan", price: "Rp 49.000/bln" },
-  { id: "PRO", name: "Pro (Populer)", price: "Rp 149.000/thn" },
-  { id: "PREMIUM", name: "Premium", price: "Rp 249.000/thn" },
-  { id: "LIFETIME", name: "Lifetime", price: "Rp 399.000 sekali" },
+  { id: "BULANAN", name: "Bulanan", price: "Rp 49.000/bulan" },
+  { id: "PRO", name: "Pro Tahunan", price: "Rp 149.000/tahun" },
+  { id: "PREMIUM", name: "Premium", price: "Rp 249.000/tahun" },
+  { id: "LIFETIME", name: "Seumur Hidup", price: "Rp 399.000 sekali bayar" },
 ];
 
 function RegisterForm() {
@@ -43,129 +43,157 @@ function RegisterForm() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Gagal mendaftar.");
+        setError(data.error || "Gagal mendaftarkan toko");
       } else {
         router.push("/dashboard");
         router.refresh();
       }
     } catch {
-      setError("Gagal terhubung ke server.");
+      setError("Tidak dapat terhubung ke server");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="bg-ambient min-h-screen px-4 py-8">
-      <div className="mx-auto max-w-3xl">
+    <div className="bg-ambient min-h-screen px-6 py-10">
+      <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#ece3d2] bg-white px-4 py-2 text-xs font-bold text-[#111114] shadow-xs"
+            className="inline-flex items-center gap-2 text-xs font-medium text-[#5e554a] hover:text-[#1f1b16]"
           >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Beranda
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
+            <span>Beranda</span>
           </Link>
           <Link
             href="/login"
-            className="text-xs font-extrabold text-[#7c3aed] hover:underline"
+            className="text-xs font-medium text-[#5e554a] hover:text-[#1f1b16]"
           >
-            Sudah punya akun? Login →
+            Sudah punya akun? Masuk →
           </Link>
         </div>
 
-        <div className="rounded-3xl border border-[#ece3d2] bg-white p-6 shadow-xl sm:p-10">
+        <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:p-8">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35] text-white">
-              <QrCode className="h-6 w-6" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
+              <Printer className="h-4 w-4" strokeWidth={1.5} />
             </div>
             <div>
-              <h1 className="font-display text-2xl font-extrabold text-[#111114]">
-                Daftarkan Toko Fotokopi Anda
+              <h1 className="text-xl font-medium text-[#1f1b16]">
+                Pendaftaran toko fotokopi baru
               </h1>
-              <p className="text-xs text-[#6b7280]">
-                Selesai dalam 1 menit — langsung dapat QR Toko & Dashboard Antrean.
+              <p className="text-xs text-[#7b7266]">
+                Dapatkan poster QR meja kasir dan akses dashboard antrean cetak
               </p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-8">
             {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700">
+              <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3.5 text-xs font-medium text-[#dc2626]">
                 {error}
               </div>
             )}
 
             {/* Step 1: Shop Details */}
             <div>
-              <h2 className="font-display flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#7c3aed]">
-                <Store className="h-4 w-4" />
-                1. Informasi Toko
+              <h2 className="text-sm font-medium text-[#1f1b16]">
+                1. Identitas toko & akun
               </h2>
-              <div className="mt-3 grid gap-3.5 sm:grid-cols-2">
-                <input
-                  required
-                  placeholder="Nama Toko (cth: Fotokopi Sinar Jaya)"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:bg-white"
-                />
-                <input
-                  required
-                  placeholder="Nama Pemilik"
-                  value={form.ownerName}
-                  onChange={(e) =>
-                    setForm({ ...form, ownerName: e.target.value })
-                  }
-                  className="rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:bg-white"
-                />
-                <input
-                  required
-                  type="email"
-                  placeholder="Email Login"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:bg-white"
-                />
-                <input
-                  required
-                  placeholder="Nomor WhatsApp (cth: 0812xxxx)"
-                  value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  className="rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:bg-white"
-                />
-                <input
-                  required
-                  placeholder="Alamat Lengkap Toko"
-                  value={form.address}
-                  onChange={(e) =>
-                    setForm({ ...form, address: e.target.value })
-                  }
-                  className="rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:bg-white sm:col-span-2"
-                />
-                <input
-                  required
-                  type="password"
-                  minLength={4}
-                  placeholder="Password Login (minimal 4 karakter)"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm({ ...form, password: e.target.value })
-                  }
-                  className="rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm outline-none focus:border-[#7c3aed] focus:bg-white sm:col-span-2"
-                />
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Nama toko
+                  </label>
+                  <input
+                    required
+                    placeholder="Fotokopi Sinar Jaya"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Nama pemilik / penanggung jawab
+                  </label>
+                  <input
+                    required
+                    placeholder="Budi Santoso"
+                    value={form.ownerName}
+                    onChange={(e) =>
+                      setForm({ ...form, ownerName: e.target.value })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Email login
+                  </label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="nama@tokoanda.com"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Nomor WhatsApp
+                  </label>
+                  <input
+                    required
+                    placeholder="08123456789"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Alamat lengkap toko
+                  </label>
+                  <input
+                    required
+                    placeholder="Jl. Kampus Raya No. 14, Kecamatan..."
+                    value={form.address}
+                    onChange={(e) =>
+                      setForm({ ...form, address: e.target.value })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Kata sandi dashboard (minimal 4 karakter)
+                  </label>
+                  <input
+                    required
+                    type="password"
+                    minLength={4}
+                    placeholder="Buat kata sandi"
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm({ ...form, password: e.target.value })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
               </div>
             </div>
 
             {/* Step 2: Print Rates */}
             <div>
-              <h2 className="font-display flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#ff6b35]">
-                <Banknote className="h-4 w-4" />
-                2. Tarif Cetak Per Lembar (Rupiah)
+              <h2 className="text-sm font-medium text-[#1f1b16]">
+                2. Tarif cetak dasar per lembar (Rupiah)
               </h2>
-              <div className="mt-3 grid gap-3.5 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-[#6b7280]">
+                  <label className="mb-1 block text-xs text-[#5e554a]">
                     Hitam Putih (A4) — Rp / lembar
                   </label>
                   <input
@@ -176,11 +204,11 @@ function RegisterForm() {
                     onChange={(e) =>
                       setForm({ ...form, bwPrice: Number(e.target.value) })
                     }
-                    className="w-full rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm font-bold outline-none focus:border-[#ff6b35] focus:bg-white"
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-bold text-[#6b7280]">
+                  <label className="mb-1 block text-xs text-[#5e554a]">
                     Warna (A4) — Rp / lembar
                   </label>
                   <input
@@ -191,7 +219,7 @@ function RegisterForm() {
                     onChange={(e) =>
                       setForm({ ...form, colorPrice: Number(e.target.value) })
                     }
-                    className="w-full rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-4 py-3 text-sm font-bold outline-none focus:border-[#ff6b35] focus:bg-white"
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
                 </div>
               </div>
@@ -199,11 +227,10 @@ function RegisterForm() {
 
             {/* Step 3: Choose Plan */}
             <div>
-              <h2 className="font-display flex items-center gap-2 text-sm font-extrabold uppercase tracking-wider text-[#ff2e63]">
-                <Sparkles className="h-4 w-4" />
-                3. Pilih Paket Aktivasi
+              <h2 className="text-sm font-medium text-[#1f1b16]">
+                3. Paket langganan
               </h2>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                 {PLAN_OPTIONS.map((p) => {
                   const selected = form.plan === p.id;
                   return (
@@ -211,28 +238,30 @@ function RegisterForm() {
                       type="button"
                       key={p.id}
                       onClick={() => setForm({ ...form, plan: p.id })}
-                      className={`flex items-center justify-between rounded-2xl border-2 p-4 text-left transition-all ${
+                      className={`flex cursor-pointer items-center justify-between rounded-xl border p-3.5 text-left transition-colors ${
                         selected
-                          ? "border-[#ff2e63] bg-[#fff9ec]"
-                          : "border-[#ece3d2] bg-white hover:border-[#ff2e63]/40"
+                          ? "border-[#1f1b16] bg-white"
+                          : "border-[#1f1b16]/10 bg-[#f7f4ee]/60 hover:bg-[#efe9df]/60"
                       }`}
                     >
                       <div>
-                        <p className="font-display text-sm font-extrabold text-[#111114]">
+                        <p className="text-sm font-medium text-[#1f1b16]">
                           {p.name}
                         </p>
-                        <p className="text-xs font-semibold text-[#6b7280]">
+                        <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
                           {p.price}
                         </p>
                       </div>
                       <div
-                        className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                        className={`flex h-5 w-5 items-center justify-center rounded-md ${
                           selected
-                            ? "bg-[#ff2e63] text-white"
-                            : "border border-[#ece3d2]"
+                            ? "bg-[#1f1b16] text-white"
+                            : "border border-[#1f1b16]/15"
                         }`}
                       >
-                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {selected && (
+                          <Check className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        )}
                       </div>
                     </button>
                   );
@@ -243,11 +272,9 @@ function RegisterForm() {
             <button
               disabled={loading}
               type="submit"
-              className="btn-glossy w-full rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] py-4 text-sm font-extrabold text-white shadow-lg shadow-[#ff2e63]/25 disabled:opacity-60"
+              className="btn-action h-11 w-full cursor-pointer rounded-lg bg-[#d9381e] text-sm font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
             >
-              {loading
-                ? "Membuat Akun Toko..."
-                : "Buat Toko & Masuk ke Dashboard →"}
+              {loading ? "Membuat akun toko..." : "Buat toko & buka dashboard"}
             </button>
           </form>
         </div>
@@ -260,8 +287,8 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="bg-ambient flex min-h-screen items-center justify-center text-sm font-bold text-[#6b7280]">
-          Memuat halaman registrasi...
+        <div className="bg-ambient flex min-h-screen items-center justify-center text-sm text-[#7b7266]">
+          Memuat halaman pendaftaran...
         </div>
       }
     >

@@ -16,7 +16,6 @@ import {
   Banknote,
   Minus,
   Plus,
-  Sparkles,
   AlertCircle,
   Trash2,
   ArrowLeft,
@@ -24,6 +23,7 @@ import {
   RefreshCw,
   ExternalLink,
   Copy,
+  Palette,
 } from "lucide-react";
 import { calculatePrintPrice, formatRupiah } from "@/lib/utils";
 
@@ -73,7 +73,6 @@ function CustomerScanPortalContent({
   const [shopError, setShopError] = useState<string | null>(null);
   const [loadingShop, setLoadingShop] = useState(true);
 
-  // Upload & print config state
   const [file, setFile] = useState<File | null>(null);
   const [detectedPages, setDetectedPages] = useState<number>(1);
   const [countingPages, setCountingPages] = useState(false);
@@ -88,7 +87,6 @@ function CustomerScanPortalContent({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Active Job tracking state
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [qrisDataUrl, setQrisDataUrl] = useState<string>("");
   const [simulatingPay, setSimulatingPay] = useState(false);
@@ -101,12 +99,12 @@ function CustomerScanPortalContent({
         const res = await fetch(`/api/public/shop/${shopCode}`);
         const data = await res.json();
         if (!res.ok) {
-          setShopError(data.error || "Toko tidak ditemukan.");
+          setShopError(data.error || "Toko tidak ditemukan");
         } else {
           setShop(data.shop);
         }
       } catch {
-        setShopError("Gagal memuat informasi toko.");
+        setShopError("Gagal memuat informasi toko");
       } finally {
         setLoadingShop(false);
       }
@@ -114,7 +112,6 @@ function CustomerScanPortalContent({
     loadShop();
   }, [shopCode]);
 
-  // Generate QRIS image from Midtrans qr_string or fallback mock payload
   useEffect(() => {
     if (!activeJob || activeJob.paymentMethod !== "QRIS") return;
     if (activeJob.paymentProvider === "MIDTRANS" && activeJob.qrisUrl) {
@@ -127,13 +124,12 @@ function CustomerScanPortalContent({
     QRCode.toDataURL(payload, {
       width: 240,
       margin: 2,
-      color: { dark: "#111114", light: "#ffffff" },
+      color: { dark: "#1f1b16", light: "#ffffff" },
     })
       .then(setQrisDataUrl)
       .catch(() => {});
   }, [activeJob, shop]);
 
-  // Poll activeJob status every 2.5s
   useEffect(() => {
     if (!activeJob) return;
     if (
@@ -223,12 +219,12 @@ function CustomerScanPortalContent({
       });
       const data = await res.json();
       if (!res.ok) {
-        setSubmitError(data.error || "Gagal mengunggah file.");
+        setSubmitError(data.error || "Gagal mengunggah dokumen");
       } else {
         setActiveJob(data.job);
       }
     } catch {
-      setSubmitError("Gagal mengirim file ke server.");
+      setSubmitError("Gagal mengirim dokumen ke server");
     } finally {
       setSubmitting(false);
     }
@@ -283,9 +279,9 @@ function CustomerScanPortalContent({
   if (loadingShop) {
     return (
       <div className="bg-ambient flex min-h-screen items-center justify-center p-4">
-        <div className="flex items-center gap-2.5 rounded-2xl border border-[#ece3d2] bg-white px-6 py-4 text-sm font-bold text-[#111114] shadow-sm">
-          <Loader2 className="h-5 w-5 animate-spin text-[#ff2e63]" />
-          Memuat portal cetak toko...
+        <div className="flex items-center gap-2.5 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] px-5 py-3.5 text-sm text-[#1f1b16]">
+          <Loader2 className="h-4 w-4 animate-spin text-[#7b7266]" strokeWidth={1.5} />
+          <span>Memuat portal cetak toko...</span>
         </div>
       </div>
     );
@@ -294,26 +290,29 @@ function CustomerScanPortalContent({
   if (shopError || !shop) {
     return (
       <div className="bg-ambient flex min-h-screen flex-col items-center justify-center p-4 text-center">
-        <div className="max-w-md rounded-3xl border border-[#ece3d2] bg-white p-8 shadow-lg">
-          <AlertCircle className="mx-auto h-12 w-12 text-[#ff2e63]" />
-          <h1 className="font-display mt-3 text-xl font-extrabold text-[#111114]">
-            Toko Tidak Ditemukan
+        <div className="max-w-md rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-8">
+          <AlertCircle
+            className="mx-auto h-10 w-10 text-[#dc2626]"
+            strokeWidth={1.5}
+          />
+          <h1 className="mt-3 text-xl font-medium text-[#1f1b16]">
+            Toko tidak ditemukan
           </h1>
-          <p className="mt-2 text-xs text-[#6b7280]">
-            {shopError || "Kode QR tidak valid."}
+          <p className="mt-1.5 text-xs text-[#7b7266]">
+            {shopError || "Kode QR toko tidak terdaftar"}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2.5">
             <Link
               href="/register"
-              className="rounded-full bg-[#7c3aed] px-5 py-2.5 text-xs font-extrabold text-white"
+              className="btn-action inline-flex h-9 items-center rounded-lg bg-[#1f1b16] px-4 text-xs font-medium text-[#fdfbf7]"
             >
-              Daftar Toko Baru
+              Daftarkan toko baru
             </Link>
             <Link
               href="/"
-              className="rounded-full border border-[#ece3d2] px-5 py-2.5 text-xs font-bold text-[#111114]"
+              className="btn-action inline-flex h-9 items-center rounded-lg border border-[#1f1b16]/15 px-4 text-xs font-medium text-[#1f1b16]"
             >
-              Ke Beranda
+              Ke beranda
             </Link>
           </div>
         </div>
@@ -322,75 +321,65 @@ function CustomerScanPortalContent({
   }
 
   return (
-    <div className="bg-ambient min-h-screen pb-12">
+    <div className="bg-ambient min-h-screen pb-16">
       {/* Compact Top Bar */}
-      <header className="sticky top-0 z-30 border-b border-[#ece3d2] bg-[#fffdf8]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-xl items-center justify-between px-4 py-3">
+      <header className="sticky top-0 z-30 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
+        <div className="mx-auto flex h-13 max-w-xl items-center justify-between px-4">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#6b7280] hover:text-[#111114]"
+            className="inline-flex items-center gap-2 text-xs font-medium text-[#5e554a] hover:text-[#1f1b16]"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
             <span>Ngeprint</span>
-            <span className="text-[10px] font-semibold text-[#ff2e63]">by Gellona</span>
+            <span className="font-mono-num text-[#7b7266]">by Gellona</span>
           </Link>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold ${
-              shop.isAgentOnline
-                ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-                : "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
-            }`}
-          >
+          <span className="inline-flex items-center gap-2 rounded-md border border-[#1f1b16]/10 bg-[#fdfbf7] px-2.5 py-1 text-xs text-[#1f1b16]">
             <span
               className={`h-2 w-2 rounded-full ${
-                shop.isAgentOnline
-                  ? "bg-emerald-500 animate-pulse"
-                  : "bg-amber-500"
+                shop.isAgentOnline ? "bg-[#16a34a]" : "bg-[#b45309]"
               }`}
             />
-            {shop.isAgentOnline ? "Auto-Print Online" : "Siap Terima Antrean"}
+            <span>
+              {shop.isAgentOnline ? "Printer siap cetak" : "Menerima antrean"}
+            </span>
           </span>
         </div>
       </header>
 
       <main className="mx-auto max-w-xl px-4 pt-5">
         {/* Shop Identity Card */}
-        <div className="rounded-3xl border border-[#ece3d2] bg-white p-5 shadow-sm">
+        <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="inline-block rounded-full bg-[#fff9ec] px-2.5 py-0.5 text-[10px] font-extrabold tracking-wider text-[#7c3aed] ring-1 ring-[#7c3aed]/20">
+              <span className="font-mono-num text-xs text-[#7b7266]">
                 {shop.shopCode}
               </span>
-              <h1 className="font-display mt-1.5 text-xl font-extrabold text-[#111114]">
+              <h1 className="mt-1 text-xl font-medium text-[#1f1b16]">
                 {shop.name}
               </h1>
-              <p className="mt-0.5 text-xs text-[#6b7280]">{shop.address}</p>
+              <p className="mt-0.5 text-xs text-[#7b7266]">{shop.address}</p>
             </div>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35] text-white shadow-md shadow-[#ff2e63]/20">
-              <Printer className="h-5 w-5" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
+              <Printer className="h-4 w-4" strokeWidth={1.5} />
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#ece3d2] pt-3.5 text-center">
-            <div className="rounded-xl bg-[#fff9ec] p-2">
-              <p className="text-[10px] font-semibold text-[#6b7280]">
-                Hitam Putih
-              </p>
-              <p className="font-display text-xs font-extrabold text-[#111114]">
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#1f1b16]/8 pt-3.5">
+            <div className="rounded-lg bg-[#f7f4ee] p-2.5">
+              <p className="text-[11px] text-[#7b7266]">Hitam Putih</p>
+              <p className="font-mono-num mt-0.5 text-xs font-medium text-[#1f1b16]">
                 {formatRupiah(shop.bwPrice)}/lbr
               </p>
             </div>
-            <div className="rounded-xl bg-[#fff9ec] p-2">
-              <p className="text-[10px] font-semibold text-[#6b7280]">Warna</p>
-              <p className="font-display text-xs font-extrabold text-[#ff2e63]">
+            <div className="rounded-lg bg-[#f7f4ee] p-2.5">
+              <p className="text-[11px] text-[#7b7266]">Warna</p>
+              <p className="font-mono-num mt-0.5 text-xs font-medium text-[#1f1b16]">
                 {formatRupiah(shop.colorPrice)}/lbr
               </p>
             </div>
-            <div className="rounded-xl bg-[#fff9ec] p-2">
-              <p className="text-[10px] font-semibold text-[#6b7280]">
-                Foto 4×6
-              </p>
-              <p className="font-display text-xs font-extrabold text-[#7c3aed]">
+            <div className="rounded-lg bg-[#f7f4ee] p-2.5">
+              <p className="text-[11px] text-[#7b7266]">Foto 4×6</p>
+              <p className="font-mono-num mt-0.5 text-xs font-medium text-[#1f1b16]">
                 {formatRupiah(shop.photoPrice)}/lbr
               </p>
             </div>
@@ -398,82 +387,91 @@ function CustomerScanPortalContent({
         </div>
 
         {/* Privacy Assurance */}
-        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-[#17171b] px-4 py-2.5 text-[11px] font-semibold text-white">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-[#ffd22e]" />
+        <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-[#1f1b16]/10 bg-[#efe9df] px-4 py-2.5 text-xs text-[#1f1b16]">
+          <ShieldCheck className="h-4 w-4 shrink-0 text-[#16a34a]" strokeWidth={1.5} />
           <span>
-            Privasi Terjamin: File Anda otomatis dihapus dari server & PC toko segera setelah selesai dicetak.
+            Dokumen Anda otomatis dihapus dari server dan PC toko segera setelah tercetak
           </span>
         </div>
 
         {/* STEP 2: ACTIVE JOB TRACKER & PAYMENT */}
         {activeJob ? (
           <div className="mt-5 space-y-4">
-            <div className="rounded-3xl border-2 border-[#7c3aed]/30 bg-white p-6 shadow-lg">
-              <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-[#1f1b16]/12 bg-[#fdfbf7] p-6">
+              <div className="flex items-center justify-between border-b border-[#1f1b16]/8 pb-4">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-[#6b7280]">
-                    Kode Antrean Cetak
-                  </p>
-                  <p className="font-display text-2xl font-extrabold text-[#7c3aed]">
+                  <p className="text-xs text-[#7b7266]">Nomor antrean cetak</p>
+                  <p className="font-mono-num mt-0.5 text-2xl font-medium text-[#1f1b16]">
                     {activeJob.jobCode}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[11px] font-bold text-[#6b7280]">Total</p>
-                  <p className="font-display text-xl font-extrabold text-[#111114]">
+                  <p className="text-xs text-[#7b7266]">Total biaya</p>
+                  <p className="font-mono-num mt-0.5 text-xl font-medium text-[#d9381e]">
                     {formatRupiah(activeJob.totalPrice)}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-[#fff9ec] p-3.5 text-xs">
-                <p className="font-bold text-[#111114] truncate">
-                  📄 {activeJob.fileName}
-                </p>
-                <p className="mt-1 text-[#6b7280]">
-                  {activeJob.pageCount} hal • {activeJob.copies} rangkap •{" "}
-                  {activeJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} •{" "}
-                  {activeJob.paperSize}
-                  {activeJob.duplex ? " • Bolak-balik" : ""}
-                </p>
+              <div className="mt-4 flex items-start gap-2.5 rounded-lg bg-[#f7f4ee] p-3.5 text-xs">
+                <FileText
+                  className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
+                  strokeWidth={1.5}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-[#1f1b16]">
+                    {activeJob.fileName}
+                  </p>
+                  <p className="font-mono-num mt-1 text-[#7b7266]">
+                    {activeJob.pageCount} hal · {activeJob.copies} rangkap ·{" "}
+                    {activeJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} ·{" "}
+                    {activeJob.paperSize}
+                    {activeJob.duplex ? " · Bolak-balik" : ""}
+                  </p>
+                </div>
               </div>
 
               {/* Payment Block if Pending */}
               {activeJob.paymentStatus === "PENDING" && (
-                <div className="mt-5 rounded-2xl border border-[#ece3d2] bg-[#fffdf8] p-5 text-center">
+                <div className="mt-5 rounded-xl border border-[#1f1b16]/10 bg-white p-5 text-center">
                   {activeJob.paymentMethod === "QRIS" ? (
                     <>
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ff2e63]/10 px-3 py-1 text-[11px] font-extrabold text-[#ff2e63]">
-                        <QrCode className="h-3.5 w-3.5" />
-                        {activeJob.paymentProvider === "MIDTRANS"
-                          ? activeJob.midtransIsProd
-                            ? "SCAN QRIS MIDTRANS RESMI"
-                            : "MIDTRANS QRIS (SANDBOX)"
-                          : "SCAN QRIS (MODE SIMULASI)"}
-                      </span>
-                      <p className="mt-2 text-xs font-bold text-[#111114]">
+                      <div className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1f1b16]">
+                        <QrCode className="h-4 w-4 text-[#d9381e]" strokeWidth={1.5} />
+                        <span>
+                          {activeJob.paymentProvider === "MIDTRANS"
+                            ? activeJob.midtransIsProd
+                              ? "Pembayaran QRIS Midtrans"
+                              : "QRIS Midtrans (Sandbox)"
+                            : "Pembayaran QRIS (Simulasi)"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-[#7b7266]">
                         {shop.qrisName}
                       </p>
+
                       {qrisDataUrl && (
-                        <img
-                          src={qrisDataUrl}
-                          alt="QRIS Pembayaran"
-                          className="mx-auto my-3 h-52 w-52 rounded-2xl border border-[#ece3d2] bg-white p-2 shadow-xs object-contain"
-                        />
+                        <div className="crop-frame mx-auto my-4 inline-block rounded-xl border border-[#1f1b16]/12 bg-white p-3">
+                          <img
+                            src={qrisDataUrl}
+                            alt="QRIS Pembayaran"
+                            className="h-48 w-48 object-contain"
+                          />
+                        </div>
                       )}
 
                       {activeJob.paymentProvider === "MIDTRANS" ? (
-                        <div className="mt-3 space-y-3">
-                          <p className="text-[11px] text-[#6b7280]">
+                        <div className="mt-2 space-y-3">
+                          <p className="text-xs text-[#5e554a]">
                             {activeJob.midtransIsProd
-                              ? "Scan QRIS di atas dengan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking. Printer akan langsung bekerja otomatis begitu lunas."
-                              : "Mode Sandbox Midtrans aktif. Salin URL QR Code di bawah lalu tempel di Midtrans QRIS Simulator untuk menguji bayar otomatis."}
+                              ? "Pindai kode QRIS di atas menggunakan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking. Printer bekerja otomatis setelah lunas."
+                              : "Mode Sandbox Midtrans aktif. Salin tautan QRIS di bawah lalu tempelkan pada Midtrans QRIS Simulator."}
                           </p>
 
                           {!activeJob.midtransIsProd && activeJob.qrisUrl && (
-                            <div className="rounded-xl border border-[#ece3d2] bg-[#fff9ec] p-3 text-left text-[11px]">
-                              <p className="font-bold text-[#111114]">
-                                Uji Bayar via Midtrans Simulator:
+                            <div className="rounded-lg border border-[#1f1b16]/10 bg-[#f7f4ee] p-3 text-left text-xs">
+                              <p className="font-medium text-[#1f1b16]">
+                                Pengujian pembayaran Midtrans Simulator
                               </p>
                               <div className="mt-2 flex flex-wrap gap-2">
                                 <button
@@ -488,21 +486,23 @@ function CustomerScanPortalContent({
                                       2000
                                     );
                                   }}
-                                  className="inline-flex items-center gap-1 rounded-lg bg-[#17171b] px-3 py-1.5 font-bold text-white"
+                                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-[#1f1b16] px-3 py-1.5 text-xs font-medium text-[#fdfbf7]"
                                 >
-                                  <Copy className="h-3 w-3" />
-                                  {copiedQrUrl
-                                    ? "URL QR Tersalin!"
-                                    : "1. Salin URL QRIS"}
+                                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                  <span>
+                                    {copiedQrUrl
+                                      ? "URL QRIS tersalin"
+                                      : "1. Salin URL QRIS"}
+                                  </span>
                                 </button>
                                 <a
                                   href="https://simulator.sandbox.midtrans.com/v2/qris/index"
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center gap-1 rounded-lg bg-[#7c3aed] px-3 py-1.5 font-bold text-white"
+                                  className="inline-flex items-center gap-1.5 rounded-md border border-[#1f1b16]/15 bg-white px-3 py-1.5 text-xs font-medium text-[#1f1b16]"
                                 >
-                                  <ExternalLink className="h-3 w-3" />
-                                  2. Buka Simulator Midtrans
+                                  <span>2. Buka simulator</span>
+                                  <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
                                 </a>
                               </div>
                             </div>
@@ -512,52 +512,61 @@ function CustomerScanPortalContent({
                             type="button"
                             disabled={checkingStatus}
                             onClick={handleCheckStatusNow}
-                            className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#7c3aed] bg-white py-3 text-xs font-extrabold text-[#7c3aed] hover:bg-[#7c3aed]/5 disabled:opacity-60"
+                            className="btn-action inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#1f1b16]/15 bg-[#f7f4ee] text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df] disabled:opacity-60"
                           >
                             <RefreshCw
-                              className={`h-4 w-4 ${
+                              className={`h-3.5 w-3.5 ${
                                 checkingStatus ? "animate-spin" : ""
                               }`}
+                              strokeWidth={1.5}
                             />
-                            {checkingStatus
-                              ? "Mengecek ke Midtrans..."
-                              : "Cek Status Pembayaran Sekarang"}
+                            <span>
+                              {checkingStatus
+                                ? "Memeriksa status ke Midtrans..."
+                                : "Periksa status pembayaran"}
+                            </span>
                           </button>
                         </div>
                       ) : (
                         <>
-                          <p className="text-[11px] text-[#6b7280]">
-                            Midtrans Server Key belum diatur di Dashboard Toko. Gunakan tombol simulasi di bawah atau masukkan Midtrans Key untuk QRIS asli.
+                          <p className="text-xs text-[#7b7266]">
+                            Gunakan tombol simulasi di bawah untuk menguji alur cetak otomatis
                           </p>
                           <button
                             disabled={simulatingPay}
                             onClick={handleSimulateQrisPay}
-                            className="btn-glossy mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] py-3.5 text-sm font-extrabold text-white shadow-lg shadow-[#ff2e63]/20 disabled:opacity-60"
+                            className="btn-action mt-4 inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
                           >
-                            <Sparkles className="h-4 w-4" />
-                            {simulatingPay
-                              ? "Memproses Pembayaran..."
-                              : `Simulasi Bayar QRIS (${formatRupiah(activeJob.totalPrice)})`}
+                            <span>
+                              {simulatingPay
+                                ? "Memverifikasi pembayaran..."
+                                : `Simulasikan pelunasan QRIS (${formatRupiah(
+                                    activeJob.totalPrice
+                                  )})`}
+                            </span>
                           </button>
                         </>
                       )}
                     </>
                   ) : (
                     <>
-                      <Banknote className="mx-auto h-10 w-10 text-emerald-600" />
-                      <h3 className="font-display mt-2 text-base font-extrabold text-[#111114]">
-                        Bayar Tunai di Kasir
+                      <Banknote
+                        className="mx-auto h-8 w-8 text-[#16a34a]"
+                        strokeWidth={1.5}
+                      />
+                      <h3 className="mt-2 text-base font-medium text-[#1f1b16]">
+                        Pembayaran tunai di kasir
                       </h3>
-                      <p className="mt-1 text-xs text-[#6b7280]">
-                        Sebutkan kode{" "}
-                        <strong className="text-[#111114]">
+                      <p className="mt-1 text-xs text-[#5e554a]">
+                        Sebutkan kode antrean{" "}
+                        <strong className="font-mono-num font-medium text-[#1f1b16]">
                           {activeJob.jobCode}
                         </strong>{" "}
-                        dan bayar{" "}
-                        <strong className="text-[#111114]">
+                        dan bayar sejumlah{" "}
+                        <strong className="font-mono-num font-medium text-[#1f1b16]">
                           {formatRupiah(activeJob.totalPrice)}
                         </strong>{" "}
-                        ke kasir. Printer akan langsung mencetak setelah kasir mengonfirmasi.
+                        kepada petugas kasir.
                       </p>
                     </>
                   )}
@@ -565,68 +574,79 @@ function CustomerScanPortalContent({
               )}
 
               {/* Live Status Stepper */}
-              <div className="mt-6 space-y-3">
-                <p className="text-xs font-extrabold uppercase tracking-wider text-[#6b7280]">
-                  Status Real-Time
+              <div className="mt-6 space-y-2.5">
+                <p className="text-xs font-medium text-[#7b7266]">
+                  Progres pencetakan
                 </p>
 
                 {[
                   {
                     done: activeJob.paymentStatus === "PAID",
                     active: activeJob.paymentStatus === "PENDING",
-                    title: "Pembayaran",
+                    title: "Verifikasi pembayaran",
                     desc:
                       activeJob.paymentStatus === "PAID"
-                        ? "Lunas — pembayaran terverifikasi"
-                        : "Menunggu pembayaran pelanggan",
+                        ? "Pembayaran telah diterima"
+                        : "Menunggu penyelesaian pembayaran",
                   },
                   {
                     done:
                       activeJob.printStatus === "PRINTING" ||
                       activeJob.printStatus === "COMPLETED",
                     active: activeJob.printStatus === "QUEUED",
-                    title: "Antrean Printer Toko",
+                    title: "Antrean Print Agent toko",
                     desc:
                       activeJob.printStatus === "QUEUED"
-                        ? "Menunggu Print Agent mengambil dokumen..."
+                        ? "Menunggu komputer kasir mengambil dokumen"
                         : activeJob.printStatus === "WAITING_PAYMENT"
-                        ? "Akan otomatis masuk antrean setelah lunas"
-                        : "Sudah diteruskan ke printer",
+                        ? "Masuk antrean otomatis setelah pembayaran lunas"
+                        : "Dokumen telah diteruskan ke printer",
                   },
                   {
                     done: activeJob.printStatus === "COMPLETED",
                     active: activeJob.printStatus === "PRINTING",
-                    title: "Proses Mencetak",
+                    title: "Pencetakan & penghapusan file",
                     desc:
                       activeJob.printStatus === "PRINTING"
-                        ? "Dokumen sedang keluar dari printer..."
+                        ? "Kertas sedang keluar dari mesin printer"
                         : activeJob.printStatus === "COMPLETED"
-                        ? "Selesai dicetak! Silakan ambil hasil cetak Anda."
+                        ? "Selesai dicetak, silakan ambil dokumen Anda di baki printer"
                         : "Menunggu giliran cetak",
                   },
                 ].map((step) => (
                   <div
                     key={step.title}
-                    className={`flex items-start gap-3 rounded-2xl border p-3.5 ${
+                    className={`flex items-start gap-3 rounded-lg border p-3.5 ${
                       step.done
-                        ? "border-emerald-200 bg-emerald-50/60"
+                        ? "border-[#16a34a]/25 bg-[#16a34a]/5"
                         : step.active
-                        ? "border-[#7c3aed]/40 bg-[#7c3aed]/5"
-                        : "border-[#ece3d2] bg-white opacity-60"
+                        ? "border-[#1f1b16]/20 bg-white"
+                        : "border-[#1f1b16]/8 bg-[#f7f4ee]/50 opacity-60"
                     }`}
                   >
                     {step.done ? (
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                      <CheckCircle2
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[#16a34a]"
+                        strokeWidth={1.5}
+                      />
                     ) : step.active ? (
-                      <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-[#7c3aed]" />
+                      <Loader2
+                        className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-[#1f1b16]"
+                        strokeWidth={1.5}
+                      />
                     ) : (
-                      <Clock className="mt-0.5 h-5 w-5 shrink-0 text-[#6b7280]" />
+                      <Clock
+                        className="mt-0.5 h-4 w-4 shrink-0 text-[#7b7266]"
+                        strokeWidth={1.5}
+                      />
                     )}
                     <div>
-                      <p className="text-xs font-extrabold text-[#111114]">
+                      <p className="text-xs font-medium text-[#1f1b16]">
                         {step.title}
                       </p>
-                      <p className="text-[11px] text-[#6b7280]">{step.desc}</p>
+                      <p className="mt-0.5 text-xs text-[#5e554a]">
+                        {step.desc}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -634,23 +654,27 @@ function CustomerScanPortalContent({
 
               {/* Privacy Deleted Banner */}
               {activeJob.fileDeletedAt && (
-                <div className="mt-4 flex items-center gap-2.5 rounded-2xl border border-emerald-300 bg-emerald-50 p-3.5 text-xs font-bold text-emerald-800">
-                  <Trash2 className="h-4 w-4 shrink-0" />
+                <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-[#16a34a]/30 bg-[#16a34a]/10 p-3.5 text-xs text-[#1f1b16]">
+                  <Trash2
+                    className="h-4 w-4 shrink-0 text-[#16a34a]"
+                    strokeWidth={1.5}
+                  />
                   <span>
-                    File dokumen Anda telah dihapus permanen dari server pada{" "}
-                    {new Date(activeJob.fileDeletedAt).toLocaleTimeString(
-                      "id-ID"
-                    )}
-                    .
+                    File dokumen Anda telah dihapus permanen dari server pada pukul{" "}
+                    <span className="font-mono-num font-medium">
+                      {new Date(activeJob.fileDeletedAt).toLocaleTimeString(
+                        "id-ID"
+                      )}
+                    </span>
                   </span>
                 </div>
               )}
 
               <button
                 onClick={resetOrder}
-                className="mt-5 w-full rounded-full border border-[#ece3d2] bg-white py-3 text-xs font-extrabold text-[#111114] hover:bg-[#fff9ec]"
+                className="btn-action mt-5 h-10 w-full cursor-pointer rounded-lg border border-[#1f1b16]/15 bg-white text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
               >
-                + Cetak Dokumen Lainnya
+                Cetak dokumen lainnya
               </button>
             </div>
           </div>
@@ -658,18 +682,18 @@ function CustomerScanPortalContent({
           /* STEP 1: UPLOAD & PRINT OPTIONS FORM */
           <form onSubmit={handleUploadAndOrder} className="mt-5 space-y-4">
             {submitError && (
-              <div className="rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-700">
+              <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3.5 text-xs font-medium text-[#dc2626]">
                 {submitError}
               </div>
             )}
 
             {/* File Dropzone */}
-            <div className="rounded-3xl border border-[#ece3d2] bg-white p-5 shadow-sm">
-              <label className="mb-2 block text-xs font-extrabold uppercase tracking-wider text-[#111114]">
-                1. Pilih File Dokumen / Foto
+            <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
+              <label className="mb-2.5 block text-xs font-medium text-[#1f1b16]">
+                1. Pilih dokumen PDF atau foto
               </label>
 
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-[#ff2e63]/40 bg-[#fff9ec]/70 px-4 py-7 text-center transition-colors hover:border-[#ff2e63] hover:bg-[#fff9ec]">
+              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#1f1b16]/25 bg-[#f7f4ee]/70 px-4 py-7 text-center transition-colors hover:border-[#1f1b16] hover:bg-[#efe9df]/50">
                 <input
                   type="file"
                   accept=".pdf,image/jpeg,image/png,image/webp"
@@ -680,35 +704,35 @@ function CustomerScanPortalContent({
                 />
                 {file ? (
                   <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#7c3aed] text-white">
-                      <FileText className="h-6 w-6" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
+                      <FileText className="h-5 w-5" strokeWidth={1.5} />
                     </div>
-                    <p className="mt-2.5 max-w-full truncate text-sm font-extrabold text-[#111114]">
+                    <p className="mt-2.5 max-w-full truncate text-sm font-medium text-[#1f1b16]">
                       {file.name}
                     </p>
-                    <p className="mt-1 text-xs font-semibold text-[#7c3aed]">
+                    <p className="font-mono-num mt-1 text-xs text-[#5e554a]">
                       {countingPages
-                        ? "Menghitung halaman PDF..."
-                        : `${detectedPages} halaman terdeteksi • ${(
+                        ? "Menghitung lembar halaman PDF..."
+                        : `${detectedPages} halaman · ${(
                             file.size /
                             1024 /
                             1024
                           ).toFixed(2)} MB`}
                     </p>
-                    <span className="mt-2 text-[11px] font-bold text-[#ff2e63] underline">
-                      Ganti file lain
+                    <span className="mt-2 text-xs font-medium text-[#d9381e] underline">
+                      Ganti dokumen lain
                     </span>
                   </>
                 ) : (
                   <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ff2e63] to-[#ff6b35] text-white shadow-md shadow-[#ff2e63]/20">
-                      <UploadCloud className="h-6 w-6" />
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#1f1b16]/12 bg-white text-[#1f1b16]">
+                      <UploadCloud className="h-5 w-5" strokeWidth={1.5} />
                     </div>
-                    <p className="mt-3 text-sm font-extrabold text-[#111114]">
-                      Ketuk untuk pilih PDF atau Foto
+                    <p className="mt-3 text-sm font-medium text-[#1f1b16]">
+                      Ketuk untuk memilih file dari ponsel Anda
                     </p>
-                    <p className="mt-1 text-xs text-[#6b7280]">
-                      Format: PDF, JPG, PNG, WEBP (Maks. 20 MB)
+                    <p className="mt-1 text-xs text-[#7b7266]">
+                      Mendukung PDF, JPG, PNG, WEBP hingga 20 MB
                     </p>
                   </>
                 )}
@@ -716,63 +740,75 @@ function CustomerScanPortalContent({
             </div>
 
             {/* Print Options */}
-            <div className="rounded-3xl border border-[#ece3d2] bg-white p-5 shadow-sm space-y-4">
-              <p className="text-xs font-extrabold uppercase tracking-wider text-[#111114]">
-                2. Pengaturan Cetak
+            <div className="space-y-4 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
+              <p className="text-xs font-medium text-[#1f1b16]">
+                2. Pengaturan cetak kertas
               </p>
 
               <div>
-                <label className="mb-1 block text-xs font-bold text-[#6b7280]">
-                  Nama Anda (opsional, untuk panggilan kasir)
+                <label className="mb-1 block text-xs text-[#5e554a]">
+                  Nama pemesan (opsional, untuk penanda di baki printer)
                 </label>
                 <input
-                  placeholder="cth: Andi / Meja 2"
+                  placeholder="Andi"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-3.5 py-2.5 text-sm outline-none focus:border-[#7c3aed]"
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
               </div>
 
-              {/* Color Mode */}
+              {/* Color Mode — Line Icons Instead of Emojis */}
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setColorMode("BW")}
-                  className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
                     colorMode === "BW"
-                      ? "border-[#111114] bg-[#fff9ec]"
-                      : "border-[#ece3d2] bg-white"
+                      ? "border-[#1f1b16] bg-white"
+                      : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
                   }`}
                 >
-                  <p className="text-xs font-extrabold text-[#111114]">
-                    ⚫ Hitam Putih
-                  </p>
-                  <p className="text-[11px] font-semibold text-[#6b7280]">
-                    {formatRupiah(shop.bwPrice)} / lembar
-                  </p>
+                  <FileText
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
+                    strokeWidth={1.5}
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-[#1f1b16]">
+                      Hitam Putih
+                    </p>
+                    <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
+                      {formatRupiah(shop.bwPrice)}/lembar
+                    </p>
+                  </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setColorMode("COLOR")}
-                  className={`rounded-2xl border-2 p-3 text-left transition-all ${
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
                     colorMode === "COLOR"
-                      ? "border-[#ff2e63] bg-[#ff2e63]/5"
-                      : "border-[#ece3d2] bg-white"
+                      ? "border-[#1f1b16] bg-white"
+                      : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
                   }`}
                 >
-                  <p className="text-xs font-extrabold text-[#ff2e63]">
-                    🎨 Full Warna
-                  </p>
-                  <p className="text-[11px] font-semibold text-[#6b7280]">
-                    {formatRupiah(shop.colorPrice)} / lembar
-                  </p>
+                  <Palette
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
+                    strokeWidth={1.5}
+                  />
+                  <div>
+                    <p className="text-xs font-medium text-[#1f1b16]">
+                      Warna
+                    </p>
+                    <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
+                      {formatRupiah(shop.colorPrice)}/lembar
+                    </p>
+                  </div>
                 </button>
               </div>
 
               {/* Paper Size */}
               <div>
-                <label className="mb-1.5 block text-xs font-bold text-[#6b7280]">
-                  Ukuran Kertas
+                <label className="mb-1.5 block text-xs text-[#5e554a]">
+                  Ukuran kertas
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
@@ -784,10 +820,10 @@ function CustomerScanPortalContent({
                       type="button"
                       key={s.id}
                       onClick={() => setPaperSize(s.id)}
-                      className={`rounded-xl border py-2.5 text-xs font-bold transition-all ${
+                      className={`h-9 cursor-pointer rounded-lg border text-xs font-medium transition-colors ${
                         paperSize === s.id
-                          ? "border-[#7c3aed] bg-[#7c3aed] text-white"
-                          : "border-[#ece3d2] bg-[#fffdf8] text-[#111114]"
+                          ? "border-[#1f1b16] bg-[#1f1b16] text-[#fdfbf7]"
+                          : "border-[#1f1b16]/12 bg-white text-[#1f1b16] hover:bg-[#efe9df]"
                       }`}
                     >
                       {s.label}
@@ -799,105 +835,111 @@ function CustomerScanPortalContent({
               {/* Copies & Page Range */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1.5 block text-xs font-bold text-[#6b7280]">
-                    Jumlah Rangkap
+                  <label className="mb-1.5 block text-xs text-[#5e554a]">
+                    Jumlah rangkap
                   </label>
-                  <div className="flex items-center justify-between rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-2 py-1.5">
+                  <div className="flex h-10 items-center justify-between rounded-lg border border-[#1f1b16]/12 bg-white px-2">
                     <button
                       type="button"
                       onClick={() => setCopies((c) => Math.max(1, c - 1))}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#111114] shadow-2xs"
+                      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-[#f7f4ee] text-[#1f1b16] hover:bg-[#efe9df]"
                     >
-                      <Minus className="h-4 w-4" />
+                      <Minus className="h-3.5 w-3.5" strokeWidth={1.5} />
                     </button>
-                    <span className="font-display text-sm font-extrabold">
-                      {copies}x
+                    <span className="font-mono-num text-sm font-medium">
+                      {copies}×
                     </span>
                     <button
                       type="button"
                       onClick={() => setCopies((c) => Math.min(50, c + 1))}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-[#111114] shadow-2xs"
+                      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-[#f7f4ee] text-[#1f1b16] hover:bg-[#efe9df]"
                     >
-                      <Plus className="h-4 w-4" />
+                      <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="mb-1.5 block text-xs font-bold text-[#6b7280]">
-                    Halaman (cth: ALL / 1-3)
+                  <label className="mb-1.5 block text-xs text-[#5e554a]">
+                    Rentang halaman (ALL / 1-3)
                   </label>
                   <input
                     value={pageRange}
                     onChange={(e) => setPageRange(e.target.value)}
                     placeholder="ALL"
-                    className="w-full rounded-xl border border-[#ece3d2] bg-[#fffdf8] px-3.5 py-2.5 text-sm font-bold outline-none focus:border-[#7c3aed]"
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
                 </div>
               </div>
 
               {/* Duplex toggle */}
               {paperSize !== "PHOTO_4X6" && (
-                <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-[#ece3d2] bg-[#fff9ec]/60 px-4 py-3">
+                <label className="flex cursor-pointer items-center justify-between rounded-xl border border-[#1f1b16]/10 bg-[#f7f4ee] px-4 py-3">
                   <div>
-                    <p className="text-xs font-extrabold text-[#111114]">
-                      Cetak Bolak-Balik (Duplex)
+                    <p className="text-xs font-medium text-[#1f1b16]">
+                      Cetak bolak-balik (Duplex)
                     </p>
-                    <p className="text-[11px] text-[#6b7280]">
-                      Hemat kertas + diskon {shop.duplexDiscount}% (min. 2 hal)
+                    <p className="text-xs text-[#7b7266]">
+                      Hemat kertas dengan potongan {shop.duplexDiscount}% (minimal 2 halaman)
                     </p>
                   </div>
                   <input
                     type="checkbox"
                     checked={duplex}
                     onChange={(e) => setDuplex(e.target.checked)}
-                    className="h-5 w-5 accent-[#ff2e63]"
+                    className="h-4 w-4 accent-[#1f1b16]"
                   />
                 </label>
               )}
             </div>
 
             {/* Payment Method */}
-            <div className="rounded-3xl border border-[#ece3d2] bg-white p-5 shadow-sm">
-              <p className="mb-3 text-xs font-extrabold uppercase tracking-wider text-[#111114]">
-                3. Metode Pembayaran
+            <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
+              <p className="mb-3 text-xs font-medium text-[#1f1b16]">
+                3. Metode pembayaran
               </p>
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("QRIS")}
-                  className={`flex items-center gap-2.5 rounded-2xl border-2 p-3 text-left ${
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
                     paymentMethod === "QRIS"
-                      ? "border-[#ff2e63] bg-[#ff2e63]/5"
-                      : "border-[#ece3d2]"
+                      ? "border-[#1f1b16] bg-white"
+                      : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
                   }`}
                 >
-                  <CreditCard className="h-5 w-5 text-[#ff2e63]" />
+                  <CreditCard
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
+                    strokeWidth={1.5}
+                  />
                   <div>
-                    <p className="text-xs font-extrabold text-[#111114]">
-                      QRIS Instan
+                    <p className="text-xs font-medium text-[#1f1b16]">
+                      QRIS instan
                     </p>
-                    <p className="text-[10px] text-[#6b7280]">
-                      Langsung cetak otomatis
+                    <p className="mt-0.5 text-[11px] text-[#7b7266]">
+                      Otomatis langsung cetak
                     </p>
                   </div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("CASH")}
-                  className={`flex items-center gap-2.5 rounded-2xl border-2 p-3 text-left ${
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
                     paymentMethod === "CASH"
-                      ? "border-emerald-600 bg-emerald-50/50"
-                      : "border-[#ece3d2]"
+                      ? "border-[#1f1b16] bg-white"
+                      : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
                   }`}
                 >
-                  <Banknote className="h-5 w-5 text-emerald-600" />
+                  <Banknote
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
+                    strokeWidth={1.5}
+                  />
                   <div>
-                    <p className="text-xs font-extrabold text-[#111114]">
-                      Tunai di Kasir
+                    <p className="text-xs font-medium text-[#1f1b16]">
+                      Tunai di kasir
                     </p>
-                    <p className="text-[10px] text-[#6b7280]">
-                      Bayar setelah upload
+                    <p className="mt-0.5 text-[11px] text-[#7b7266]">
+                      Bayar setelah unggah
                     </p>
                   </div>
                 </button>
@@ -905,22 +947,22 @@ function CustomerScanPortalContent({
             </div>
 
             {/* Sticky Price Summary & Submit */}
-            <div className="sticky bottom-3 z-20 rounded-3xl border-2 border-[#17171b] bg-[#17171b]/95 p-4 text-white shadow-2xl backdrop-blur sm:p-5">
+            <div className="sticky bottom-3 z-20 rounded-xl border border-[#1f1b16]/15 bg-[#161513] p-4 text-[#efe9de] shadow-lg">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[11px] font-semibold text-white/70">
-                    Estimasi ({priceCalc.effectivePages} hal × {copies}x)
+                  <p className="font-mono-num truncate text-xs text-[#aaa398]">
+                    Total ({priceCalc.effectivePages} hal × {copies})
                   </p>
-                  <p className="font-display text-xl font-extrabold text-[#ffd22e] sm:text-2xl">
+                  <p className="font-mono-num mt-0.5 text-xl font-medium text-[#efe9de]">
                     {formatRupiah(priceCalc.totalPrice)}
                   </p>
                 </div>
                 <button
                   disabled={!file || submitting}
                   type="submit"
-                  className="btn-glossy min-h-[46px] shrink-0 rounded-full bg-gradient-to-r from-[#ff2e63] to-[#ff6b35] px-5 py-3 text-xs font-extrabold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-50 sm:px-6 sm:text-sm"
+                  className="btn-action h-11 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 >
-                  {submitting ? "Mengunggah..." : "Lanjut Bayar →"}
+                  {submitting ? "Mengunggah..." : "Lanjut pembayaran →"}
                 </button>
               </div>
             </div>
@@ -940,9 +982,9 @@ export default function CustomerScanPortalPage({
     <Suspense
       fallback={
         <div className="bg-ambient flex min-h-screen items-center justify-center p-4">
-          <div className="flex items-center gap-2.5 rounded-2xl border border-[#ece3d2] bg-white px-6 py-4 text-sm font-bold text-[#111114] shadow-sm">
-            <Loader2 className="h-5 w-5 animate-spin text-[#ff2e63]" />
-            Memuat portal cetak toko...
+          <div className="flex items-center gap-2.5 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] px-5 py-3.5 text-sm text-[#1f1b16]">
+            <Loader2 className="h-4 w-4 animate-spin text-[#7b7266]" strokeWidth={1.5} />
+            <span>Memuat portal cetak toko...</span>
           </div>
         </div>
       }

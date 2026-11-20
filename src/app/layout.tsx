@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: ["400", "500", "600"],
   variable: "--font-jakarta",
 });
 
-const inter = Inter({
+const mono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
+  weight: ["400", "500"],
+  variable: "--font-mono",
 });
 
 export const metadata: Metadata = {
-  title: "Ngeprint by Gellona Teknologi — Scan • Upload • Bayar • Cetak Otomatis",
+  title: "Ngeprint by Gellona Teknologi — Cetak mandiri via QR untuk toko fotokopi",
   description:
-    "Ngeprint (ngeprint.id) adalah solusi cetak mandiri berbasis QR dari Gellona Teknologi untuk toko fotokopi, percetakan, dan warnet Indonesia. Tanpa WhatsApp, tanpa flashdisk, bayar QRIS, langsung tercetak & file otomatis terhapus.",
+    "Ngeprint (ngeprint.id) adalah sistem cetak mandiri berbasis QR dari Gellona Teknologi untuk toko fotokopi, percetakan, dan koperasi kampus. Tanpa WhatsApp, tanpa flashdisk, bayar QRIS, langsung tercetak dan file otomatis terhapus.",
 };
 
 export default function RootLayout({
@@ -28,9 +28,9 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${jakarta.variable} ${inter.variable} scroll-smooth`}
+      className={`${jakarta.variable} ${mono.variable} scroll-smooth`}
     >
-      <body className="min-h-screen bg-[#fffdf8] text-[#111114] font-sans antialiased selection:bg-[#ff2e63]/20 selection:text-[#111114]">
+      <body className="min-h-screen bg-[#f7f4ee] text-[#1f1b16] font-sans antialiased selection:bg-[#d9381e]/15 selection:text-[#1f1b16]">
         {children}
       </body>
     </html>
