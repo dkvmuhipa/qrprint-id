@@ -1,0 +1,35 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+
+export async function POST(req: Request) {
+  const agentKey = req.headers.get("x-agent-key");
+  if (!agentKey) {
+    return NextResponse.json({ error: "Missing x-agent-key" }, { status: 401 });
+  }
+
+  const shop = await prisma.shop.findUnique({ where: { agentKey } });
+  if (!shop) {
+    return NextResponse.json({ error: "Invalid agent key" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => ({}));
+  const printers = Array.isArray(body.printers)
+    ? body.printers.map((p: unknown) => String(p)).slice(0, 20)
+    : undefined;
+
+  await prisma.shop.update({
+    where: { id: shop.id },
+    data: {
+      agentLastSeen: new Date(),
+      ...(printers ? { agentPrinters: JSON.stringify(printers) } : {}),
+    },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    shopCode: shop.shopCode,
+    shopName: shop.name,
+    bwPrinter: shop.bwPrinter,
+    colorPrinter: shop.colorPrinter,
+  });
+}

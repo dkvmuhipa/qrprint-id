@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Shop {
+  id             String     @id @default(cuid())
+  shopCode       String     @unique
+  name           String
+  ownerName      String     @default("Pemilik Toko")
+  email          String     @unique
+  phone          String
+  address        String
+  passwordHash   String
+  plan           String     @default("PRO")
+  bwPrice        Int        @default(500)
+  colorPrice     Int        @default(1500)
+  duplexDiscount Int        @default(10)
+  photoPrice     Int        @default(3000)
+  agentKey       String     @unique
+  agentLastSeen  DateTime?
+  agentPrinters  String     @default("[]")
+  bwPrinter         String     @default("Default Printer")
+  colorPrinter      String     @default("Default Printer")
+  qrisName          String     @default("QRIS Toko")
+  midtransServerKey String?
+  midtransIsProd    Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  jobs           PrintJob[]
+}
+
+model PrintJob {
+  id             String    @id @default(cuid())
+  jobCode        String    @unique
+  shopId         String
+  shop           Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  customerName   String    @default("Pelanggan")
+  fileName       String
+  storedFilePath String?
+  mimeType       String
+  fileSize       Int
+  pageCount      Int
+  copies         Int       @default(1)
+  colorMode      String    @default("BW")
+  paperSize      String    @default("A4")
+  duplex         Boolean   @default(false)
+  pageRange      String    @default("ALL")
+  totalPrice      Int
+  paymentMethod   String    @default("QRIS")
+  paymentProvider String    @default("SIMULATION")
+  paymentOrderId  String?   @unique
+  qrisUrl         String?
+  qrisString      String?
+  paymentStatus   String    @default("PENDING")
+  printStatus    String    @default("WAITING_PAYMENT")
+  fileDeletedAt  DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model DemoRequest {
+  id        String   @id @default(cuid())
+  name      String
+  whatsapp  String
+  shopName  String
+  address   String
+  email     String
+  createdAt DateTime @default(now())
+}
