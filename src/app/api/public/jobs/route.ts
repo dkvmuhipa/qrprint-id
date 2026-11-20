@@ -5,6 +5,7 @@ import { detectVerifiedFileType, saveUploadedFile } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { calculatePrintPrice, generateJobCode } from "@/lib/utils";
 import { evaluateShopEntitlement } from "@/lib/plans";
+import { convertStaticQrisToDynamic, isValidStaticQris } from "@/lib/qris";
 import {
   createMidtransQrisCharge,
   resolveMidtransConfig,
@@ -173,6 +174,13 @@ export async function POST(req: Request) {
         qrisUrl = charge.qrisUrl;
         qrisString = charge.qrisString;
         midtransIsProd = midtransConfig.isProduction;
+      } else if (shop.staticQrisString && isValidStaticQris(shop.staticQrisString)) {
+        // GoPay Merchant / Static QRIS -> Auto-Dynamic QRIS with exact amount & valid CRC16
+        paymentProvider = "MERCHANT_QRIS";
+        qrisString = convertStaticQrisToDynamic(
+          shop.staticQrisString,
+          pricing.totalPrice
+        );
       }
     }
 

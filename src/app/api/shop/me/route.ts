@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { evaluateShopEntitlement, SAAS_PLANS } from "@/lib/plans";
+import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
 
 export async function GET() {
   const shop = await getCurrentShop();
@@ -92,6 +93,10 @@ export async function GET() {
       colorPrinter: shop.colorPrinter,
       photoPrinter: shop.photoPrinter,
       qrisName: shop.qrisName,
+      hasStaticQris: Boolean(shop.staticQrisString),
+      staticQrisPreview: shop.staticQrisString
+        ? `${shop.staticQrisString.slice(0, 22)}...${shop.staticQrisString.slice(-8)}`
+        : "",
       hasMidtransKey: Boolean(shop.midtransServerKey),
       midtransServerKeyMasked: shop.midtransServerKey
         ? `${shop.midtransServerKey.slice(0, 10)}••••${shop.midtransServerKey.slice(-4)}`
@@ -119,6 +124,28 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json();
+
+    let nextStaticQris: string | null | undefined = undefined;
+    let detectedQrisMerchant: string | null = null;
+    if (body.staticQrisString !== undefined) {
+      const raw = String(body.staticQrisString || "").trim();
+      if (raw === "") {
+        nextStaticQris = null;
+      } else {
+        if (!isValidStaticQris(raw)) {
+          return NextResponse.json(
+            {
+              error:
+                "Format QRIS GoPay Merchant tidak valid. Pastikan yang diunggah adalah gambar/kode QRIS standar Indonesia (diawali 000201).",
+            },
+            { status: 400 }
+          );
+        }
+        nextStaticQris = raw;
+        detectedQrisMerchant = extractQrisMerchantName(raw);
+      }
+    }
+
     const updated = await prisma.shop.update({
       where: { id: shop.id },
       data: {
@@ -148,7 +175,14 @@ export async function PATCH(req: Request) {
         photoPrinter: body.photoPrinter
           ? String(body.photoPrinter)
           : shop.photoPrinter,
-        qrisName: body.qrisName ? String(body.qrisName).trim() : shop.qrisName,
+        qrisName: detectedQrisMerchant
+          ? detectedQrisMerchant
+          : body.qrisName
+          ? String(body.qrisName).trim()
+          : shop.qrisName,
+        ...(nextStaticQris !== undefined
+          ? { staticQrisString: nextStaticQris }
+          : {}),
         ...(body.midtransServerKey !== undefined
           ? {
               midtransServerKey: String(body.midtransServerKey).trim() || null,

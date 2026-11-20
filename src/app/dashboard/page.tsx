@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
+import jsQR from "jsqr";
 import {
   QrCode,
   Printer,
@@ -129,6 +130,8 @@ interface ShopInfo {
   colorPrinter: string;
   photoPrinter?: string;
   qrisName: string;
+  hasStaticQris?: boolean;
+  staticQrisPreview?: string;
   hasMidtransKey?: boolean;
   midtransServerKeyMasked?: string;
   midtransIsProd?: boolean;
@@ -243,12 +246,56 @@ function DashboardContent() {
     bwPrinter: "Default Printer",
     colorPrinter: "Default Printer",
     photoPrinter: "Default Printer",
+    staticQrisString: "",
     midtransServerKey: "",
     midtransIsProd: false,
   });
   const [settingsInitialized, setSettingsInitialized] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
+  const [decodingQris, setDecodingQris] = useState(false);
+  const [qrisDecodeMsg, setQrisDecodeMsg] = useState<string | null>(null);
+
+  async function handleDecodeQrisImage(file: File | null) {
+    if (!file) return;
+    setDecodingQris(true);
+    setQrisDecodeMsg(null);
+    try {
+      const imgUrl = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Gagal membaca gambar"));
+        img.src = imgUrl;
+      });
+      const canvas = document.createElement("canvas");
+      const maxDim = 1200;
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Canvas tidak didukung");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imgData.data, imgData.width, imgData.height);
+      URL.revokeObjectURL(imgUrl);
+
+      if (!code || !code.data || !code.data.startsWith("000201")) {
+        setQrisDecodeMsg(
+          "QRIS tidak terbaca dari gambar. Pastikan foto QRIS jelas/tidak terpotong atau tempel string QRIS secara manual."
+        );
+      } else {
+        setSettingsForm((prev) => ({ ...prev, staticQrisString: code.data }));
+        setQrisDecodeMsg(
+          "QRIS GoPay Merchant berhasil terbaca. Klik 'Simpan pengaturan' di bawah untuk mengaktifkan."
+        );
+      }
+    } catch {
+      setQrisDecodeMsg("Gagal memproses gambar QRIS.");
+    } finally {
+      setDecodingQris(false);
+    }
+  }
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -291,6 +338,7 @@ function DashboardContent() {
             bwPrinter: json.shop.bwPrinter,
             colorPrinter: json.shop.colorPrinter,
             photoPrinter: json.shop.photoPrinter || "Default Printer",
+            staticQrisString: "",
             midtransServerKey: "",
             midtransIsProd: Boolean(json.shop.midtransIsProd),
           });
@@ -426,6 +474,9 @@ function DashboardContent() {
         photoPrinter: settingsForm.photoPrinter,
         midtransIsProd: settingsForm.midtransIsProd,
       };
+      if (settingsForm.staticQrisString.trim() !== "") {
+        payload.staticQrisString = settingsForm.staticQrisString.trim();
+      }
       if (settingsForm.midtransServerKey.trim() !== "") {
         payload.midtransServerKey = settingsForm.midtransServerKey.trim();
       }
@@ -434,12 +485,18 @@ function DashboardContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const resJson = await res.json().catch(() => ({}));
       if (res.ok) {
-        setSettingsMsg("Pengaturan toko dan integrasi Midtrans telah disimpan");
-        setSettingsForm((prev) => ({ ...prev, midtransServerKey: "" }));
+        setSettingsMsg("Pengaturan toko, GoPay Merchant QRIS & Midtrans telah disimpan");
+        setSettingsForm((prev) => ({
+          ...prev,
+          staticQrisString: "",
+          midtransServerKey: "",
+        }));
+        setQrisDecodeMsg(null);
         await fetchDashboard();
       } else {
-        setSettingsMsg("Gagal menyimpan pengaturan");
+        setSettingsMsg(resJson.error || "Gagal menyimpan pengaturan");
       }
     } finally {
       setSavingSettings(false);
@@ -1707,6 +1764,94 @@ function DashboardContent() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* GoPay Merchant / Static-to-Dynamic QRIS Box */}
+              <div className="mt-8 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-medium text-[#171717]">
+                      QRIS GoPay Merchant / QRIS Toko (Nominal Otomatis)
+                    </h3>
+                    <p className="mt-0.5 text-xs text-[#737373]">
+                      Unggah gambar QRIS dari aplikasi GoPay Merchant (GoBiz), DANA Bisnis, atau Bank. Nominal harga cetak akan terisi otomatis saat pelanggan scan.
+                    </p>
+                  </div>
+                  <span className="font-mono-num rounded-md border border-[#171717]/10 bg-white px-2.5 py-1 text-xs text-[#171717]">
+                    {shop.hasStaticQris ? "QRIS Merchant Aktif" : "Belum dipasang"}
+                  </span>
+                </div>
+
+                {qrisDecodeMsg && (
+                  <p className="mt-3 rounded-lg border border-[#171717]/10 bg-white p-2.5 text-xs text-[#171717]">
+                    {qrisDecodeMsg}
+                  </p>
+                )}
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[#171717]">
+                      Unggah Gambar QRIS GoPay Merchant
+                    </label>
+                    <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#171717]/25 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]">
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        onChange={(e) =>
+                          handleDecodeQrisImage(e.target.files?.[0] || null)
+                        }
+                        className="hidden"
+                      />
+                      <span>
+                        {decodingQris
+                          ? "Membaca kode QRIS..."
+                          : "Pilih foto/screenshot QRIS Merchant"}
+                      </span>
+                    </label>
+                    {shop.hasStaticQris && (
+                      <div className="mt-1.5 flex items-center justify-between text-[11px] text-[#16a34a]">
+                        <span className="font-mono-num truncate">
+                          Tersimpan: {shop.staticQrisPreview}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            await fetch("/api/shop/me", {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ staticQrisString: "" }),
+                            });
+                            await fetchDashboard();
+                          }}
+                          className="ml-2 shrink-0 cursor-pointer text-[#dc2626] hover:underline"
+                        >
+                          Hapus
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-[#171717]">
+                      Atau tempel kode QRIS mentah (opsional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="00020101021126..."
+                      value={settingsForm.staticQrisString}
+                      onChange={(e) =>
+                        setSettingsForm({
+                          ...settingsForm,
+                          staticQrisString: e.target.value,
+                        })
+                      }
+                      className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-white px-3.5 text-xs outline-none focus:border-[#171717]"
+                    />
+                    <p className="mt-1 text-[11px] text-[#737373]">
+                      Uang masuk langsung 100% ke saldo GoPay Merchant Anda. Kasir klik &ldquo;Terima bayar&rdquo; saat notifikasi suara GoPay masuk.
+                    </p>
+                  </div>
                 </div>
               </div>
 

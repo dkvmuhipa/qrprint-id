@@ -459,6 +459,8 @@ function CustomerScanPortalContent({
                             ? activeJob.midtransIsProd
                               ? "Pembayaran QRIS Midtrans"
                               : "QRIS Midtrans (Sandbox)"
+                            : activeJob.paymentProvider === "MERCHANT_QRIS"
+                            ? "QRIS GoPay Merchant / Toko (Nominal Otomatis)"
                             : "Pembayaran QRIS (Simulasi)"}
                         </span>
                       </div>
@@ -542,6 +544,23 @@ function CustomerScanPortalContent({
                                 : "Periksa status pembayaran"}
                             </span>
                           </button>
+                        </div>
+                      ) : activeJob.paymentProvider === "MERCHANT_QRIS" ? (
+                        <div className="mt-2 space-y-2.5 text-xs text-[#5e554a]">
+                          <p>
+                            Pindai kode QRIS di atas dengan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking. Nominal{" "}
+                            <strong className="font-mono-num text-[#1f1b16]">
+                              {formatRupiah(activeJob.totalPrice)}
+                            </strong>{" "}
+                            otomatis terisi.
+                          </p>
+                          <p className="rounded-lg bg-[#f7f4ee] p-2.5 text-[11px] text-[#7b7266]">
+                            Setelah pembayaran berhasil, tunjukkan bukti bayar atau tunggu kasir mengonfirmasi kode{" "}
+                            <strong className="font-mono-num text-[#1f1b16]">
+                              {activeJob.jobCode}
+                            </strong>{" "}
+                            agar dokumen langsung tercetak.
+                          </p>
                         </div>
                       ) : (
                         <>

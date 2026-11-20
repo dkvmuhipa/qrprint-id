@@ -30,6 +30,7 @@ model Shop {
   colorPrinter      String                @default("Default Printer")
   photoPrinter      String                @default("Default Printer")
   qrisName          String                @default("QRIS Toko")
+  staticQrisString  String?
   midtransServerKey String?
   midtransIsProd    Boolean               @default(false)
   createdAt         DateTime              @default(now())
