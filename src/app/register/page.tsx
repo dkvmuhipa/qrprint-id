@@ -6,16 +6,37 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Printer, Check } from "lucide-react";
 
 const PLAN_OPTIONS = [
-  { id: "BULANAN", name: "Bulanan", price: "Rp 49.000/bulan" },
-  { id: "PRO", name: "Pro Tahunan", price: "Rp 149.000/tahun" },
-  { id: "PREMIUM", name: "Premium", price: "Rp 249.000/tahun" },
-  { id: "LIFETIME", name: "Seumur Hidup", price: "Rp 399.000 sekali bayar" },
+  {
+    id: "DEMO",
+    name: "Demo 24 Jam",
+    price: "Rp 0 · Kuota 10 cetakan",
+  },
+  {
+    id: "BULANAN",
+    name: "Bulanan",
+    price: "Rp 49.000/bulan",
+  },
+  {
+    id: "PRO",
+    name: "Pro Tahunan",
+    price: "Rp 149.000/tahun",
+  },
+  {
+    id: "PREMIUM",
+    name: "Premium Tahunan",
+    price: "Rp 249.000/tahun",
+  },
+  {
+    id: "LIFETIME",
+    name: "Seumur Hidup",
+    price: "Rp 399.000 sekali bayar",
+  },
 ];
 
 function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialPlan = searchParams.get("plan") || "PRO";
+  const initialPlan = (searchParams.get("plan") || "PRO").toUpperCase();
 
   const [form, setForm] = useState({
     name: "",
@@ -45,7 +66,11 @@ function RegisterForm() {
       if (!res.ok) {
         setError(data.error || "Gagal mendaftarkan toko");
       } else {
-        router.push("/dashboard");
+        if (data.pendingInvoiceCode) {
+          router.push("/dashboard?tab=billing");
+        } else {
+          router.push("/dashboard");
+        }
         router.refresh();
       }
     } catch {
@@ -84,7 +109,7 @@ function RegisterForm() {
                 Pendaftaran toko fotokopi baru
               </h1>
               <p className="text-xs text-[#7b7266]">
-                Dapatkan poster QR meja kasir dan akses dashboard antrean cetak
+                Akun langsung aktif dengan uji coba Demo 24 jam dan tagihan paket pilihan Anda
               </p>
             </div>
           </div>
@@ -228,8 +253,11 @@ function RegisterForm() {
             {/* Step 3: Choose Plan */}
             <div>
               <h2 className="text-sm font-medium text-[#1f1b16]">
-                3. Paket langganan
+                3. Pilih paket langganan
               </h2>
+              <p className="mt-0.5 text-xs text-[#7b7266]">
+                Jika memilih paket berbayar, tagihan QRIS akan disiapkan di menu Langganan & Paket
+              </p>
               <div className="mt-3 grid gap-2.5 sm:grid-cols-2">
                 {PLAN_OPTIONS.map((p) => {
                   const selected = form.plan === p.id;
@@ -274,7 +302,11 @@ function RegisterForm() {
               type="submit"
               className="btn-action h-11 w-full cursor-pointer rounded-lg bg-[#d9381e] text-sm font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
             >
-              {loading ? "Membuat akun toko..." : "Buat toko & buka dashboard"}
+              {loading
+                ? "Membuat akun toko..."
+                : form.plan === "DEMO"
+                ? "Mulai Demo 24 Jam & buka dashboard"
+                : "Buat toko & lanjutkan ke pembayaran paket"}
             </button>
           </form>
         </div>

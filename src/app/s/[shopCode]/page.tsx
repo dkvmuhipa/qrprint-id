@@ -38,6 +38,11 @@ interface PublicShop {
   duplexDiscount: number;
   qrisName: string;
   isAgentOnline: boolean;
+  plan?: string;
+  allowExtraPaper?: boolean;
+  allowDuplex?: boolean;
+  canAcceptJobs?: boolean;
+  blockReason?: string | null;
 }
 
 interface ActiveJob {
@@ -393,6 +398,17 @@ function CustomerScanPortalContent({
             Dokumen Anda otomatis dihapus dari server dan PC toko segera setelah tercetak
           </span>
         </div>
+
+        {/* SaaS Plan Quota / Expiry Notice */}
+        {shop.canAcceptJobs === false && (
+          <div className="mt-3 rounded-xl border border-[#dc2626]/25 bg-[#dc2626]/10 p-4 text-xs text-[#dc2626]">
+            <p className="font-medium">Layanan cetak mandiri toko sedang dijeda</p>
+            <p className="mt-0.5 text-[#1f1b16]/80">
+              {shop.blockReason ||
+                "Kuota atau masa aktif paket toko ini telah berakhir. Silakan hubungi petugas kasir."}
+            </p>
+          </div>
+        )}
 
         {/* STEP 2: ACTIVE JOB TRACKER & PAYMENT */}
         {activeJob ? (
@@ -812,15 +828,24 @@ function CustomerScanPortalContent({
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { id: "A4" as const, label: "A4 Standar" },
-                    { id: "F4" as const, label: "F4 / Folio" },
-                    { id: "PHOTO_4X6" as const, label: "Foto 4×6" },
+                    { id: "A4" as const, label: "A4 Standar", locked: false },
+                    {
+                      id: "F4" as const,
+                      label: "F4 / Folio",
+                      locked: shop.allowExtraPaper === false,
+                    },
+                    {
+                      id: "PHOTO_4X6" as const,
+                      label: "Foto 4×6",
+                      locked: shop.allowExtraPaper === false,
+                    },
                   ].map((s) => (
                     <button
                       type="button"
                       key={s.id}
+                      disabled={s.locked}
                       onClick={() => setPaperSize(s.id)}
-                      className={`h-9 cursor-pointer rounded-lg border text-xs font-medium transition-colors ${
+                      className={`h-9 cursor-pointer rounded-lg border text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45 ${
                         paperSize === s.id
                           ? "border-[#1f1b16] bg-[#1f1b16] text-[#fdfbf7]"
                           : "border-[#1f1b16]/12 bg-white text-[#1f1b16] hover:bg-[#efe9df]"
@@ -873,7 +898,7 @@ function CustomerScanPortalContent({
               </div>
 
               {/* Duplex toggle */}
-              {paperSize !== "PHOTO_4X6" && (
+              {paperSize !== "PHOTO_4X6" && shop.allowDuplex !== false && (
                 <label className="flex cursor-pointer items-center justify-between rounded-xl border border-[#1f1b16]/10 bg-[#f7f4ee] px-4 py-3">
                   <div>
                     <p className="text-xs font-medium text-[#1f1b16]">
@@ -958,7 +983,7 @@ function CustomerScanPortalContent({
                   </p>
                 </div>
                 <button
-                  disabled={!file || submitting}
+                  disabled={!file || submitting || shop.canAcceptJobs === false}
                   type="submit"
                   className="btn-action h-11 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:cursor-not-allowed disabled:opacity-50 sm:text-sm"
                 >

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { evaluateShopEntitlement } from "@/lib/plans";
 
 export async function GET(
   _req: Request,
@@ -17,6 +18,19 @@ export async function GET(
     );
   }
 
+  const totalJobsCount = await prisma.printJob.count({
+    where: {
+      shopId: shop.id,
+      printStatus: { not: "CANCELLED" },
+    },
+  });
+
+  const entitlement = evaluateShopEntitlement({
+    planId: shop.plan,
+    planExpiresAt: shop.planExpiresAt,
+    totalJobsCount,
+  });
+
   const isAgentOnline = shop.agentLastSeen
     ? Date.now() - new Date(shop.agentLastSeen).getTime() < 20000
     : false;
@@ -33,6 +47,11 @@ export async function GET(
       duplexDiscount: shop.duplexDiscount,
       qrisName: shop.qrisName,
       isAgentOnline,
+      plan: entitlement.plan.id,
+      allowExtraPaper: entitlement.plan.allowExtraPaper,
+      allowDuplex: entitlement.plan.allowDuplex,
+      canAcceptJobs: entitlement.canAcceptJobs,
+      blockReason: entitlement.blockReason,
     },
   });
 }

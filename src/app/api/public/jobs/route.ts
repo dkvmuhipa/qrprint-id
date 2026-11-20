@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { detectVerifiedFileType, saveUploadedFile } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { calculatePrintPrice, generateJobCode } from "@/lib/utils";
+import { evaluateShopEntitlement } from "@/lib/plans";
 import {
   createMidtransQrisCharge,
   resolveMidtransConfig,
@@ -78,6 +79,36 @@ export async function POST(req: Request) {
       );
     }
 
+    // SaaS Plan Entitlement & Quota Check
+    const totalJobsCount = await prisma.printJob.count({
+      where: {
+        shopId: shop.id,
+        printStatus: { not: "CANCELLED" },
+      },
+    });
+    const entitlement = evaluateShopEntitlement({
+      planId: shop.plan,
+      planExpiresAt: shop.planExpiresAt,
+      totalJobsCount,
+    });
+
+    if (!entitlement.canAcceptJobs) {
+      return NextResponse.json(
+        {
+          error:
+            entitlement.blockReason ||
+            "Langganan toko sedang tidak aktif. Hubungi kasir toko.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const effectivePaperSize =
+      !entitlement.plan.allowExtraPaper && paperSize !== "A4"
+        ? "A4"
+        : paperSize;
+    const effectiveDuplex = !entitlement.plan.allowDuplex ? false : duplex;
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -109,8 +140,8 @@ export async function POST(req: Request) {
       pageRange,
       copies,
       colorMode,
-      paperSize,
-      duplex,
+      paperSize: effectivePaperSize,
+      duplex: effectiveDuplex,
       bwPrice: shop.bwPrice,
       colorPrice: shop.colorPrice,
       photoPrice: shop.photoPrice,
@@ -157,8 +188,8 @@ export async function POST(req: Request) {
         pageCount,
         copies,
         colorMode,
-        paperSize,
-        duplex,
+        paperSize: effectivePaperSize,
+        duplex: effectiveDuplex,
         pageRange,
         totalPrice: pricing.totalPrice,
         paymentMethod,

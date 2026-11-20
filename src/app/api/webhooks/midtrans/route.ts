@@ -5,6 +5,7 @@ import {
   verifyMidtransSignature,
 } from "@/lib/midtrans";
 import { deleteUploadedFile } from "@/lib/storage";
+import { calculateNewExpiryDate, getPlanDef } from "@/lib/plans";
 
 export async function GET() {
   return NextResponse.json({
@@ -35,13 +36,86 @@ export async function POST(req: Request) {
       );
     }
 
+    const isPaid =
+      transactionStatus === "settlement" ||
+      (transactionStatus === "capture" && fraudStatus === "accept");
+
+    const isFailed = ["cancel", "deny", "expire", "failure"].includes(
+      transactionStatus
+    );
+
+    // 1. Check if this order_id belongs to a SaaS Subscription Invoice (INV-...)
+    const subInvoice = await prisma.subscriptionInvoice.findUnique({
+      where: { paymentOrderId: orderId },
+      include: { shop: true },
+    });
+
+    if (subInvoice) {
+      const config = resolveMidtransConfig(subInvoice.shop);
+      if (!config) {
+        return NextResponse.json(
+          { error: "Midtrans belum dikonfigurasi." },
+          { status: 400 }
+        );
+      }
+
+      const isValid = verifyMidtransSignature({
+        orderId,
+        statusCode,
+        grossAmount,
+        serverKey: config.serverKey,
+        signatureKey,
+      });
+
+      if (!isValid) {
+        return NextResponse.json(
+          { error: "Signature Midtrans tidak valid." },
+          { status: 403 }
+        );
+      }
+
+      if (isPaid && subInvoice.status !== "PAID") {
+        const planDef = getPlanDef(subInvoice.plan);
+        const baseExpiry =
+          subInvoice.shop.plan === "DEMO"
+            ? null
+            : subInvoice.shop.planExpiresAt;
+        const newExpiresAt = calculateNewExpiryDate(
+          baseExpiry,
+          planDef.durationDays
+        );
+
+        await prisma.$transaction([
+          prisma.subscriptionInvoice.update({
+            where: { id: subInvoice.id },
+            data: { status: "PAID", paidAt: new Date() },
+          }),
+          prisma.shop.update({
+            where: { id: subInvoice.shopId },
+            data: {
+              plan: planDef.id,
+              planStatus: "ACTIVE",
+              planExpiresAt: newExpiresAt,
+            },
+          }),
+        ]);
+      } else if (isFailed && subInvoice.status === "PENDING") {
+        await prisma.subscriptionInvoice.update({
+          where: { id: subInvoice.id },
+          data: { status: "CANCELLED" },
+        });
+      }
+
+      return NextResponse.json({ ok: true, type: "subscription" });
+    }
+
+    // 2. Otherwise check Customer PrintJob
     const job = await prisma.printJob.findUnique({
       where: { paymentOrderId: orderId },
       include: { shop: true },
     });
 
     if (!job) {
-      // Return 200 for unknown/test orders so Midtrans does not retry endlessly or fail URL verification
       return NextResponse.json({ ok: true, ignored: true });
     }
 
@@ -68,14 +142,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const isPaid =
-      transactionStatus === "settlement" ||
-      (transactionStatus === "capture" && fraudStatus === "accept");
-
-    const isFailed = ["cancel", "deny", "expire", "failure"].includes(
-      transactionStatus
-    );
-
     if (isPaid && job.paymentStatus !== "PAID") {
       await prisma.printJob.update({
         where: { id: job.id },
@@ -97,7 +163,7 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, type: "print_job" });
   } catch (err) {
     console.error("Midtrans webhook error:", err);
     return NextResponse.json(

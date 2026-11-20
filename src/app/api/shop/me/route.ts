@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { evaluateShopEntitlement, SAAS_PLANS } from "@/lib/plans";
 
 export async function GET() {
   const shop = await getCurrentShop();
@@ -8,10 +9,29 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const jobs = await prisma.printJob.findMany({
-    where: { shopId: shop.id },
-    orderBy: { createdAt: "desc" },
-    take: 50,
+  const [jobs, totalJobsCount, invoices] = await Promise.all([
+    prisma.printJob.findMany({
+      where: { shopId: shop.id },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.printJob.count({
+      where: {
+        shopId: shop.id,
+        printStatus: { not: "CANCELLED" },
+      },
+    }),
+    prisma.subscriptionInvoice.findMany({
+      where: { shopId: shop.id },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+    }),
+  ]);
+
+  const entitlement = evaluateShopEntitlement({
+    planId: shop.plan,
+    planExpiresAt: shop.planExpiresAt,
+    totalJobsCount,
   });
 
   const todayStart = new Date();
@@ -55,6 +75,8 @@ export async function GET() {
       phone: shop.phone,
       address: shop.address,
       plan: shop.plan,
+      planStatus: entitlement.isExpired ? "EXPIRED" : shop.planStatus,
+      planExpiresAt: shop.planExpiresAt,
       bwPrice: shop.bwPrice,
       colorPrice: shop.colorPrice,
       duplexDiscount: shop.duplexDiscount,
@@ -72,6 +94,9 @@ export async function GET() {
         : "",
       midtransIsProd: shop.midtransIsProd,
     },
+    entitlement,
+    plans: Object.values(SAAS_PLANS),
+    invoices,
     stats: {
       todayRevenue,
       totalRevenue,

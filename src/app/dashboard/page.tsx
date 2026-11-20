@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
 import {
   QrCode,
   Printer,
   Settings,
   Terminal,
+  CreditCard,
   LogOut,
   RefreshCw,
   CheckCircle2,
@@ -21,6 +22,7 @@ import {
   ShieldCheck,
   XCircle,
   Loader2,
+  AlertTriangle,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 
@@ -33,6 +35,8 @@ interface ShopInfo {
   phone: string;
   address: string;
   plan: string;
+  planStatus: string;
+  planExpiresAt: string | null;
   bwPrice: number;
   colorPrice: number;
   duplexDiscount: number;
@@ -47,6 +51,47 @@ interface ShopInfo {
   hasMidtransKey?: boolean;
   midtransServerKeyMasked?: string;
   midtransIsProd?: boolean;
+}
+
+interface PlanDefItem {
+  id: string;
+  name: string;
+  price: number;
+  periodLabel: string;
+  durationDays: number | null;
+  maxJobs: number | null;
+  maxPrinters: number | null;
+  allowExtraPaper: boolean;
+  allowDuplex: boolean;
+  description: string;
+  features: string[];
+}
+
+interface EntitlementInfo {
+  plan: PlanDefItem;
+  isExpired: boolean;
+  daysLeft: number | null;
+  hoursLeft: number | null;
+  quotaUsed: number;
+  quotaLimit: number | null;
+  isQuotaExceeded: boolean;
+  canAcceptJobs: boolean;
+  blockReason: string | null;
+}
+
+interface SubscriptionInvoiceItem {
+  id: string;
+  invoiceCode: string;
+  plan: string;
+  amount: number;
+  durationDays: number | null;
+  paymentProvider: string;
+  paymentOrderId: string | null;
+  qrisUrl: string | null;
+  qrisString: string | null;
+  status: string;
+  paidAt: string | null;
+  createdAt: string;
 }
 
 interface PrintJobItem {
@@ -71,6 +116,9 @@ interface PrintJobItem {
 
 interface DashboardData {
   shop: ShopInfo;
+  entitlement: EntitlementInfo;
+  plans: PlanDefItem[];
+  invoices: SubscriptionInvoiceItem[];
   stats: {
     todayRevenue: number;
     totalRevenue: number;
@@ -80,15 +128,26 @@ interface DashboardData {
   jobs: PrintJobItem[];
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialTabParam = searchParams.get("tab");
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<"queue" | "qr" | "settings" | "agent">("queue");
+  const [tab, setTab] = useState<
+    "queue" | "qr" | "billing" | "settings" | "agent"
+  >(initialTabParam === "billing" ? "billing" : "queue");
   const [qrUrl, setQrUrl] = useState("");
   const [qrImage, setQrImage] = useState("");
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [busyJobId, setBusyJobId] = useState<string | null>(null);
+
+  // Billing state
+  const [creatingPlanId, setCreatingPlanId] = useState<string | null>(null);
+  const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
+  const [invoiceQrDataUrl, setInvoiceQrDataUrl] = useState<string>("");
+  const [billingMsg, setBillingMsg] = useState<string | null>(null);
 
   const [settingsForm, setSettingsForm] = useState({
     name: "",
@@ -158,6 +217,79 @@ export default function DashboardPage() {
       .catch(() => {});
   }, [data?.shop.shopCode]);
 
+  const activePendingInvoice = data?.invoices.find(
+    (inv) => inv.status === "PENDING"
+  );
+
+  useEffect(() => {
+    if (!activePendingInvoice) {
+      setInvoiceQrDataUrl("");
+      return;
+    }
+    if (
+      activePendingInvoice.paymentProvider === "MIDTRANS" &&
+      activePendingInvoice.qrisUrl
+    ) {
+      setInvoiceQrDataUrl(activePendingInvoice.qrisUrl);
+      return;
+    }
+    const payload =
+      activePendingInvoice.qrisString ||
+      `00020101021226580016ID.NGEPRINT.SAAS0215GELLONA520459995303360540${activePendingInvoice.amount}5802ID5918GELLONA TEKNOLOGI62140510${activePendingInvoice.invoiceCode}`;
+    QRCode.toDataURL(payload, {
+      width: 240,
+      margin: 2,
+      color: { dark: "#171717", light: "#ffffff" },
+    })
+      .then(setInvoiceQrDataUrl)
+      .catch(() => {});
+  }, [activePendingInvoice]);
+
+  async function handleCreateSubscriptionInvoice(planId: string) {
+    setCreatingPlanId(planId);
+    setBillingMsg(null);
+    try {
+      const res = await fetch("/api/shop/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      if (res.ok) {
+        await fetchDashboard();
+      }
+    } finally {
+      setCreatingPlanId(null);
+    }
+  }
+
+  async function handleInvoiceAction(
+    invoiceId: string,
+    action: "SIMULATE_PAY" | "CHECK_STATUS" | "CANCEL"
+  ) {
+    setPayingInvoiceId(invoiceId);
+    setBillingMsg(null);
+    try {
+      const res = await fetch("/api/shop/subscription", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceId, action }),
+      });
+      const json = await res.json();
+      if (res.ok && json.paid) {
+        setBillingMsg(
+          `Pembayaran berhasil. Paket toko Anda kini aktif pada paket ${json.shop.plan}.`
+        );
+      } else if (action === "CHECK_STATUS" && !json.paid) {
+        setBillingMsg(
+          json.message || "Pembayaran belum terkonfirmasi dari Midtrans."
+        );
+      }
+      await fetchDashboard();
+    } finally {
+      setPayingInvoiceId(null);
+    }
+  }
+
   async function handleJobAction(jobId: string, action: string) {
     setBusyJobId(jobId);
     try {
@@ -225,18 +357,27 @@ export default function DashboardPage() {
     return (
       <div className="bg-app flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-2.5 rounded-xl border border-[#171717]/8 bg-white px-5 py-3.5 text-sm text-[#171717]">
-          <Loader2 className="h-4 w-4 animate-spin text-[#737373]" strokeWidth={1.5} />
+          <Loader2
+            className="h-4 w-4 animate-spin text-[#737373]"
+            strokeWidth={1.5}
+          />
           <span>Memuat dashboard toko...</span>
         </div>
       </div>
     );
   }
 
-  const { shop, stats, jobs } = data;
+  const { shop, entitlement, plans, invoices, stats, jobs } = data;
   const origin =
-    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000";
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "http://localhost:3000";
   const dryRunCmd = `node print-agent/agent.mjs --url=${origin} --key=${shop.agentKey} --dry-run`;
   const liveCmd = `node print-agent/agent.mjs --url=${origin} --key=${shop.agentKey} --live`;
+
+  const pendingInvoiceCount = invoices.filter(
+    (inv) => inv.status === "PENDING"
+  ).length;
 
   const NAV_ITEMS = [
     {
@@ -249,6 +390,12 @@ export default function DashboardPage() {
       id: "qr" as const,
       label: "Poster QR kasir",
       icon: QrCode,
+    },
+    {
+      id: "billing" as const,
+      label: "Langganan & paket",
+      icon: CreditCard,
+      count: pendingInvoiceCount,
     },
     {
       id: "settings" as const,
@@ -264,7 +411,7 @@ export default function DashboardPage() {
 
   return (
     <div className="bg-app flex min-h-screen flex-col lg:flex-row">
-      {/* Desktop Sidebar (256px wide, graphite neutral ramp per Unslop Layout & Spacing Pass) */}
+      {/* Desktop Sidebar */}
       <aside className="no-print hidden w-64 shrink-0 flex-col justify-between border-r border-[#171717]/8 bg-white p-4 lg:flex">
         <div>
           <div className="flex items-center justify-between px-2 py-1.5">
@@ -282,11 +429,28 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-4 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-3">
-            <p className="truncate text-sm font-medium text-[#171717]">
-              {shop.name}
-            </p>
-            <p className="mt-0.5 truncate text-xs text-[#737373]">
-              Paket {shop.plan} · {shop.ownerName}
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-sm font-medium text-[#171717]">
+                {shop.name}
+              </p>
+              <span
+                className={`shrink-0 rounded px-1.5 py-0.5 font-mono-num text-[11px] font-medium ${
+                  entitlement.canAcceptJobs
+                    ? "bg-[#16a34a]/10 text-[#16a34a]"
+                    : "bg-[#dc2626]/10 text-[#dc2626]"
+                }`}
+              >
+                {entitlement.plan.id}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-[#737373]">
+              {entitlement.plan.id === "LIFETIME"
+                ? "Aktif selamanya"
+                : entitlement.isExpired
+                ? "Masa aktif berakhir"
+                : entitlement.plan.id === "DEMO"
+                ? `Sisa ${entitlement.hoursLeft ?? 24} jam · ${entitlement.quotaUsed}/${entitlement.quotaLimit} cetak`
+                : `Sisa ${entitlement.daysLeft ?? 0} hari`}
             </p>
             <div className="mt-2.5 flex items-center gap-2 border-t border-[#171717]/8 pt-2 text-xs">
               <span
@@ -295,7 +459,9 @@ export default function DashboardPage() {
                 }`}
               />
               <span className="text-[#525252]">
-                {shop.isAgentOnline ? "Print Agent aktif" : "Print Agent offline"}
+                {shop.isAgentOnline
+                  ? "Print Agent aktif"
+                  : "Print Agent offline"}
               </span>
             </div>
           </div>
@@ -342,7 +508,10 @@ export default function DashboardPage() {
             className="flex h-9 items-center justify-between rounded-lg px-2.5 text-xs font-medium text-[#525252] hover:bg-[#f4f4f5] hover:text-[#171717]"
           >
             <span>Buka portal pelanggan</span>
-            <ExternalLink className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+            <ExternalLink
+              className="h-3.5 w-3.5 text-[#737373]"
+              strokeWidth={1.5}
+            />
           </Link>
           <button
             onClick={handleLogout}
@@ -367,7 +536,7 @@ export default function DashboardPage() {
             <div>
               <p className="text-sm font-medium text-[#171717]">{shop.name}</p>
               <p className="font-mono-num text-[11px] text-[#737373]">
-                {shop.shopCode}
+                {shop.shopCode} · Paket {entitlement.plan.name}
               </p>
             </div>
           </div>
@@ -379,7 +548,10 @@ export default function DashboardPage() {
               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-3 text-xs font-medium text-[#171717]"
             >
               <span>Portal</span>
-              <ExternalLink className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+              <ExternalLink
+                className="h-3.5 w-3.5 text-[#737373]"
+                strokeWidth={1.5}
+              />
             </Link>
             <button
               onClick={handleLogout}
@@ -421,6 +593,37 @@ export default function DashboardPage() {
       {/* Main Content Fluid Area */}
       <main className="flex-1 px-4 py-6 sm:px-8 lg:py-8">
         <div className="mx-auto max-w-5xl">
+          {/* SaaS Subscription Alert Banner if Expired, Quota Exceeded, or Pending Invoice */}
+          {(!entitlement.canAcceptJobs || activePendingInvoice) &&
+            tab !== "billing" && (
+              <div className="no-print mb-6 flex flex-col justify-between gap-3 rounded-xl border border-[#d9381e]/25 bg-[#d9381e]/5 p-4 sm:flex-row sm:items-center">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
+                    strokeWidth={1.5}
+                  />
+                  <div className="text-xs">
+                    <p className="font-medium text-[#171717]">
+                      {!entitlement.canAcceptJobs
+                        ? entitlement.blockReason
+                        : `Anda memiliki tagihan paket ${activePendingInvoice?.plan} (${activePendingInvoice?.invoiceCode}) yang menunggu pembayaran`}
+                    </p>
+                    <p className="mt-0.5 text-[#525252]">
+                      {!entitlement.canAcceptJobs
+                        ? "Portal scan QR pelanggan sedang dikunci sementara hingga paket diperbarui."
+                        : "Selesaikan pembayaran QRIS untuk mengaktifkan kuota dan masa aktif penuh."}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTab("billing")}
+                  className="btn-action h-8 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-3.5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                >
+                  Buka Langganan & Paket
+                </button>
+              </div>
+            )}
+
           {/* Page Header */}
           <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
@@ -429,13 +632,13 @@ export default function DashboardPage() {
                   ? "Antrean & riwayat cetak"
                   : tab === "qr"
                   ? "Poster QR meja kasir"
+                  : tab === "billing"
+                  ? "Langganan & paket SaaS"
                   : tab === "settings"
                   ? "Tarif cetak & printer"
                   : "Koneksi Windows Print Agent"}
               </h1>
-              <p className="mt-0.5 text-xs text-[#737373]">
-                {shop.address}
-              </p>
+              <p className="mt-0.5 text-xs text-[#737373]">{shop.address}</p>
             </div>
 
             {tab === "queue" && (
@@ -443,13 +646,16 @@ export default function DashboardPage() {
                 onClick={fetchDashboard}
                 className="btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/10 bg-white px-3.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
               >
-                <RefreshCw className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+                <RefreshCw
+                  className="h-3.5 w-3.5 text-[#737373]"
+                  strokeWidth={1.5}
+                />
                 <span>Perbarui data</span>
               </button>
             )}
           </div>
 
-          {/* KPI Stats Row — Strictly Numbers Only, Tabular Nums, Equal Height */}
+          {/* KPI Stats Row */}
           <div className="no-print mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <div className="rounded-xl border border-[#171717]/8 bg-white p-4">
               <p className="text-xs text-[#737373]">Omzet hari ini</p>
@@ -472,12 +678,14 @@ export default function DashboardPage() {
             </div>
 
             <div className="rounded-xl border border-[#171717]/8 bg-white p-4">
-              <p className="text-xs text-[#737373]">Selesai dicetak</p>
-              <p className="font-mono-num mt-2 text-2xl font-medium text-[#171717]">
-                {stats.completedCount}
+              <p className="text-xs text-[#737373]">Paket & kuota cetak</p>
+              <p className="font-mono-num mt-2 text-xl font-medium text-[#171717]">
+                {entitlement.plan.name}
               </p>
-              <p className="mt-1 text-xs text-[#737373]">
-                Dokumen telah dihapus
+              <p className="font-mono-num mt-1 text-xs text-[#737373]">
+                {entitlement.quotaLimit !== null
+                  ? `${entitlement.quotaUsed} / ${entitlement.quotaLimit} cetakan terpakai`
+                  : `${stats.completedCount} cetakan selesai (Unlimited)`}
               </p>
             </div>
 
@@ -494,9 +702,9 @@ export default function DashboardPage() {
                 </span>
               </div>
               <p className="mt-1 text-xs text-[#737373]">
-                {shop.isAgentOnline
-                  ? `${shop.printers.length} printer siap cetak`
-                  : "Jalankan agent.mjs di PC kasir"}
+                {entitlement.plan.maxPrinters !== null
+                  ? `Maks. ${entitlement.plan.maxPrinters} printer aktif`
+                  : "Multi-printer tanpa batas"}
               </p>
             </div>
           </div>
@@ -569,11 +777,16 @@ export default function DashboardPage() {
                             <span className="text-[#737373]">·</span>
                             <span className="font-mono-num text-[#525252]">
                               {job.paymentMethod}{" "}
-                              {job.paymentStatus === "PAID" ? "(Lunas)" : "(Belum lunas)"}
+                              {job.paymentStatus === "PAID"
+                                ? "(Lunas)"
+                                : "(Belum lunas)"}
                             </span>
                             {job.fileDeletedAt && (
                               <span className="inline-flex items-center gap-1 text-[#737373]">
-                                <ShieldCheck className="h-3.5 w-3.5 text-[#16a34a]" strokeWidth={1.5} />
+                                <ShieldCheck
+                                  className="h-3.5 w-3.5 text-[#16a34a]"
+                                  strokeWidth={1.5}
+                                />
                                 <span>File dihapus</span>
                               </span>
                             )}
@@ -583,12 +796,20 @@ export default function DashboardPage() {
                             {job.fileName}
                           </p>
                           <p className="mt-0.5 text-xs text-[#737373]">
-                            Pelanggan: <span className="text-[#525252]">{job.customerName}</span> ·{" "}
-                            <span className="font-mono-num">
-                              {job.pageCount} hal ({job.pageRange}) × {job.copies}
+                            Pelanggan:{" "}
+                            <span className="text-[#525252]">
+                              {job.customerName}
                             </span>{" "}
-                            · {job.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} ·{" "}
-                            {job.paperSize}
+                            ·{" "}
+                            <span className="font-mono-num">
+                              {job.pageCount} hal ({job.pageRange}) ×{" "}
+                              {job.copies}
+                            </span>{" "}
+                            ·{" "}
+                            {job.colorMode === "COLOR"
+                              ? "Warna"
+                              : "Hitam Putih"}{" "}
+                            · {job.paperSize}
                             {job.duplex ? " · Bolak-balik" : ""}
                           </p>
                         </div>
@@ -604,7 +825,10 @@ export default function DashboardPage() {
                               target="_blank"
                               className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-2.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
                             >
-                              <FileText className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+                              <FileText
+                                className="h-3.5 w-3.5 text-[#737373]"
+                                strokeWidth={1.5}
+                              />
                               <span>Buka file</span>
                             </a>
                           )}
@@ -618,7 +842,10 @@ export default function DashboardPage() {
                                 }
                                 className="btn-action inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-[#16a34a] px-3 text-xs font-medium text-white hover:bg-[#16a34a]/90 disabled:opacity-50"
                               >
-                                <Banknote className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                <Banknote
+                                  className="h-3.5 w-3.5"
+                                  strokeWidth={1.5}
+                                />
                                 <span>Terima tunai</span>
                               </button>
                             )}
@@ -630,7 +857,10 @@ export default function DashboardPage() {
                               onClick={() => handleJobAction(job.id, "COMPLETE")}
                               className="btn-action inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90 disabled:opacity-50"
                             >
-                              <CheckCircle2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                              <CheckCircle2
+                                className="h-3.5 w-3.5"
+                                strokeWidth={1.5}
+                              />
                               <span>Selesai & hapus file</span>
                             </button>
                           )}
@@ -643,7 +873,10 @@ export default function DashboardPage() {
                                 title="Batalkan & hapus file"
                                 className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-[#171717]/10 text-[#737373] hover:border-[#dc2626]/30 hover:text-[#dc2626] disabled:opacity-50"
                               >
-                                <XCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+                                <XCircle
+                                  className="h-3.5 w-3.5"
+                                  strokeWidth={1.5}
+                                />
                               </button>
                             )}
                         </div>
@@ -678,10 +911,12 @@ export default function DashboardPage() {
                 )}
 
                 <p className="text-xs font-medium text-[#171717]">
-                  1. Scan QR · 2. Unggah PDF/Foto · 3. Bayar QRIS · 4. Langsung tercetak
+                  1. Scan QR · 2. Unggah PDF/Foto · 3. Bayar QRIS · 4. Langsung
+                  tercetak
                 </p>
                 <p className="mt-1 text-[11px] text-[#737373]">
-                  Dokumen otomatis dihapus dari sistem segera setelah selesai dicetak
+                  Dokumen otomatis dihapus dari sistem segera setelah selesai
+                  dicetak
                 </p>
 
                 <div className="font-mono-num mt-4 flex gap-3 text-xs">
@@ -699,7 +934,9 @@ export default function DashboardPage() {
                   Pasang poster QR di meja kasir
                 </h3>
                 <p className="text-xs leading-relaxed text-[#525252]">
-                  Cetak poster QR di samping dan letakkan di meja pelayanan. Saat pelanggan memindai kode QR dengan kamera ponsel, mereka langsung masuk ke halaman unggah dokumen khusus toko Anda.
+                  Cetak poster QR di samping dan letakkan di meja pelayanan.
+                  Saat pelanggan memindai kode QR dengan kamera ponsel, mereka
+                  langsung masuk ke halaman unggah dokumen khusus toko Anda.
                 </p>
 
                 <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-3.5">
@@ -742,7 +979,362 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* TAB 3: SETTINGS & PRICING */}
+          {/* TAB 3: SAAS SUBSCRIPTION & BILLING */}
+          {tab === "billing" && (
+            <div className="space-y-6">
+              {billingMsg && (
+                <div className="rounded-xl border border-[#16a34a]/30 bg-[#16a34a]/10 p-4 text-xs font-medium text-[#16a34a]">
+                  {billingMsg}
+                </div>
+              )}
+
+              {/* Current Plan Entitlement Summary */}
+              <div className="grid gap-4 rounded-xl border border-[#171717]/8 bg-white p-6 md:grid-cols-12">
+                <div className="md:col-span-7">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs text-[#737373]">
+                      Paket aktif saat ini
+                    </span>
+                    <span
+                      className={`rounded px-2 py-0.5 font-mono-num text-xs font-medium ${
+                        entitlement.canAcceptJobs
+                          ? "bg-[#16a34a]/10 text-[#16a34a]"
+                          : "bg-[#dc2626]/10 text-[#dc2626]"
+                      }`}
+                    >
+                      {entitlement.canAcceptJobs ? "Aktif" : "Perlu perpanjangan"}
+                    </span>
+                  </div>
+                  <h2 className="mt-1 text-2xl font-medium text-[#171717]">
+                    {entitlement.plan.name}
+                  </h2>
+                  <p className="mt-1 text-xs text-[#525252]">
+                    {entitlement.plan.description}
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[#171717]/8 pt-4 text-xs">
+                    <div>
+                      <p className="text-[#737373]">Masa berlaku</p>
+                      <p className="font-mono-num mt-1 font-medium text-[#171717]">
+                        {entitlement.plan.id === "LIFETIME"
+                          ? "Selamanya"
+                          : shop.planExpiresAt
+                          ? new Date(shop.planExpiresAt).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )
+                          : "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#737373]">Kuota cetakan</p>
+                      <p className="font-mono-num mt-1 font-medium text-[#171717]">
+                        {entitlement.quotaLimit !== null
+                          ? `${entitlement.quotaUsed} / ${entitlement.quotaLimit} job`
+                          : "Unlimited"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[#737373]">Kapasitas printer</p>
+                      <p className="font-mono-num mt-1 font-medium text-[#171717]">
+                        {entitlement.plan.maxPrinters !== null
+                          ? `Maks. ${entitlement.plan.maxPrinters} unit`
+                          : "Unlimited"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col justify-between rounded-xl border border-[#171717]/8 bg-[#fafafa] p-4 md:col-span-5">
+                  <p className="text-xs font-medium text-[#171717]">
+                    Hak akses fitur paket {entitlement.plan.name}
+                  </p>
+                  <ul className="mt-2.5 space-y-1.5 text-xs text-[#525252]">
+                    {entitlement.plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <Check
+                          className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#16a34a]"
+                          strokeWidth={1.5}
+                        />
+                        <span>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {/* Active Pending Invoice Checkout Block */}
+              {activePendingInvoice && (
+                <div className="grid items-center gap-6 rounded-xl border-2 border-[#171717] bg-white p-6 md:grid-cols-12">
+                  <div className="flex flex-col items-center text-center md:col-span-5">
+                    <span className="font-mono-num text-xs text-[#d9381e]">
+                      Tagihan {activePendingInvoice.invoiceCode}
+                    </span>
+                    <p className="mt-1 text-base font-medium text-[#171717]">
+                      Aktivasi Paket {activePendingInvoice.plan}
+                    </p>
+                    <p className="font-mono-num mt-0.5 text-xl font-medium text-[#171717]">
+                      {formatRupiah(activePendingInvoice.amount)}
+                    </p>
+
+                    {invoiceQrDataUrl && (
+                      <div className="crop-frame my-4 rounded-xl border border-[#171717]/12 bg-white p-3">
+                        <img
+                          src={invoiceQrDataUrl}
+                          alt="QRIS Langganan"
+                          className="h-44 w-44 object-contain"
+                        />
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-[#737373]">
+                      {activePendingInvoice.paymentProvider === "MIDTRANS"
+                        ? "QRIS Midtrans · Otomatis aktif setelah pembayaran"
+                        : "QRIS Gellona Teknologi · Mode simulasi"}
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 md:col-span-7">
+                    <div>
+                      <h3 className="text-base font-medium text-[#171717]">
+                        Selesaikan pembayaran untuk mengaktifkan paket
+                      </h3>
+                      <p className="mt-1 text-xs leading-relaxed text-[#525252]">
+                        Begitu tagihan ini lunas, kuota cetak toko Anda langsung
+                        diperbarui menjadi{" "}
+                        <strong>Unlimited</strong>, fitur kertas F4, Foto 4×6,
+                        dan Duplex terbuka otomatis, serta masa aktif ditambahkan
+                        ke akun toko.
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-3.5 text-xs">
+                      <div className="flex justify-between py-1">
+                        <span className="text-[#737373]">Nomor invoice</span>
+                        <span className="font-mono-num font-medium text-[#171717]">
+                          {activePendingInvoice.invoiceCode}
+                        </span>
+                      </div>
+                      <div className="flex justify-between py-1">
+                        <span className="text-[#737373]">Paket tujuan</span>
+                        <span className="font-medium text-[#171717]">
+                          {activePendingInvoice.plan} (
+                          {activePendingInvoice.durationDays
+                            ? `${activePendingInvoice.durationDays} hari`
+                            : "Selamanya"}
+                          )
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t border-[#171717]/8 pt-2 mt-1">
+                        <span className="text-[#737373]">Total tagihan</span>
+                        <span className="font-mono-num font-medium text-[#d9381e]">
+                          {formatRupiah(activePendingInvoice.amount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2.5">
+                      <button
+                        disabled={payingInvoiceId === activePendingInvoice.id}
+                        onClick={() =>
+                          handleInvoiceAction(
+                            activePendingInvoice.id,
+                            "SIMULATE_PAY"
+                          )
+                        }
+                        className="btn-action inline-flex h-10 cursor-pointer items-center justify-center rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
+                      >
+                        {payingInvoiceId === activePendingInvoice.id
+                          ? "Memverifikasi..."
+                          : `Konfirmasi / Simulasi Bayar (${formatRupiah(
+                              activePendingInvoice.amount
+                            )})`}
+                      </button>
+
+                      {activePendingInvoice.paymentProvider === "MIDTRANS" && (
+                        <button
+                          disabled={payingInvoiceId === activePendingInvoice.id}
+                          onClick={() =>
+                            handleInvoiceAction(
+                              activePendingInvoice.id,
+                              "CHECK_STATUS"
+                            )
+                          }
+                          className="btn-action inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-4 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          <span>Cek status Midtrans</span>
+                        </button>
+                      )}
+
+                      <button
+                        disabled={payingInvoiceId === activePendingInvoice.id}
+                        onClick={() =>
+                          handleInvoiceAction(activePendingInvoice.id, "CANCEL")
+                        }
+                        className="btn-action inline-flex h-10 cursor-pointer items-center justify-center rounded-lg border border-[#171717]/10 px-4 text-xs text-[#737373] hover:text-[#dc2626]"
+                      >
+                        Batalkan tagihan
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Plan Upgrade / Renewal Cards */}
+              <div>
+                <h3 className="text-base font-medium text-[#171717]">
+                  Upgrade atau perpanjang paket langganan
+                </h3>
+                <p className="mt-0.5 text-xs text-[#737373]">
+                  Pilih paket di bawah untuk menerbitkan invoice pembayaran QRIS
+                  instan
+                </p>
+
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                  {plans
+                    .filter((p) => p.id !== "DEMO")
+                    .map((p) => {
+                      const isCurrent = shop.plan === p.id;
+                      const busy = creatingPlanId === p.id;
+                      return (
+                        <div
+                          key={p.id}
+                          className={`flex flex-col justify-between rounded-xl border p-5 ${
+                            isCurrent
+                              ? "border-[#171717] bg-white"
+                              : "border-[#171717]/8 bg-white"
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between gap-2">
+                              <h4 className="text-sm font-medium text-[#171717]">
+                                {p.name}
+                              </h4>
+                              {isCurrent && (
+                                <span className="rounded bg-[#171717] px-2 py-0.5 text-[10px] font-medium text-white">
+                                  Paket saat ini
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="mt-3 flex items-baseline gap-1">
+                              <span className="font-mono-num text-xl font-medium text-[#171717]">
+                                {formatRupiah(p.price)}
+                              </span>
+                              <span className="text-xs text-[#737373]">
+                                /{p.periodLabel}
+                              </span>
+                            </div>
+
+                            <ul className="mt-4 space-y-2 border-t border-[#171717]/8 pt-3 text-xs text-[#525252]">
+                              {p.features.map((f) => (
+                                <li key={f} className="flex items-start gap-2">
+                                  <Check
+                                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#16a34a]"
+                                    strokeWidth={1.5}
+                                  />
+                                  <span>{f}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <button
+                            disabled={
+                              busy ||
+                              (isCurrent && shop.plan === "LIFETIME")
+                            }
+                            onClick={() =>
+                              handleCreateSubscriptionInvoice(p.id)
+                            }
+                            className={`btn-action mt-5 h-9 w-full cursor-pointer rounded-lg text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                              p.id === "PRO"
+                                ? "bg-[#d9381e] text-white hover:bg-[#be2e17]"
+                                : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                            }`}
+                          >
+                            {busy
+                              ? "Membuat tagihan..."
+                              : isCurrent && shop.plan === "LIFETIME"
+                              ? "Sudah aktif selamanya"
+                              : isCurrent
+                              ? `Perpanjang ${p.name}`
+                              : `Pilih ${p.name}`}
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+
+              {/* Billing Invoice History Table */}
+              <div className="rounded-xl border border-[#171717]/8 bg-white p-6">
+                <h3 className="text-base font-medium text-[#171717]">
+                  Riwayat tagihan langganan
+                </h3>
+                {invoices.length === 0 ? (
+                  <p className="mt-3 text-xs text-[#737373]">
+                    Belum ada riwayat tagihan langganan untuk toko ini.
+                  </p>
+                ) : (
+                  <div className="mt-4 divide-y divide-[#171717]/8 text-xs">
+                    {invoices.map((inv) => (
+                      <div
+                        key={inv.id}
+                        className="flex flex-wrap items-center justify-between gap-3 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono-num font-medium text-[#171717]">
+                            {inv.invoiceCode}
+                          </span>
+                          <span className="text-[#525252]">
+                            Paket {inv.plan}
+                          </span>
+                          <span className="text-[#737373]">
+                            {new Date(inv.createdAt).toLocaleDateString(
+                              "id-ID",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              }
+                            )}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span className="font-mono-num font-medium text-[#171717]">
+                            {formatRupiah(inv.amount)}
+                          </span>
+                          <span
+                            className={`rounded px-2 py-0.5 font-mono-num text-[11px] font-medium ${
+                              inv.status === "PAID"
+                                ? "bg-[#16a34a]/10 text-[#16a34a]"
+                                : inv.status === "PENDING"
+                                ? "bg-[#b45309]/10 text-[#b45309]"
+                                : "bg-[#f4f4f5] text-[#737373]"
+                            }`}
+                          >
+                            {inv.status === "PAID"
+                              ? "Lunas"
+                              : inv.status === "PENDING"
+                              ? "Menunggu bayar"
+                              : "Dibatalkan"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: SETTINGS & PRICING */}
           {tab === "settings" && (
             <form
               onSubmit={handleSaveSettings}
@@ -752,7 +1344,8 @@ export default function DashboardPage() {
                 Konfigurasi tarif cetak & pemetaan printer
               </h2>
               <p className="mt-0.5 text-xs text-[#737373]">
-                Perubahan tarif langsung diperbarui pada halaman scan QR pelanggan
+                Perubahan tarif langsung diperbarui pada halaman scan QR
+                pelanggan
               </p>
 
               {settingsMsg && (
@@ -932,7 +1525,8 @@ export default function DashboardPage() {
                       Integrasi Midtrans QRIS
                     </h3>
                     <p className="mt-0.5 text-xs text-[#737373]">
-                      Masukkan Server Key Midtrans agar status pembayaran QRIS terverifikasi otomatis
+                      Masukkan Server Key Midtrans agar status pembayaran QRIS
+                      terverifikasi otomatis
                     </p>
                   </div>
                   <span className="font-mono-num rounded-md border border-[#171717]/10 bg-white px-2.5 py-1 text-xs text-[#171717]">
@@ -967,7 +1561,8 @@ export default function DashboardPage() {
                       className="h-10 w-full rounded-lg border border-[#171717]/12 bg-white px-3.5 text-sm outline-none focus:border-[#171717]"
                     />
                     <p className="mt-1 text-[11px] text-[#737373]">
-                      Biarkan kosong jika tidak ingin mengganti kunci yang sudah tersimpan
+                      Biarkan kosong jika tidak ingin mengganti kunci yang sudah
+                      tersimpan
                     </p>
                   </div>
 
@@ -998,7 +1593,9 @@ export default function DashboardPage() {
                 <div className="mt-4 rounded-lg border border-[#171717]/8 bg-white p-3 text-xs">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <span className="text-[#737373]">URL Webhook Midtrans: </span>
+                      <span className="text-[#737373]">
+                        URL Webhook Midtrans:{" "}
+                      </span>
                       <code className="font-mono-num text-[#171717]">
                         {origin}/api/webhooks/midtrans
                       </code>
@@ -1029,7 +1626,7 @@ export default function DashboardPage() {
             </form>
           )}
 
-          {/* TAB 4: WINDOWS PRINT AGENT */}
+          {/* TAB 5: WINDOWS PRINT AGENT */}
           {tab === "agent" && (
             <div className="space-y-5 rounded-xl border border-[#171717]/8 bg-white p-6">
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1038,7 +1635,8 @@ export default function DashboardPage() {
                     Perintah terminal Windows Print Agent
                   </h2>
                   <p className="mt-0.5 text-xs text-[#737373]">
-                    Jalankan agen di PC kasir agar dokumen lunas langsung dicetak ke printer USB
+                    Jalankan agen di PC kasir agar dokumen lunas langsung
+                    dicetak ke printer USB
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-2 rounded-md border border-[#171717]/10 bg-[#fafafa] px-3 py-1 text-xs font-medium text-[#171717]">
@@ -1068,7 +1666,9 @@ export default function DashboardPage() {
                     ) : (
                       <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
                     )}
-                    <span>{copiedText === "key" ? "Tersalin" : "Salin kunci"}</span>
+                    <span>
+                      {copiedText === "key" ? "Tersalin" : "Salin kunci"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -1111,7 +1711,11 @@ export default function DashboardPage() {
 
               <div>
                 <p className="text-xs font-medium text-[#171717]">
-                  Daftar printer terdeteksi ({shop.printers.length})
+                  Daftar printer terdeteksi ({shop.printers.length}
+                  {entitlement.plan.maxPrinters !== null
+                    ? ` · batas paket ${entitlement.plan.maxPrinters} printer`
+                    : ""}
+                  )
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {shop.printers.length > 0 ? (
@@ -1120,13 +1724,17 @@ export default function DashboardPage() {
                         key={p}
                         className="inline-flex items-center gap-2 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-3 py-1.5 text-xs text-[#171717]"
                       >
-                        <Printer className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+                        <Printer
+                          className="h-3.5 w-3.5 text-[#737373]"
+                          strokeWidth={1.5}
+                        />
                         <span>{p}</span>
                       </span>
                     ))
                   ) : (
                     <p className="text-xs text-[#737373]">
-                      Belum ada printer terdaftar, jalankan perintah di atas pada PC Windows toko
+                      Belum ada printer terdaftar, jalankan perintah di atas
+                      pada PC Windows toko
                     </p>
                   )}
                 </div>
@@ -1136,5 +1744,25 @@ export default function DashboardPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="bg-app flex min-h-screen items-center justify-center">
+          <div className="flex items-center gap-2.5 rounded-xl border border-[#171717]/8 bg-white px-5 py-3.5 text-sm text-[#171717]">
+            <Loader2
+              className="h-4 w-4 animate-spin text-[#737373]"
+              strokeWidth={1.5}
+            />
+            <span>Memuat dashboard toko...</span>
+          </div>
+        </div>
+      }
+    >
+      <DashboardContent />
+    </Suspense>
   );
 }
