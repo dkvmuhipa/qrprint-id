@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useCallback } from "react";
+import { Suspense, useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import QRCode from "qrcode";
@@ -23,8 +23,88 @@ import {
   XCircle,
   Loader2,
   AlertTriangle,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
+
+function playCashierBell() {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    // Crisp two-tone cashier chime ("Ting-Ting!")
+    [880, 1318.5].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+      gain.gain.setValueAtTime(0.001, now + idx * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + idx * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.12 + 0.45);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.12);
+      osc.stop(now + idx * 0.12 + 0.5);
+    });
+  } catch {
+    // Ignore autoplay restriction errors until user interacts
+  }
+}
+
+function exportShopJobsCsv(shopCode: string, jobs: PrintJobItem[]) {
+  const headers = [
+    "Kode Antrean",
+    "Tanggal",
+    "Pelanggan",
+    "Nama Dokumen",
+    "Halaman",
+    "Rangkap",
+    "Mode Warna",
+    "Ukuran Kertas",
+    "Bolak-Balik",
+    "Metode Bayar",
+    "Status Bayar",
+    "Status Cetak",
+    "Total (Rp)",
+  ];
+  const escape = (v: string | number) =>
+    `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const rows = jobs.map((j) => [
+    j.jobCode,
+    new Date(j.createdAt).toLocaleString("id-ID"),
+    j.customerName,
+    j.fileName,
+    j.pageCount,
+    j.copies,
+    j.colorMode === "COLOR" ? "Warna" : "Hitam Putih",
+    j.paperSize,
+    j.duplex ? "Ya" : "Tidak",
+    j.paymentMethod,
+    j.paymentStatus === "PAID" ? "Lunas" : "Belum Lunas",
+    j.printStatus,
+    j.totalPrice,
+  ]);
+  const csv = [
+    headers.map(escape).join(","),
+    ...rows.map((r) => r.map(escape).join(",")),
+  ].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], {
+    type: "text/csv;charset=utf-8;",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `laporan-omzet-${shopCode}-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 interface ShopInfo {
   id: string;
@@ -143,6 +223,8 @@ function DashboardContent() {
   const [qrImage, setQrImage] = useState("");
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [busyJobId, setBusyJobId] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const knownPaidJobIdsRef = useRef<Set<string> | null>(null);
 
   // Billing state
   const [creatingPlanId, setCreatingPlanId] = useState<string | null>(null);
@@ -177,6 +259,25 @@ function DashboardContent() {
       }
       if (res.ok) {
         const json: DashboardData = await res.json();
+        const currentPaidIds = new Set(
+          json.jobs
+            .filter((j) => j.paymentStatus === "PAID")
+            .map((j) => j.id)
+        );
+        if (knownPaidJobIdsRef.current !== null && soundEnabled) {
+          let hasNewPaidJob = false;
+          for (const id of currentPaidIds) {
+            if (!knownPaidJobIdsRef.current.has(id)) {
+              hasNewPaidJob = true;
+              break;
+            }
+          }
+          if (hasNewPaidJob) {
+            playCashierBell();
+          }
+        }
+        knownPaidJobIdsRef.current = currentPaidIds;
+
         setData(json);
         if (!settingsInitialized) {
           setSettingsForm({
@@ -199,7 +300,7 @@ function DashboardContent() {
     } finally {
       setLoading(false);
     }
-  }, [router, settingsInitialized]);
+  }, [router, settingsInitialized, soundEnabled]);
 
   useEffect(() => {
     fetchDashboard();
@@ -646,16 +747,48 @@ function DashboardContent() {
             </div>
 
             {tab === "queue" && (
-              <button
-                onClick={fetchDashboard}
-                className="btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/10 bg-white px-3.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
-              >
-                <RefreshCw
-                  className="h-3.5 w-3.5 text-[#737373]"
-                  strokeWidth={1.5}
-                />
-                <span>Perbarui data</span>
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => {
+                    const next = !soundEnabled;
+                    setSoundEnabled(next);
+                    if (next) playCashierBell();
+                  }}
+                  title="Bunyikan notifikasi suara saat ada pesanan lunas masuk"
+                  className={`btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${
+                    soundEnabled
+                      ? "border-[#171717]/15 bg-white text-[#171717] hover:bg-[#f4f4f5]"
+                      : "border-[#171717]/10 bg-[#fafafa] text-[#737373]"
+                  }`}
+                >
+                  {soundEnabled ? (
+                    <Volume2 className="h-3.5 w-3.5 text-[#16a34a]" strokeWidth={1.5} />
+                  ) : (
+                    <VolumeX className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+                  )}
+                  <span>{soundEnabled ? "Suara aktif" : "Suara senyap"}</span>
+                </button>
+
+                <button
+                  disabled={jobs.length === 0}
+                  onClick={() => exportShopJobsCsv(shop.shopCode, jobs)}
+                  className="btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/10 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  <Download className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+                  <span>Ekspor Omzet CSV</span>
+                </button>
+
+                <button
+                  onClick={fetchDashboard}
+                  className="btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/10 bg-white px-3.5 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                >
+                  <RefreshCw
+                    className="h-3.5 w-3.5 text-[#737373]"
+                    strokeWidth={1.5}
+                  />
+                  <span>Perbarui</span>
+                </button>
+              </div>
             )}
           </div>
 
