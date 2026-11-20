@@ -45,3 +45,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# flutter android companion build artifacts
+/android-listener/build/
+/android-listener/.dart_tool/
+/android-listener/android/.gradle/
+/android-listener/android/local.properties

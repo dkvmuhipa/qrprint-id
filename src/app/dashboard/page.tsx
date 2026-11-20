@@ -1854,20 +1854,64 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                {/* MacroDroid / Auto-Verify Webhook Guide for GoPay Merchant */}
+                {/* Ngeprint Listener Android App + Webhook Guide */}
                 <div className="mt-4 rounded-lg border border-[#171717]/8 bg-white p-3.5 text-xs">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-[#171717]">
-                        Otomatisasi Lunas Tanpa Klik (MacroDroid / Tasker Android)
+                        Otomatisasi Lunas Tanpa Klik — Aplikasi Android Ngeprint Listener (Gratis)
                       </p>
                       <p className="mt-0.5 text-[11px] text-[#737373]">
-                        Teruskan notifikasi uang masuk dari aplikasi GoPay Merchant ke URL Webhook di bawah agar printer otomatis mencetak tanpa klik kasir:
+                        Pasang aplikasi resmi Ngeprint Listener di HP kasir untuk meneruskan notifikasi uang masuk GoPay Merchant / DANA Bisnis / OVO / Bank secara otomatis tanpa aplikasi berbayar.
                       </p>
-                      <code className="font-mono-num mt-1.5 block truncate text-[11px] text-[#171717]">
-                        {origin}/api/webhooks/qris-notification?key={shop.agentKey}
-                      </code>
                     </div>
+                    <a
+                      href="/downloads/ngeprint-listener.apk"
+                      download="ngeprint-listener.apk"
+                      className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#d9381e] px-3 py-1.5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                    >
+                      <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <span>Unduh APK Android</span>
+                    </a>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 rounded-md bg-[#fafafa] p-2.5 text-[11px] text-[#525252] sm:grid-cols-2">
+                    <div className="flex items-center justify-between gap-2 rounded border border-[#171717]/8 bg-white px-2.5 py-1.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#737373]">URL Server</p>
+                        <code className="font-mono-num block truncate text-[11px] text-[#171717]">
+                          {origin}
+                        </code>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(origin, "listener_origin")}
+                        className="shrink-0 cursor-pointer rounded bg-[#171717] px-2 py-1 text-[10px] font-medium text-white"
+                      >
+                        {copiedText === "listener_origin" ? "Tersalin" : "Salin"}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 rounded border border-[#171717]/8 bg-white px-2.5 py-1.5">
+                      <div className="min-w-0">
+                        <p className="text-[10px] text-[#737373]">Agent Key Toko</p>
+                        <code className="font-mono-num block truncate text-[11px] text-[#171717]">
+                          {shop.agentKey}
+                        </code>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(shop.agentKey, "listener_key")}
+                        className="shrink-0 cursor-pointer rounded bg-[#171717] px-2 py-1 text-[10px] font-medium text-white"
+                      >
+                        {copiedText === "listener_key" ? "Tersalin" : "Salin"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#737373]">
+                    <span>
+                      Cara pakai: Install APK → aktifkan <strong>Izin Notifikasi</strong> → tempel URL Server &amp; Agent Key → selesai.
+                    </span>
                     <button
                       type="button"
                       onClick={() =>
@@ -1876,22 +1920,12 @@ function DashboardContent() {
                           "qris_notif_url"
                         )
                       }
-                      className="shrink-0 cursor-pointer rounded-md bg-[#171717] px-2.5 py-1.5 text-xs font-medium text-white"
+                      className="shrink-0 cursor-pointer font-medium text-[#171717] underline-offset-2 hover:underline"
                     >
-                      {copiedText === "qris_notif_url" ? "Tersalin" : "Salin Webhook"}
+                      {copiedText === "qris_notif_url"
+                        ? "URL Webhook Tersalin"
+                        : "Salin URL Webhook (opsional)"}
                     </button>
-                  </div>
-                  <div className="mt-2.5 rounded-md bg-[#fafafa] p-2.5 text-[11px] text-[#525252]">
-                    <p className="font-medium text-[#171717]">
-                      Pengaturan singkat di MacroDroid (Android):
-                    </p>
-                    <p className="mt-0.5">
-                      1. <strong>Trigger:</strong> Notification Received → pilih aplikasi <em>GoPay Merchant / GoBiz</em>.{" "}
-                      2. <strong>Action:</strong> HTTP Request (POST, JSON) ke URL di atas dengan body{" "}
-                      <code className="font-mono-num text-[#171717]">
-                        {`{"title":"[not_title]","text":"[notification]"}`}
-                      </code>
-                    </p>
                   </div>
                 </div>
               </div>
