@@ -99,22 +99,32 @@ function CustomerScanPortalContent({
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
 
   useEffect(() => {
+    let active = true;
     async function loadShop() {
       try {
-        const res = await fetch(`/api/public/shop/${shopCode}`);
+        const res = await fetch(`/api/public/shop/${shopCode}?t=${Date.now()}`, {
+          cache: "no-store",
+        });
         const data = await res.json();
+        if (!active) return;
         if (!res.ok) {
           setShopError(data.error || "Toko tidak ditemukan");
         } else {
           setShop(data.shop);
         }
       } catch {
-        setShopError("Gagal memuat informasi toko");
+        if (active) setShopError("Gagal memuat informasi toko");
       } finally {
-        setLoadingShop(false);
+        if (active) setLoadingShop(false);
       }
     }
     loadShop();
+    // Auto-sync shop tariff & agent status every 10 seconds so price changes reflect immediately
+    const timer = setInterval(loadShop, 10000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, [shopCode]);
 
   useEffect(() => {

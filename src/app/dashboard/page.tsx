@@ -1599,7 +1599,7 @@ function DashboardContent() {
                   <input
                     type="number"
                     min={100}
-                    step={100}
+                    step={1}
                     value={settingsForm.bwPrice}
                     onChange={(e) =>
                       setSettingsForm({
@@ -1616,8 +1616,8 @@ function DashboardContent() {
                   </label>
                   <input
                     type="number"
-                    min={200}
-                    step={100}
+                    min={100}
+                    step={1}
                     value={settingsForm.colorPrice}
                     onChange={(e) =>
                       setSettingsForm({
@@ -1639,8 +1639,8 @@ function DashboardContent() {
                   </label>
                   <input
                     type="number"
-                    min={500}
-                    step={500}
+                    min={100}
+                    step={1}
                     disabled={!entitlement.plan.allowExtraPaper}
                     value={settingsForm.photoPrice}
                     onChange={(e) =>

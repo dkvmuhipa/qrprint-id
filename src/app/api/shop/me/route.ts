@@ -158,11 +158,11 @@ export async function PATCH(req: Request) {
             : shop.bwPrice,
         colorPrice:
           body.colorPrice !== undefined
-            ? Math.max(200, Number(body.colorPrice) || 1500)
+            ? Math.max(100, Number(body.colorPrice) || 1500)
             : shop.colorPrice,
         photoPrice:
           body.photoPrice !== undefined
-            ? Math.max(500, Number(body.photoPrice) || 3000)
+            ? Math.max(100, Number(body.photoPrice) || 3000)
             : shop.photoPrice,
         duplexDiscount:
           body.duplexDiscount !== undefined
