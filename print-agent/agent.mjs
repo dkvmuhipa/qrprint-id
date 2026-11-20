@@ -18,7 +18,7 @@
  */
 
 import fs from "fs/promises";
-import { constants as fsConstants } from "fs";
+import { constants as fsConstants, existsSync, readFileSync } from "fs";
 import path from "path";
 import os from "os";
 import { fileURLToPath } from "url";
@@ -29,18 +29,53 @@ const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Auto-load local .env next to agent.mjs so beginners can just double-click PASANG-DAN-JALANKAN.bat
+function loadLocalDotEnv() {
+  const envPath = path.join(__dirname, ".env");
+  if (!existsSync(envPath)) return;
+  try {
+    const raw = readFileSync(envPath, "utf8");
+    for (const line of raw.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eq = trimmed.indexOf("=");
+      if (eq === -1) continue;
+      const k = trimmed.slice(0, eq).trim();
+      let v = trimmed.slice(eq + 1).trim();
+      if (
+        (v.startsWith('"') && v.endsWith('"')) ||
+        (v.startsWith("'") && v.endsWith("'"))
+      ) {
+        v = v.slice(1, -1);
+      }
+      if (k && process.env[k] === undefined) {
+        process.env[k] = v;
+      }
+    }
+  } catch {
+    // Ignore .env parse errors
+  }
+}
+loadLocalDotEnv();
+
 function parseArgs() {
   const args = process.argv.slice(2);
   const config = {
     url:
+      process.env.SERVER_URL ||
       process.env.NGEPRINT_URL ||
       process.env.QRPRINT_URL ||
-      "http://localhost:3000",
+      "https://ngeprint.gellona.web.id",
     key:
-      process.env.NGEPRINT_AGENT_KEY || process.env.QRPRINT_AGENT_KEY || "",
+      process.env.AGENT_KEY ||
+      process.env.NGEPRINT_AGENT_KEY ||
+      process.env.QRPRINT_AGENT_KEY ||
+      "",
     sumatraPath: process.env.SUMATRA_PDF_PATH || "",
-    live: false,
-    pollMs: 3000,
+    live:
+      String(process.env.DRY_RUN || "").toLowerCase() === "false" ||
+      String(process.env.LIVE_MODE || "").toLowerCase() === "true",
+    pollMs: Math.max(1500, Number(process.env.POLL_INTERVAL_MS) || 3000),
   };
 
   for (const arg of args) {

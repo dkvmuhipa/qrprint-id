@@ -2897,6 +2897,45 @@ function DashboardContent() {
                 </span>
               </div>
 
+              {/* Beginner-Friendly 1-Click ZIP Installer Hero Card */}
+              <div className="rounded-xl border border-[#d9381e]/25 bg-[#d9381e]/5 p-5">
+                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                  <div className="space-y-1">
+                    <span className="inline-block rounded bg-[#d9381e] px-2 py-0.5 text-[10px] font-medium text-white">
+                      Direkomendasikan untuk pemula
+                    </span>
+                    <h3 className="text-sm font-medium text-[#171717]">
+                      Unduh Paket Print Agent Siap Pakai (.zip) — Khusus {shop.name}
+                    </h3>
+                    <p className="text-xs leading-relaxed text-[#525252]">
+                      Sudah berisi program Print Agent, file <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">.env</code> toko Anda, auto-installer Node.js &amp; SumatraPDF, serta auto-start saat komputer menyala.
+                    </p>
+                  </div>
+                  <a
+                    href="/api/shop/agent-bundle"
+                    download={`ngeprint-agent-${shop.shopCode}.zip`}
+                    className="btn-action inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17]"
+                  >
+                    <Download className="h-4 w-4" strokeWidth={1.5} />
+                    <span>Unduh Paket ZIP Siap Pakai</span>
+                  </a>
+                </div>
+                <div className="mt-3.5 grid gap-2 border-t border-[#d9381e]/15 pt-3 text-[11px] text-[#525252] sm:grid-cols-3">
+                  <p>
+                    <strong className="text-[#171717]">1. Unduh &amp; Ekstrak:</strong>{" "}
+                    Klik tombol merah di atas lalu ekstrak folder ZIP di PC kasir.
+                  </p>
+                  <p>
+                    <strong className="text-[#171717]">2. Klik ganda 1 file:</strong>{" "}
+                    Jalankan <code className="font-mono-num rounded bg-white px-1 text-[#171717]">PASANG-DAN-JALANKAN.bat</code>.
+                  </p>
+                  <p>
+                    <strong className="text-[#171717]">3. Selesai:</strong>{" "}
+                    Status berubah <strong>Terhubung</strong> &amp; printer USB otomatis terdeteksi.
+                  </p>
+                </div>
+              </div>
+
               <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-4">
                 <p className="text-xs text-[#737373]">
                   Kunci otentikasi agen toko
