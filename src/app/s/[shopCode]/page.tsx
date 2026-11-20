@@ -548,18 +548,14 @@ function CustomerScanPortalContent({
                       ) : activeJob.paymentProvider === "MERCHANT_QRIS" ? (
                         <div className="mt-2 space-y-2.5 text-xs text-[#5e554a]">
                           <p>
-                            Pindai kode QRIS di atas dengan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking. Nominal{" "}
+                            Pindai kode QRIS di atas dengan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking. Nominal unik{" "}
                             <strong className="font-mono-num text-[#1f1b16]">
                               {formatRupiah(activeJob.totalPrice)}
                             </strong>{" "}
-                            otomatis terisi.
+                            otomatis terisi agar pembayaran langsung terverifikasi otomatis.
                           </p>
                           <p className="rounded-lg bg-[#f7f4ee] p-2.5 text-[11px] text-[#7b7266]">
-                            Setelah pembayaran berhasil, tunjukkan bukti bayar atau tunggu kasir mengonfirmasi kode{" "}
-                            <strong className="font-mono-num text-[#1f1b16]">
-                              {activeJob.jobCode}
-                            </strong>{" "}
-                            agar dokumen langsung tercetak.
+                            Mohon bayar sesuai nominal tepat (termasuk 2 digit kode unik) agar printer langsung mencetak secara otomatis tanpa perlu konfirmasi manual.
                           </p>
                         </div>
                       ) : (

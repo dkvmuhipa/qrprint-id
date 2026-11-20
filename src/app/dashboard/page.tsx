@@ -1849,7 +1849,48 @@ function DashboardContent() {
                       className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-white px-3.5 text-xs outline-none focus:border-[#171717]"
                     />
                     <p className="mt-1 text-[11px] text-[#737373]">
-                      Uang masuk langsung 100% ke saldo GoPay Merchant Anda. Kasir klik &ldquo;Terima bayar&rdquo; saat notifikasi suara GoPay masuk.
+                      Uang masuk langsung 100% ke saldo GoPay Merchant Anda dengan kode unik otomatis (Rp 11–99).
+                    </p>
+                  </div>
+                </div>
+
+                {/* MacroDroid / Auto-Verify Webhook Guide for GoPay Merchant */}
+                <div className="mt-4 rounded-lg border border-[#171717]/8 bg-white p-3.5 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-[#171717]">
+                        Otomatisasi Lunas Tanpa Klik (MacroDroid / Tasker Android)
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-[#737373]">
+                        Teruskan notifikasi uang masuk dari aplikasi GoPay Merchant ke URL Webhook di bawah agar printer otomatis mencetak tanpa klik kasir:
+                      </p>
+                      <code className="font-mono-num mt-1.5 block truncate text-[11px] text-[#171717]">
+                        {origin}/api/webhooks/qris-notification?key={shop.agentKey}
+                      </code>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyToClipboard(
+                          `${origin}/api/webhooks/qris-notification?key=${shop.agentKey}`,
+                          "qris_notif_url"
+                        )
+                      }
+                      className="shrink-0 cursor-pointer rounded-md bg-[#171717] px-2.5 py-1.5 text-xs font-medium text-white"
+                    >
+                      {copiedText === "qris_notif_url" ? "Tersalin" : "Salin Webhook"}
+                    </button>
+                  </div>
+                  <div className="mt-2.5 rounded-md bg-[#fafafa] p-2.5 text-[11px] text-[#525252]">
+                    <p className="font-medium text-[#171717]">
+                      Pengaturan singkat di MacroDroid (Android):
+                    </p>
+                    <p className="mt-0.5">
+                      1. <strong>Trigger:</strong> Notification Received → pilih aplikasi <em>GoPay Merchant / GoBiz</em>.{" "}
+                      2. <strong>Action:</strong> HTTP Request (POST, JSON) ke URL di atas dengan body{" "}
+                      <code className="font-mono-num text-[#171717]">
+                        {`{"title":"[not_title]","text":"[notification]"}`}
+                      </code>
                     </p>
                   </div>
                 </div>

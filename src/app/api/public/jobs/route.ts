@@ -159,6 +159,8 @@ export async function POST(req: Request) {
     let qrisString: string | null = null;
     let midtransIsProd = false;
 
+    let finalTotalPrice = pricing.totalPrice;
+
     if (paymentMethod === "QRIS") {
       const midtransConfig = resolveMidtransConfig(shop);
       if (midtransConfig) {
@@ -175,11 +177,29 @@ export async function POST(req: Request) {
         qrisString = charge.qrisString;
         midtransIsProd = midtransConfig.isProduction;
       } else if (shop.staticQrisString && isValidStaticQris(shop.staticQrisString)) {
-        // GoPay Merchant / Static QRIS -> Auto-Dynamic QRIS with exact amount & valid CRC16
+        // GoPay Merchant / Static QRIS -> Auto-Dynamic QRIS + Unique 1-99 Rupiah Code
+        // so Notification Listener (MacroDroid/Tasker) can auto-match without collision!
+        const sixtyMinsAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const recentPending = await prisma.printJob.findMany({
+          where: {
+            shopId: shop.id,
+            paymentStatus: "PENDING",
+            createdAt: { gte: sixtyMinsAgo },
+          },
+          select: { totalPrice: true },
+        });
+        const usedTotals = new Set(recentPending.map((j) => j.totalPrice));
+        let uniqueOffset = Math.floor(Math.random() * 89) + 11; // 11..99
+        for (let attempt = 0; attempt < 50; attempt++) {
+          if (!usedTotals.has(pricing.totalPrice + uniqueOffset)) break;
+          uniqueOffset = ((uniqueOffset + 7) % 89) + 11;
+        }
+        finalTotalPrice = pricing.totalPrice + uniqueOffset;
+
         paymentProvider = "MERCHANT_QRIS";
         qrisString = convertStaticQrisToDynamic(
           shop.staticQrisString,
-          pricing.totalPrice
+          finalTotalPrice
         );
       }
     }
@@ -199,7 +219,7 @@ export async function POST(req: Request) {
         paperSize: effectivePaperSize,
         duplex: effectiveDuplex,
         pageRange,
-        totalPrice: pricing.totalPrice,
+        totalPrice: finalTotalPrice,
         paymentMethod,
         paymentProvider,
         paymentOrderId,
