@@ -4,6 +4,7 @@ import { getCurrentAdmin } from "@/lib/admin-auth";
 import { setShopSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
+  buildShopUpdateForPaidInvoice,
   calculateNewExpiryDate,
   generateInvoiceCode,
   getPlanDef,
@@ -164,13 +165,7 @@ export async function PATCH(req: Request) {
         );
       }
 
-      const planDef = getPlanDef(inv.plan);
-      const baseExpiry =
-        inv.shop.plan === "DEMO" ? null : inv.shop.planExpiresAt;
-      const newExpiresAt = calculateNewExpiryDate(
-        baseExpiry,
-        planDef.durationDays
-      );
+      const fulfillment = buildShopUpdateForPaidInvoice(inv.plan, inv.shop);
 
       await prisma.$transaction([
         prisma.subscriptionInvoice.update({
@@ -179,17 +174,13 @@ export async function PATCH(req: Request) {
         }),
         prisma.shop.update({
           where: { id: inv.shopId },
-          data: {
-            plan: planDef.id,
-            planStatus: "ACTIVE",
-            planExpiresAt: newExpiresAt,
-          },
+          data: fulfillment.data,
         }),
       ]);
 
       return NextResponse.json({
         ok: true,
-        message: `Invoice ${inv.invoiceCode} disetujui. Paket ${planDef.name} aktif untuk ${inv.shop.name}.`,
+        message: `Invoice ${inv.invoiceCode} disetujui. ${fulfillment.label} aktif untuk ${inv.shop.name}.`,
       });
     }
 

@@ -5,7 +5,7 @@ import {
   verifyMidtransSignature,
 } from "@/lib/midtrans";
 import { deleteUploadedFile } from "@/lib/storage";
-import { calculateNewExpiryDate, getPlanDef } from "@/lib/plans";
+import { buildShopUpdateForPaidInvoice } from "@/lib/plans";
 
 export async function GET() {
   return NextResponse.json({
@@ -75,14 +75,9 @@ export async function POST(req: Request) {
       }
 
       if (isPaid && subInvoice.status !== "PAID") {
-        const planDef = getPlanDef(subInvoice.plan);
-        const baseExpiry =
-          subInvoice.shop.plan === "DEMO"
-            ? null
-            : subInvoice.shop.planExpiresAt;
-        const newExpiresAt = calculateNewExpiryDate(
-          baseExpiry,
-          planDef.durationDays
+        const fulfillment = buildShopUpdateForPaidInvoice(
+          subInvoice.plan,
+          subInvoice.shop
         );
 
         await prisma.$transaction([
@@ -92,11 +87,7 @@ export async function POST(req: Request) {
           }),
           prisma.shop.update({
             where: { id: subInvoice.shopId },
-            data: {
-              plan: planDef.id,
-              planStatus: "ACTIVE",
-              planExpiresAt: newExpiresAt,
-            },
+            data: fulfillment.data,
           }),
         ]);
       } else if (isFailed && subInvoice.status === "PENDING") {

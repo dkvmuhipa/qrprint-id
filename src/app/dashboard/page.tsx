@@ -2145,69 +2145,114 @@ function DashboardContent() {
                       );
                     })}
                 </div>
-                {/* Add-On Opsional (untuk paket Bulanan / kebutuhan khusus) */}
+                {/* Add-On Opsional — Checkout Langsung 1-Klik */}
                 <div className="mt-5 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div>
-                      <h4 className="text-sm font-medium text-[#171717]">
-                        Add-On Opsional (Khusus Paket Bulanan)
-                      </h4>
-                      <p className="mt-0.5 text-xs text-[#737373]">
-                        Aktifkan fitur satuan tanpa harus langsung pindah paket — atau hemat jauh lebih besar dengan Pro Tahunan.
-                      </p>
-                    </div>
-                    <a
-                      href={`mailto:admin@gellona.id?subject=${encodeURIComponent(
-                        `Aktivasi Add-On Ngeprint (${shop.shopCode})`
-                      )}`}
-                      className="btn-action inline-flex h-8 shrink-0 items-center rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90"
-                    >
-                      Pesan Add-On via Admin
-                    </a>
+                  <div>
+                    <h4 className="text-sm font-medium text-[#171717]">
+                      Add-On Opsional — Checkout Langsung
+                    </h4>
+                    <p className="mt-0.5 text-xs text-[#737373]">
+                      Beli fitur satuan langsung lewat tagihan QRIS tanpa perlu menghubungi admin (atau hemat lebih besar dengan Pro Tahunan).
+                    </p>
                   </div>
-                  <div className="mt-3 grid gap-2.5 sm:grid-cols-3 text-xs">
-                    <div className="rounded-lg border border-[#171717]/8 bg-white p-3">
-                      <p className="font-medium text-[#171717]">
-                        APK Ngeprint Listener
-                      </p>
-                      <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
-                        +Rp 25.000 / bulan
-                      </p>
-                      <p className="mt-1 text-[11px] text-[#737373]">
-                        Lunas otomatis tanpa klik kasir.{" "}
-                        {shop.canUseListener ? (
-                          <strong className="text-[#16a34a]">(Sudah aktif)</strong>
-                        ) : (
-                          "Gratis di Pro/Premium."
-                        )}
-                      </p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3 text-xs">
+                    <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
+                      <div>
+                        <p className="font-medium text-[#171717]">
+                          APK Ngeprint Listener
+                        </p>
+                        <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                          +Rp 25.000 / 30 hari
+                        </p>
+                        <p className="mt-1 text-[11px] text-[#737373]">
+                          Verifikasi QRIS &amp; cetak otomatis 100% tanpa klik kasir.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          Boolean(shop.canUseListener) ||
+                          creatingPlanId === "ADDON_LISTENER"
+                        }
+                        onClick={() =>
+                          handleCreateSubscriptionInvoice("ADDON_LISTENER")
+                        }
+                        className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {shop.canUseListener
+                          ? "Sudah aktif"
+                          : creatingPlanId === "ADDON_LISTENER"
+                          ? "Membuat tagihan..."
+                          : "Checkout Rp 25.000"}
+                      </button>
                     </div>
-                    <div className="rounded-lg border border-[#171717]/8 bg-white p-3">
-                      <p className="font-medium text-[#171717]">
-                        Tambah Slot Printer
-                      </p>
-                      <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
-                        +Rp 20.000 / slot / bln
-                      </p>
-                      <p className="mt-1 text-[11px] text-[#737373]">
-                        Tambah kuota printer &amp; buka Multi-Printer Pool.{" "}
-                        {(shop.extraPrinterSlots || 0) > 0 && (
-                          <strong className="text-[#16a34a]">
-                            (+{shop.extraPrinterSlots} aktif)
-                          </strong>
-                        )}
-                      </p>
+
+                    <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
+                      <div>
+                        <p className="font-medium text-[#171717]">
+                          Tambah +1 Slot Printer
+                        </p>
+                        <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                          +Rp 20.000 / slot / 30 hari
+                        </p>
+                        <p className="mt-1 text-[11px] text-[#737373]">
+                          Tambah kapasitas printer &amp; buka Multi-Printer Pool.{" "}
+                          {(shop.extraPrinterSlots || 0) > 0 && (
+                            <strong className="text-[#16a34a]">
+                              (+{shop.extraPrinterSlots} aktif)
+                            </strong>
+                          )}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          shop.plan === "PREMIUM" ||
+                          creatingPlanId === "ADDON_PRINTER"
+                        }
+                        onClick={() =>
+                          handleCreateSubscriptionInvoice("ADDON_PRINTER")
+                        }
+                        className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {shop.plan === "PREMIUM"
+                          ? "Sudah Unlimited"
+                          : creatingPlanId === "ADDON_PRINTER"
+                          ? "Membuat tagihan..."
+                          : "Checkout +1 Slot (Rp 20.000)"}
+                      </button>
                     </div>
-                    <div className="rounded-lg border border-[#171717]/8 bg-white p-3">
-                      <p className="font-medium text-[#171717]">
-                        Ganti URL Portal (/s/...)
-                      </p>
-                      <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
-                        Rp 37.000 / sekali
-                      </p>
-                      <p className="mt-1 text-[11px] text-[#737373]">
-                        Untuk perubahan URL portal setelah kuota 1× gratis habis.
-                      </p>
+
+                    <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
+                      <div>
+                        <p className="font-medium text-[#171717]">
+                          Buka Kunci Ganti URL Portal
+                        </p>
+                        <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                          Rp 37.000 / sekali
+                        </p>
+                        <p className="mt-1 text-[11px] text-[#737373]">
+                          Buka kembali kuota 1× ubah link{" "}
+                          <code className="font-mono-num">/s/...</code> setelah jatah gratis terpakai.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={
+                          (shop.shopCodeChangeCount ?? 0) < 1 ||
+                          creatingPlanId === "ADDON_URL_CHANGE"
+                        }
+                        onClick={() =>
+                          handleCreateSubscriptionInvoice("ADDON_URL_CHANGE")
+                        }
+                        className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {(shop.shopCodeChangeCount ?? 0) < 1
+                          ? "Masih ada jatah 1× gratis"
+                          : creatingPlanId === "ADDON_URL_CHANGE"
+                          ? "Membuat tagihan..."
+                          : "Checkout Rp 37.000"}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -2346,22 +2391,30 @@ function DashboardContent() {
                     />
                   </div>
                   {(shop.shopCodeChangeCount ?? 0) >= 1 ? (
-                    <p className="mt-1.5 text-[11px] text-[#525252]">
-                      URL portal pelanggan sudah pernah diganti dan kini terkunci permanen. Perubahan URL berikutnya dikenakan biaya{" "}
-                      <strong className="font-mono-num text-[#171717]">
-                        Rp 37.000
-                      </strong>{" "}
-                      — silakan hubungi admin{" "}
-                      <a
-                        href={`mailto:admin@gellona.id?subject=${encodeURIComponent(
-                          `Permintaan Ganti URL Portal Rp 37.000 (${shop.shopCode})`
-                        )}`}
-                        className="font-medium text-[#d9381e] underline"
+                    <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#525252]">
+                      <span>
+                        URL portal pelanggan sudah pernah diganti dan terkunci. Buka kunci lagi untuk{" "}
+                        <strong className="font-mono-num text-[#171717]">
+                          Rp 37.000
+                        </strong>
+                        .
+                      </span>
+                      <button
+                        type="button"
+                        disabled={creatingPlanId === "ADDON_URL_CHANGE"}
+                        onClick={async () => {
+                          await handleCreateSubscriptionInvoice(
+                            "ADDON_URL_CHANGE"
+                          );
+                          setTab("billing");
+                        }}
+                        className="cursor-pointer font-medium text-[#d9381e] underline disabled:opacity-50"
                       >
-                        Gellona Teknologi
-                      </a>
-                      .
-                    </p>
+                        {creatingPlanId === "ADDON_URL_CHANGE"
+                          ? "Membuat tagihan..."
+                          : "Checkout Ganti URL (Rp 37.000) →"}
+                      </button>
+                    </div>
                   ) : (
                     <p className="mt-1 text-[11px] text-[#737373]">
                       Default otomatis mengikuti nama toko saat pendaftaran. Anda hanya dapat menggantinya <strong>1 kali gratis</strong> — setelah itu terkunci (perubahan berikutnya Rp 37.000).

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
-  calculateNewExpiryDate,
+  buildShopUpdateForPaidInvoice,
   generateInvoiceCode,
-  getPlanDef,
+  getCheckoutItem,
   SAAS_PLANS,
 } from "@/lib/plans";
 import {
@@ -41,11 +41,11 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const targetPlan = getPlanDef(body.plan);
+    const checkoutItem = getCheckoutItem(body.plan);
 
-    if (targetPlan.id === "DEMO" || targetPlan.price <= 0) {
+    if (!checkoutItem) {
       return NextResponse.json(
-        { error: "Paket Demo hanya untuk masa uji coba awal." },
+        { error: "Paket atau Add-On yang dipilih tidak valid." },
         { status: 400 }
       );
     }
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     let paymentOrderId: string | null = null;
     let qrisUrl: string | null = null;
     let qrisString: string | null = null;
-    let finalAmount = targetPlan.price;
+    let finalAmount = checkoutItem.price;
 
     const midtransConfig = resolveMidtransConfig({});
     if (midtransConfig) {
@@ -69,9 +69,9 @@ export async function POST(req: Request) {
         const orderId = `${invoiceCode}-${Date.now().toString().slice(-5)}`;
         const charge = await createMidtransQrisCharge(midtransConfig, {
           orderId,
-          grossAmount: targetPlan.price,
+          grossAmount: checkoutItem.price,
           customerName: shop.name,
-          itemName: `Paket Ngeprint ${targetPlan.name}`,
+          itemName: `Ngeprint ${checkoutItem.name}`,
         });
         paymentProvider = "MIDTRANS";
         paymentOrderId = charge.orderId;
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
       isValidStaticQris(platformStaticQris)
     ) {
       const uniqueOffset = Math.floor(11 + Math.random() * 88);
-      finalAmount = targetPlan.price + uniqueOffset;
+      finalAmount = checkoutItem.price + uniqueOffset;
       qrisString = convertStaticQrisToDynamic(platformStaticQris, finalAmount);
       paymentProvider = "MERCHANT_QRIS";
     }
@@ -98,9 +98,9 @@ export async function POST(req: Request) {
       data: {
         invoiceCode,
         shopId: shop.id,
-        plan: targetPlan.id,
+        plan: checkoutItem.id,
         amount: finalAmount,
-        durationDays: targetPlan.durationDays,
+        durationDays: checkoutItem.durationDays,
         paymentProvider,
         paymentOrderId,
         qrisUrl,
@@ -184,14 +184,7 @@ export async function PATCH(req: Request) {
       });
     }
 
-    const planDef = getPlanDef(invoice.plan);
-    // Calculate new expiry date: if upgrading from DEMO, start fresh from now; if renewing paid plan, stack days
-    const baseExpiry =
-      shop.plan === "DEMO" ? null : shop.planExpiresAt;
-    const newExpiresAt = calculateNewExpiryDate(
-      baseExpiry,
-      planDef.durationDays
-    );
+    const fulfillment = buildShopUpdateForPaidInvoice(invoice.plan, shop);
 
     const [updatedInvoice, updatedShop] = await prisma.$transaction([
       prisma.subscriptionInvoice.update({
@@ -203,11 +196,7 @@ export async function PATCH(req: Request) {
       }),
       prisma.shop.update({
         where: { id: shop.id },
-        data: {
-          plan: planDef.id,
-          planStatus: "ACTIVE",
-          planExpiresAt: newExpiresAt,
-        },
+        data: fulfillment.data,
       }),
     ]);
 

@@ -4,6 +4,116 @@ export type PlanId = "DEMO" | "BULANAN" | "PRO" | "PREMIUM";
 
 export const LISTENER_ADDON_PRICE = 25000;
 export const EXTRA_PRINTER_ADDON_PRICE = 20000;
+export const URL_CHANGE_ADDON_PRICE = 37000;
+
+export type AddonId = "ADDON_LISTENER" | "ADDON_PRINTER" | "ADDON_URL_CHANGE";
+
+export interface AddonDefinition {
+  id: AddonId;
+  name: string;
+  price: number;
+  durationDays: number | null;
+  periodLabel: string;
+  description: string;
+}
+
+export const SAAS_ADDONS: Record<AddonId, AddonDefinition> = {
+  ADDON_LISTENER: {
+    id: "ADDON_LISTENER",
+    name: "Add-On APK Ngeprint Listener",
+    price: LISTENER_ADDON_PRICE,
+    durationDays: 30,
+    periodLabel: "30 hari",
+    description: "Verifikasi pembayaran QRIS otomatis 100% tanpa klik kasir",
+  },
+  ADDON_PRINTER: {
+    id: "ADDON_PRINTER",
+    name: "Add-On +1 Slot Printer",
+    price: EXTRA_PRINTER_ADDON_PRICE,
+    durationDays: 30,
+    periodLabel: "30 hari",
+    description: "Tambah +1 slot printer aktif & buka Multi-Printer Pool",
+  },
+  ADDON_URL_CHANGE: {
+    id: "ADDON_URL_CHANGE",
+    name: "Buka Kunci Ganti URL Portal",
+    price: URL_CHANGE_ADDON_PRICE,
+    durationDays: null,
+    periodLabel: "sekali pakai",
+    description: "Buka kembali kuota 1× ubah URL portal pelanggan (/s/...)",
+  },
+};
+
+export function getCheckoutItem(code?: string | null): {
+  id: string;
+  name: string;
+  price: number;
+  durationDays: number | null;
+  isAddon: boolean;
+} | null {
+  const key = String(code || "").trim().toUpperCase();
+  if (key in SAAS_ADDONS) {
+    const a = SAAS_ADDONS[key as AddonId];
+    return {
+      id: a.id,
+      name: a.name,
+      price: a.price,
+      durationDays: a.durationDays,
+      isAddon: true,
+    };
+  }
+  if (key in SAAS_PLANS) {
+    const p = SAAS_PLANS[key as PlanId];
+    if (p.id === "DEMO" || p.price <= 0) return null;
+    return {
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      durationDays: p.durationDays,
+      isAddon: false,
+    };
+  }
+  return null;
+}
+
+export function buildShopUpdateForPaidInvoice(
+  invoicePlan: string,
+  shop: { plan: string; planExpiresAt: Date | null }
+): {
+  data: Record<string, unknown>;
+  label: string;
+} {
+  const key = String(invoicePlan || "").toUpperCase();
+  if (key === "ADDON_LISTENER") {
+    return {
+      data: { hasListenerAddon: true },
+      label: SAAS_ADDONS.ADDON_LISTENER.name,
+    };
+  }
+  if (key === "ADDON_PRINTER") {
+    return {
+      data: { extraPrinterSlots: { increment: 1 } },
+      label: SAAS_ADDONS.ADDON_PRINTER.name,
+    };
+  }
+  if (key === "ADDON_URL_CHANGE") {
+    return {
+      data: { shopCodeChangeCount: 0 },
+      label: SAAS_ADDONS.ADDON_URL_CHANGE.name,
+    };
+  }
+  const planDef = getPlanDef(key);
+  const baseExpiry = shop.plan === "DEMO" ? null : shop.planExpiresAt;
+  const newExpiresAt = calculateNewExpiryDate(baseExpiry, planDef.durationDays);
+  return {
+    data: {
+      plan: planDef.id,
+      planStatus: "ACTIVE",
+      planExpiresAt: newExpiresAt,
+    },
+    label: `Paket ${planDef.name}`,
+  };
+}
 
 export interface PlanDefinition {
   id: PlanId;
