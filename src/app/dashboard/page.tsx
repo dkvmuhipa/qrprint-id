@@ -31,8 +31,11 @@ import {
   Receipt,
   RotateCcw,
   X,
+  ShoppingCart,
+  Trash2,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
+import { formatInvoicePlanLabel } from "@/lib/plans";
 
 function playCashierBell() {
   if (typeof window === "undefined") return;
@@ -246,11 +249,68 @@ function DashboardContent() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const knownPaidJobIdsRef = useRef<Set<string> | null>(null);
 
-  // Billing state
+  // Billing & Cart state
   const [creatingPlanId, setCreatingPlanId] = useState<string | null>(null);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
   const [invoiceQrDataUrl, setInvoiceQrDataUrl] = useState<string>("");
   const [billingMsg, setBillingMsg] = useState<string | null>(null);
+  const [cart, setCart] = useState<{
+    planId: string | null;
+    listener: boolean;
+    extraPrinters: number;
+    urlChange: boolean;
+  }>({
+    planId: null,
+    listener: false,
+    extraPrinters: 0,
+    urlChange: false,
+  });
+  const [checkingOutCart, setCheckingOutCart] = useState(false);
+
+  async function handleCheckoutCart() {
+    const items: string[] = [];
+    if (cart.planId) items.push(cart.planId);
+    if (cart.listener) items.push("ADDON_LISTENER");
+    if (cart.extraPrinters > 0) {
+      items.push(
+        cart.extraPrinters === 1
+          ? "ADDON_PRINTER"
+          : `ADDON_PRINTER*${cart.extraPrinters}`
+      );
+    }
+    if (cart.urlChange) items.push("ADDON_URL_CHANGE");
+    if (items.length === 0) return;
+
+    setCheckingOutCart(true);
+    setBillingMsg(null);
+    try {
+      const res = await fetch("/api/shop/subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setCart({
+          planId: null,
+          listener: false,
+          extraPrinters: 0,
+          urlChange: false,
+        });
+        setBillingMsg(
+          `Invoice ${json.invoice?.invoiceCode || ""} berhasil dibuat. Silakan selesaikan pembayaran di atas.`
+        );
+        await fetchDashboard();
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      } else {
+        setBillingMsg(json.error || "Gagal membuat tagihan keranjang.");
+      }
+    } finally {
+      setCheckingOutCart(false);
+    }
+  }
 
   const [settingsForm, setSettingsForm] = useState({
     shopCode: "",
@@ -1997,13 +2057,12 @@ function DashboardContent() {
                         </span>
                       </div>
                       <div className="flex justify-between py-1">
-                        <span className="text-[#737373]">Paket tujuan</span>
-                        <span className="font-medium text-[#171717]">
-                          {activePendingInvoice.plan} (
+                        <span className="text-[#737373]">Item pesanan</span>
+                        <span className="text-right font-medium text-[#171717]">
+                          {formatInvoicePlanLabel(activePendingInvoice.plan)}
                           {activePendingInvoice.durationDays
-                            ? `${activePendingInvoice.durationDays} hari`
-                            : "Selamanya"}
-                          )
+                            ? ` (${activePendingInvoice.durationDays} hari)`
+                            : ""}
                         </span>
                       </div>
                       <div className="flex justify-between border-t border-[#171717]/8 pt-2 mt-1">
@@ -2120,39 +2179,52 @@ function DashboardContent() {
                           </div>
 
                           <button
-                            disabled={
-                              busy ||
-                              (isCurrent && shop.plan === "LIFETIME")
-                            }
-                            onClick={() =>
-                              handleCreateSubscriptionInvoice(p.id)
-                            }
+                            disabled={isCurrent && shop.plan === "LIFETIME"}
+                            onClick={() => {
+                              setCart((prev) => {
+                                const nextPlan =
+                                  prev.planId === p.id ? null : p.id;
+                                return {
+                                  ...prev,
+                                  planId: nextPlan,
+                                  listener:
+                                    nextPlan === "PRO" ||
+                                    nextPlan === "PREMIUM"
+                                      ? false
+                                      : prev.listener,
+                                  extraPrinters:
+                                    nextPlan === "PREMIUM"
+                                      ? 0
+                                      : prev.extraPrinters,
+                                };
+                              });
+                            }}
                             className={`btn-action mt-5 h-9 w-full cursor-pointer rounded-lg text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-                              p.id === "PRO"
+                              cart.planId === p.id
+                                ? "border border-[#16a34a] bg-[#16a34a]/10 text-[#16a34a]"
+                                : p.id === "PRO"
                                 ? "bg-[#d9381e] text-white hover:bg-[#be2e17]"
                                 : "bg-[#171717] text-white hover:bg-[#171717]/90"
                             }`}
                           >
-                            {busy
-                              ? "Membuat tagihan..."
-                              : isCurrent && shop.plan === "LIFETIME"
+                            {isCurrent && shop.plan === "LIFETIME"
                               ? "Sudah aktif selamanya"
-                              : isCurrent
-                              ? `Perpanjang ${p.name}`
-                              : `Pilih ${p.name}`}
+                              : cart.planId === p.id
+                              ? "✓ Di keranjang (klik batal)"
+                              : `+ Tambah ${p.name} ke keranjang`}
                           </button>
                         </div>
                       );
                     })}
                 </div>
-                {/* Add-On Opsional — Checkout Langsung 1-Klik */}
+                {/* Add-On Opsional — Tambahkan ke Keranjang */}
                 <div className="mt-5 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-5">
                   <div>
                     <h4 className="text-sm font-medium text-[#171717]">
-                      Add-On Opsional — Checkout Langsung
+                      Add-On Opsional — Gabungkan di Keranjang
                     </h4>
                     <p className="mt-0.5 text-xs text-[#737373]">
-                      Beli fitur satuan langsung lewat tagihan QRIS tanpa perlu menghubungi admin (atau hemat lebih besar dengan Pro Tahunan).
+                      Tambahkan paket dan/atau beberapa Add-On ke keranjang, lalu bayar sekaligus dalam 1 invoice QRIS.
                     </p>
                   </div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-3 text-xs">
@@ -2172,25 +2244,35 @@ function DashboardContent() {
                         type="button"
                         disabled={
                           Boolean(shop.canUseListener) ||
-                          creatingPlanId === "ADDON_LISTENER"
+                          cart.planId === "PRO" ||
+                          cart.planId === "PREMIUM"
                         }
                         onClick={() =>
-                          handleCreateSubscriptionInvoice("ADDON_LISTENER")
+                          setCart((prev) => ({
+                            ...prev,
+                            listener: !prev.listener,
+                          }))
                         }
-                        className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`btn-action mt-3 h-8 w-full cursor-pointer rounded-lg text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                          cart.listener
+                            ? "border border-[#16a34a] bg-[#16a34a]/10 text-[#16a34a]"
+                            : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                        }`}
                       >
                         {shop.canUseListener
                           ? "Sudah aktif"
-                          : creatingPlanId === "ADDON_LISTENER"
-                          ? "Membuat tagihan..."
-                          : "Checkout Rp 25.000"}
+                          : cart.planId === "PRO" || cart.planId === "PREMIUM"
+                          ? "Sudah termasuk di paket"
+                          : cart.listener
+                          ? "✓ Di keranjang (hapus)"
+                          : "+ Tambah ke keranjang"}
                       </button>
                     </div>
 
                     <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
                       <div>
                         <p className="font-medium text-[#171717]">
-                          Tambah +1 Slot Printer
+                          Tambah Slot Printer
                         </p>
                         <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
                           +Rp 20.000 / slot / 30 hari
@@ -2204,23 +2286,64 @@ function DashboardContent() {
                           )}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        disabled={
-                          shop.plan === "PREMIUM" ||
-                          creatingPlanId === "ADDON_PRINTER"
-                        }
-                        onClick={() =>
-                          handleCreateSubscriptionInvoice("ADDON_PRINTER")
-                        }
-                        className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        {shop.plan === "PREMIUM"
-                          ? "Sudah Unlimited"
-                          : creatingPlanId === "ADDON_PRINTER"
-                          ? "Membuat tagihan..."
-                          : "Checkout +1 Slot (Rp 20.000)"}
-                      </button>
+                      {shop.plan === "PREMIUM" || cart.planId === "PREMIUM" ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="mt-3 h-8 w-full cursor-not-allowed rounded-lg bg-[#171717] text-[11px] font-medium text-white opacity-50"
+                        >
+                          Sudah Unlimited
+                        </button>
+                      ) : cart.extraPrinters > 0 ? (
+                        <div className="mt-3 flex h-8 items-center justify-between rounded-lg border border-[#16a34a] bg-[#16a34a]/10 px-2 text-xs font-medium text-[#16a34a]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCart((prev) => ({
+                                ...prev,
+                                extraPrinters: Math.max(
+                                  0,
+                                  prev.extraPrinters - 1
+                                ),
+                              }))
+                            }
+                            className="h-6 w-6 cursor-pointer rounded bg-white text-[#171717]"
+                          >
+                            −
+                          </button>
+                          <span className="font-mono-num">
+                            {cart.extraPrinters} slot di keranjang
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setCart((prev) => ({
+                                ...prev,
+                                extraPrinters: Math.min(
+                                  10,
+                                  prev.extraPrinters + 1
+                                ),
+                              }))
+                            }
+                            className="h-6 w-6 cursor-pointer rounded bg-white text-[#171717]"
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCart((prev) => ({
+                              ...prev,
+                              extraPrinters: 1,
+                            }))
+                          }
+                          className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90"
+                        >
+                          + Tambah +1 slot ke keranjang
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
@@ -2238,24 +2361,131 @@ function DashboardContent() {
                       </div>
                       <button
                         type="button"
-                        disabled={
-                          (shop.shopCodeChangeCount ?? 0) < 1 ||
-                          creatingPlanId === "ADDON_URL_CHANGE"
-                        }
+                        disabled={(shop.shopCodeChangeCount ?? 0) < 1}
                         onClick={() =>
-                          handleCreateSubscriptionInvoice("ADDON_URL_CHANGE")
+                          setCart((prev) => ({
+                            ...prev,
+                            urlChange: !prev.urlChange,
+                          }))
                         }
-                        className="btn-action mt-3 h-8 w-full cursor-pointer rounded-lg bg-[#171717] text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                        className={`btn-action mt-3 h-8 w-full cursor-pointer rounded-lg text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                          cart.urlChange
+                            ? "border border-[#16a34a] bg-[#16a34a]/10 text-[#16a34a]"
+                            : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                        }`}
                       >
                         {(shop.shopCodeChangeCount ?? 0) < 1
                           ? "Masih ada jatah 1× gratis"
-                          : creatingPlanId === "ADDON_URL_CHANGE"
-                          ? "Membuat tagihan..."
-                          : "Checkout Rp 37.000"}
+                          : cart.urlChange
+                          ? "✓ Di keranjang (hapus)"
+                          : "+ Tambah ke keranjang"}
                       </button>
                     </div>
                   </div>
                 </div>
+
+                {/* Live Shopping Cart Summary & 1-Click Combined Checkout */}
+                {(() => {
+                  const cartRows: Array<{ label: string; price: number }> = [];
+                  if (cart.planId) {
+                    const pObj = plans.find((x) => x.id === cart.planId);
+                    if (pObj) {
+                      cartRows.push({
+                        label: `Paket ${pObj.name}`,
+                        price: pObj.price,
+                      });
+                    }
+                  }
+                  if (cart.listener) {
+                    cartRows.push({
+                      label: "Add-On APK Ngeprint Listener (30 hari)",
+                      price: 25000,
+                    });
+                  }
+                  if (cart.extraPrinters > 0) {
+                    cartRows.push({
+                      label: `Add-On +${cart.extraPrinters} Slot Printer (30 hari)`,
+                      price: 20000 * cart.extraPrinters,
+                    });
+                  }
+                  if (cart.urlChange) {
+                    cartRows.push({
+                      label: "Buka Kunci Ganti URL Portal (1×)",
+                      price: 37000,
+                    });
+                  }
+                  if (cartRows.length === 0) return null;
+                  const cartTotal = cartRows.reduce(
+                    (acc, r) => acc + r.price,
+                    0
+                  );
+
+                  return (
+                    <div className="mt-5 rounded-xl border-2 border-[#171717] bg-white p-5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <ShoppingCart
+                            className="h-4 w-4 text-[#d9381e]"
+                            strokeWidth={1.5}
+                          />
+                          <h4 className="text-sm font-medium text-[#171717]">
+                            Keranjang Belanja ({cartRows.length} item)
+                          </h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setCart({
+                              planId: null,
+                              listener: false,
+                              extraPrinters: 0,
+                              urlChange: false,
+                            })
+                          }
+                          className="inline-flex cursor-pointer items-center gap-1 text-xs text-[#737373] hover:text-[#dc2626]"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          <span>Kosongkan</span>
+                        </button>
+                      </div>
+
+                      <div className="mt-3 divide-y divide-[#171717]/8 text-xs">
+                        {cartRows.map((row) => (
+                          <div
+                            key={row.label}
+                            className="flex items-center justify-between py-2"
+                          >
+                            <span className="text-[#525252]">{row.label}</span>
+                            <span className="font-mono-num font-medium text-[#171717]">
+                              {formatRupiah(row.price)}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex items-baseline justify-between pt-3">
+                          <span className="text-sm font-medium text-[#171717]">
+                            Total Gabungan
+                          </span>
+                          <span className="font-mono-num text-lg font-semibold text-[#d9381e]">
+                            {formatRupiah(cartTotal)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={checkingOutCart}
+                        onClick={handleCheckoutCart}
+                        className="btn-action mt-4 h-10 w-full cursor-pointer rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
+                      >
+                        {checkingOutCart
+                          ? "Membuat invoice gabungan..."
+                          : `Checkout & Terbitkan 1 Invoice (${formatRupiah(
+                              cartTotal
+                            )})`}
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Billing Invoice History Table */}
@@ -2279,7 +2509,7 @@ function DashboardContent() {
                             {inv.invoiceCode}
                           </span>
                           <span className="text-[#525252]">
-                            Paket {inv.plan}
+                            {formatInvoicePlanLabel(inv.plan)}
                           </span>
                           <span className="text-[#737373]">
                             {new Date(inv.createdAt).toLocaleDateString(

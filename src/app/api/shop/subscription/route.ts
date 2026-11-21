@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import {
   buildShopUpdateForPaidInvoice,
   generateInvoiceCode,
-  getCheckoutItem,
+  resolveCheckoutCart,
   SAAS_PLANS,
 } from "@/lib/plans";
 import {
@@ -41,11 +41,17 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const checkoutItem = getCheckoutItem(body.plan);
+    const rawItems: string[] = Array.isArray(body.items)
+      ? body.items.map(String)
+      : body.plan
+      ? String(body.plan).split("+")
+      : [];
 
-    if (!checkoutItem) {
+    const cartCheckout = resolveCheckoutCart(rawItems);
+
+    if (!cartCheckout) {
       return NextResponse.json(
-        { error: "Paket atau Add-On yang dipilih tidak valid." },
+        { error: "Keranjang belanja kosong atau item tidak valid." },
         { status: 400 }
       );
     }
@@ -61,7 +67,7 @@ export async function POST(req: Request) {
     let paymentOrderId: string | null = null;
     let qrisUrl: string | null = null;
     let qrisString: string | null = null;
-    let finalAmount = checkoutItem.price;
+    let finalAmount = cartCheckout.totalPrice;
 
     const midtransConfig = resolveMidtransConfig({});
     if (midtransConfig) {
@@ -69,9 +75,9 @@ export async function POST(req: Request) {
         const orderId = `${invoiceCode}-${Date.now().toString().slice(-5)}`;
         const charge = await createMidtransQrisCharge(midtransConfig, {
           orderId,
-          grossAmount: checkoutItem.price,
+          grossAmount: cartCheckout.totalPrice,
           customerName: shop.name,
-          itemName: `Ngeprint ${checkoutItem.name}`,
+          itemName: `Ngeprint ${cartCheckout.label}`.slice(0, 50),
         });
         paymentProvider = "MIDTRANS";
         paymentOrderId = charge.orderId;
@@ -89,7 +95,7 @@ export async function POST(req: Request) {
       isValidStaticQris(platformStaticQris)
     ) {
       const uniqueOffset = Math.floor(11 + Math.random() * 88);
-      finalAmount = checkoutItem.price + uniqueOffset;
+      finalAmount = cartCheckout.totalPrice + uniqueOffset;
       qrisString = convertStaticQrisToDynamic(platformStaticQris, finalAmount);
       paymentProvider = "MERCHANT_QRIS";
     }
@@ -98,9 +104,9 @@ export async function POST(req: Request) {
       data: {
         invoiceCode,
         shopId: shop.id,
-        plan: checkoutItem.id,
+        plan: cartCheckout.bundleCode,
         amount: finalAmount,
-        durationDays: checkoutItem.durationDays,
+        durationDays: cartCheckout.durationDays,
         paymentProvider,
         paymentOrderId,
         qrisUrl,

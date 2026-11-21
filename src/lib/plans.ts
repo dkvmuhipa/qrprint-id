@@ -76,6 +76,96 @@ export function getCheckoutItem(code?: string | null): {
   return null;
 }
 
+export function resolveCheckoutCart(codes: string[]): {
+  bundleCode: string;
+  label: string;
+  totalPrice: number;
+  durationDays: number | null;
+} | null {
+  let selectedPlan: PlanDefinition | null = null;
+  let wantListener = false;
+  let extraPrinterQty = 0;
+  let wantUrlChange = false;
+
+  for (const raw of codes) {
+    const token = String(raw || "").trim().toUpperCase();
+    if (!token) continue;
+    const [base, qtyStr] = token.split("*");
+    const qty = Math.max(1, Math.min(10, parseInt(qtyStr || "1", 10) || 1));
+
+    if (base === "BULANAN" || base === "PRO" || base === "PREMIUM") {
+      selectedPlan = SAAS_PLANS[base];
+    } else if (base === "ADDON_LISTENER") {
+      wantListener = true;
+    } else if (base === "ADDON_PRINTER") {
+      extraPrinterQty = Math.min(10, extraPrinterQty + qty);
+    } else if (base === "ADDON_URL_CHANGE") {
+      wantUrlChange = true;
+    }
+  }
+
+  // If Pro or Premium is in the cart, Listener is already included for free
+  if (selectedPlan && selectedPlan.allowListener) {
+    wantListener = false;
+  }
+  // If Premium is in the cart, printers are already unlimited
+  if (selectedPlan && selectedPlan.maxPrinters === null) {
+    extraPrinterQty = 0;
+  }
+
+  const parts: string[] = [];
+  const labels: string[] = [];
+  let totalPrice = 0;
+  let durationDays: number | null = null;
+
+  if (selectedPlan) {
+    parts.push(selectedPlan.id);
+    labels.push(`Paket ${selectedPlan.name}`);
+    totalPrice += selectedPlan.price;
+    durationDays = selectedPlan.durationDays;
+  }
+  if (wantListener) {
+    parts.push("ADDON_LISTENER");
+    labels.push("APK Listener");
+    totalPrice += SAAS_ADDONS.ADDON_LISTENER.price;
+    if (durationDays === null && !selectedPlan) durationDays = 30;
+  }
+  if (extraPrinterQty > 0) {
+    parts.push(
+      extraPrinterQty === 1
+        ? "ADDON_PRINTER"
+        : `ADDON_PRINTER*${extraPrinterQty}`
+    );
+    labels.push(`+${extraPrinterQty} Slot Printer`);
+    totalPrice += SAAS_ADDONS.ADDON_PRINTER.price * extraPrinterQty;
+    if (durationDays === null && !selectedPlan) durationDays = 30;
+  }
+  if (wantUrlChange) {
+    parts.push("ADDON_URL_CHANGE");
+    labels.push("Buka Kunci URL Portal");
+    totalPrice += SAAS_ADDONS.ADDON_URL_CHANGE.price;
+  }
+
+  if (parts.length === 0 || totalPrice <= 0) return null;
+
+  return {
+    bundleCode: parts.join("+"),
+    label: labels.join(" + "),
+    totalPrice,
+    durationDays,
+  };
+}
+
+export function formatInvoicePlanLabel(invoicePlan: string): string {
+  const tokens = String(invoicePlan || "")
+    .split("+")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const resolved = resolveCheckoutCart(tokens);
+  if (resolved) return resolved.label;
+  return invoicePlan;
+}
+
 export function buildShopUpdateForPaidInvoice(
   invoicePlan: string,
   shop: { plan: string; planExpiresAt: Date | null }
@@ -83,35 +173,56 @@ export function buildShopUpdateForPaidInvoice(
   data: Record<string, unknown>;
   label: string;
 } {
-  const key = String(invoicePlan || "").toUpperCase();
-  if (key === "ADDON_LISTENER") {
-    return {
-      data: { hasListenerAddon: true },
-      label: SAAS_ADDONS.ADDON_LISTENER.name,
-    };
+  const tokens = String(invoicePlan || "")
+    .split("+")
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+
+  const data: Record<string, unknown> = {};
+  const labels: string[] = [];
+
+  for (const token of tokens) {
+    const [base, qtyStr] = token.split("*");
+    const qty = Math.max(1, Math.min(10, parseInt(qtyStr || "1", 10) || 1));
+
+    if (base === "ADDON_LISTENER") {
+      data.hasListenerAddon = true;
+      labels.push(SAAS_ADDONS.ADDON_LISTENER.name);
+    } else if (base === "ADDON_PRINTER") {
+      data.extraPrinterSlots = { increment: qty };
+      labels.push(`+${qty} Slot Printer`);
+    } else if (base === "ADDON_URL_CHANGE") {
+      data.shopCodeChangeCount = 0;
+      labels.push(SAAS_ADDONS.ADDON_URL_CHANGE.name);
+    } else if (base === "BULANAN" || base === "PRO" || base === "PREMIUM") {
+      const planDef = getPlanDef(base);
+      const baseExpiry = shop.plan === "DEMO" ? null : shop.planExpiresAt;
+      const newExpiresAt = calculateNewExpiryDate(
+        baseExpiry,
+        planDef.durationDays
+      );
+      data.plan = planDef.id;
+      data.planStatus = "ACTIVE";
+      data.planExpiresAt = newExpiresAt;
+      labels.push(`Paket ${planDef.name}`);
+    }
   }
-  if (key === "ADDON_PRINTER") {
-    return {
-      data: { extraPrinterSlots: { increment: 1 } },
-      label: SAAS_ADDONS.ADDON_PRINTER.name,
-    };
+
+  if (Object.keys(data).length === 0) {
+    const planDef = getPlanDef(invoicePlan);
+    const baseExpiry = shop.plan === "DEMO" ? null : shop.planExpiresAt;
+    data.plan = planDef.id;
+    data.planStatus = "ACTIVE";
+    data.planExpiresAt = calculateNewExpiryDate(
+      baseExpiry,
+      planDef.durationDays
+    );
+    labels.push(`Paket ${planDef.name}`);
   }
-  if (key === "ADDON_URL_CHANGE") {
-    return {
-      data: { shopCodeChangeCount: 0 },
-      label: SAAS_ADDONS.ADDON_URL_CHANGE.name,
-    };
-  }
-  const planDef = getPlanDef(key);
-  const baseExpiry = shop.plan === "DEMO" ? null : shop.planExpiresAt;
-  const newExpiresAt = calculateNewExpiryDate(baseExpiry, planDef.durationDays);
+
   return {
-    data: {
-      plan: planDef.id,
-      planStatus: "ACTIVE",
-      planExpiresAt: newExpiresAt,
-    },
-    label: `Paket ${planDef.name}`,
+    data,
+    label: labels.join(" + "),
   };
 }
 
