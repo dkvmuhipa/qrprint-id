@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { evaluateShopEntitlement, SAAS_PLANS } from "@/lib/plans";
+import {
+  canUseListener,
+  evaluateShopEntitlement,
+  SAAS_PLANS,
+} from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
 import { isValidShopSlug, sanitizeShopSlug } from "@/lib/utils";
@@ -111,6 +115,12 @@ export async function GET() {
       plan: shop.plan,
       planStatus: entitlement.isExpired ? "EXPIRED" : shop.planStatus,
       planExpiresAt: shop.planExpiresAt,
+      hasListenerAddon: shop.hasListenerAddon,
+      canUseListener: canUseListener({
+        planId: shop.plan,
+        planExpiresAt: shop.planExpiresAt,
+        hasListenerAddon: shop.hasListenerAddon,
+      }),
       bwPrice: shop.bwPrice,
       colorPrice: shop.colorPrice,
       duplexDiscount: shop.duplexDiscount,

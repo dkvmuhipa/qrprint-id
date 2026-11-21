@@ -21,6 +21,7 @@ model Shop {
   plan              String                @default("DEMO")
   planStatus        String                @default("ACTIVE")
   planExpiresAt     DateTime?
+  hasListenerAddon  Boolean               @default(false)
   bwPrice           Int                   @default(500)
   colorPrice        Int                   @default(1500)
   duplexDiscount    Int                   @default(10)

@@ -2,6 +2,8 @@ import crypto from "crypto";
 
 export type PlanId = "DEMO" | "BULANAN" | "PRO" | "PREMIUM";
 
+export const LISTENER_ADDON_PRICE = 25000;
+
 export interface PlanDefinition {
   id: PlanId;
   name: string;
@@ -12,6 +14,7 @@ export interface PlanDefinition {
   maxPrinters: number | null; // null = unlimited
   allowExtraPaper: boolean; // F4 & PHOTO_4X6
   allowDuplex: boolean;
+  allowListener: boolean; // Ngeprint Listener Android auto-verify QRIS
   description: string;
   features: string[];
 }
@@ -27,6 +30,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     maxPrinters: 1,
     allowExtraPaper: false,
     allowDuplex: false,
+    allowListener: false,
     description: "Uji coba langsung di printer toko selama 24 jam",
     features: [
       "Masa aktif 24 jam penuh",
@@ -46,54 +50,70 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     maxPrinters: 2,
     allowExtraPaper: true,
     allowDuplex: true,
-    description: "Fleksibel per bulan untuk toko fotokopi baru",
+    allowListener: false,
+    description: "Fleksibel per bulan · Add-On Ngeprint Listener +Rp 25.000/bln",
     features: [
       "Cetak dokumen tanpa batas kuota (30 hari)",
       "Hingga 2 printer aktif (1 B&W + 1 Warna)",
-      "Mendukung kertas A4, F4 & Foto 4×6",
-      "Mode cetak bolak-balik (Duplex)",
-      "Integrasi pembayaran QRIS penuh",
+      "Mendukung kertas A4, F4 & Foto 4×6 + Duplex",
+      "QRIS GoPay Merchant (konfirmasi kasir)",
+      "Opsional Add-On Listener otomatis +Rp 25rb/bln",
     ],
   },
   PRO: {
     id: "PRO",
     name: "Pro Tahunan",
-    price: 349000,
+    price: 449000,
     periodLabel: "365 hari",
     durationDays: 365,
     maxJobs: null,
     maxPrinters: 3,
     allowExtraPaper: true,
     allowDuplex: true,
-    description: "Paket tahunan hemat untuk toko fotokopi harian (setara Rp 29rb/bln)",
+    allowListener: true,
+    description: "Paket tahunan hemat (setara Rp 37rb/bln) — sudah termasuk Ngeprint Listener",
     features: [
       "Cetak dokumen tanpa batas 1 tahun penuh",
+      "Sudah termasuk APK Ngeprint Listener (Auto-QRIS)",
       "Hingga 3 printer aktif bersamaan",
-      "Mendukung kertas A4, F4 & Foto 4×6",
-      "Mode cetak bolak-balik (Duplex)",
+      "Mendukung kertas A4, F4 & Foto 4×6 + Duplex",
       "Pendampingan setup QRIS & Print Agent",
     ],
   },
   PREMIUM: {
     id: "PREMIUM",
     name: "Premium Tahunan",
-    price: 599000,
+    price: 749000,
     periodLabel: "365 hari",
     durationDays: 365,
     maxJobs: null,
     maxPrinters: null,
     allowExtraPaper: true,
     allowDuplex: true,
-    description: "Kapasitas penuh untuk percetakan ramai & multi-printer",
+    allowListener: true,
+    description: "Kapasitas penuh untuk percetakan ramai — sudah termasuk Ngeprint Listener",
     features: [
       "Cetak dokumen tanpa batas 1 tahun penuh",
+      "Sudah termasuk APK Ngeprint Listener (Auto-QRIS)",
       "Jumlah printer terhubung tanpa batas",
-      "Mendukung kertas A4, F4 & Foto 4×6",
+      "Mendukung kertas A4, F4 & Foto 4×6 + Duplex",
       "Prioritas bantuan teknis via AnyDesk",
-      "Seluruh pembaruan fitur berikutnya",
     ],
   },
 };
+
+export function canUseListener(params: {
+  planId: string;
+  planExpiresAt: Date | string | null;
+  hasListenerAddon?: boolean | null;
+}): boolean {
+  const plan = getPlanDef(params.planId);
+  if (params.planExpiresAt) {
+    const expMs = new Date(params.planExpiresAt).getTime();
+    if (expMs <= Date.now()) return false;
+  }
+  return plan.allowListener || Boolean(params.hasListenerAddon);
+}
 
 export function getPlanDef(planId?: string | null): PlanDefinition {
   const key = (planId || "DEMO").toUpperCase() as PlanId;

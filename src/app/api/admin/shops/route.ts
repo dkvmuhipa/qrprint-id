@@ -449,6 +449,29 @@ export async function PATCH(req: Request) {
       });
     }
 
+    // 13. Toggle Ngeprint Listener Add-On (+Rp 25.000/bln for Bulanan / Demo shops)
+    if (action === "TOGGLE_LISTENER_ADDON" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+      const nextVal = !shop.hasListenerAddon;
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { hasListenerAddon: nextVal },
+      });
+      return NextResponse.json({
+        ok: true,
+        hasListenerAddon: nextVal,
+        message: nextVal
+          ? `Add-On Ngeprint Listener diaktifkan untuk ${shop.name}.`
+          : `Add-On Ngeprint Listener dinonaktifkan untuk ${shop.name}.`,
+      });
+    }
+
     return NextResponse.json(
       { error: "Aksi admin tidak valid." },
       { status: 400 }

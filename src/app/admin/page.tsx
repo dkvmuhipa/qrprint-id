@@ -44,6 +44,7 @@ interface AdminShopRow {
   plan: string;
   planStatus: string;
   planExpiresAt: string | null;
+  hasListenerAddon?: boolean;
   daysLeft: number | null;
   hoursLeft: number | null;
   canAcceptJobs: boolean;
@@ -1714,6 +1715,42 @@ export default function SuperAdminPage() {
                     </button>
                   ))}
                 </div>
+
+                {/* Listener Add-On Toggle (+Rp 25.000/bln for Bulanan/Demo) */}
+                <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">
+                  <div>
+                    <p className="font-medium text-[#171717]">
+                      Add-On Ngeprint Listener (+Rp 25.000/bln)
+                    </p>
+                    <p className="text-[11px] text-[#737373]">
+                      {selectedShop.plan === "PRO" || selectedShop.plan === "PREMIUM"
+                        ? "Sudah otomatis aktif di paket Pro/Premium"
+                        : selectedShop.hasListenerAddon
+                        ? "Aktif (Add-On berbayar)"
+                        : "Nonaktif (konfirmasi kasir manual)"}
+                    </p>
+                  </div>
+                  {selectedShop.plan !== "PRO" &&
+                    selectedShop.plan !== "PREMIUM" && (
+                      <button
+                        type="button"
+                        disabled={busyId === "toggle_listener"}
+                        onClick={() =>
+                          runAdminAction("toggle_listener", {
+                            action: "TOGGLE_LISTENER_ADDON",
+                            shopId: selectedShop.id,
+                          })
+                        }
+                        className={`h-8 shrink-0 cursor-pointer rounded-lg px-3 text-xs font-medium ${
+                          selectedShop.hasListenerAddon
+                            ? "border border-[#dc2626]/25 bg-[#dc2626]/5 text-[#dc2626]"
+                            : "bg-[#171717] text-white"
+                        }`}
+                      >
+                        {selectedShop.hasListenerAddon ? "Nonaktifkan" : "Aktifkan"}
+                      </button>
+                    )}
+                </div>
               </div>
 
               {/* 2. Support Tools: Impersonate & Reset Password */}
@@ -2024,8 +2061,8 @@ export default function SuperAdminPage() {
                   >
                     <option value="DEMO">Demo 24 Jam (Gratis)</option>
                     <option value="BULANAN">Bulanan (Rp 79.000 · 30 hari)</option>
-                    <option value="PRO">Pro Tahunan (Rp 349.000 · 365 hari)</option>
-                    <option value="PREMIUM">Premium Tahunan (Rp 599.000 · 365 hari)</option>
+                    <option value="PRO">Pro Tahunan (Rp 449.000 · 365 hari)</option>
+                    <option value="PREMIUM">Premium Tahunan (Rp 749.000 · 365 hari)</option>
                   </select>
                 </div>
               </div>

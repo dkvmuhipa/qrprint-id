@@ -4,6 +4,7 @@ import {
   expireStalePendingJobs,
   PENDING_JOB_EXPIRE_MINUTES,
 } from "@/lib/jobs-cleanup";
+import { canUseListener } from "@/lib/plans";
 
 /**
  * Ekstrak nominal Rupiah dari teks notifikasi Android (GoPay Merchant, GoBiz, DANA Bisnis, OVO, BRI, BCA, dll).
@@ -62,6 +63,25 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Agent Key toko tidak valid." },
         { status: 401 }
+      );
+    }
+
+    // Gate automatic QRIS Listener to Pro/Premium plans or active Listener Add-On (+Rp 25.000/bln)
+    if (
+      !canUseListener({
+        planId: shop.plan,
+        planExpiresAt: shop.planExpiresAt,
+        hasListenerAddon: shop.hasListenerAddon,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          matched: false,
+          error:
+            "Fitur Ngeprint Listener otomatis tersedia di paket Pro/Premium Tahunan atau Add-On Bulanan (+Rp 25.000/bln). Upgrade di Dashboard untuk mengaktifkan.",
+        },
+        { status: 403 }
       );
     }
 

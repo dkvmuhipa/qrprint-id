@@ -16,19 +16,19 @@ const PLAN_OPTIONS = [
     id: "BULANAN",
     name: "Bulanan",
     price: "Rp 79.000/bulan",
-    detail: "Unlimited cetak · Maks. 2 printer",
+    detail: "Unlimited cetak · Add-On Listener +Rp 25rb/bln",
   },
   {
     id: "PRO",
     name: "Pro Tahunan",
-    price: "Rp 349.000/tahun",
-    detail: "Hemat 63% · Maks. 3 printer",
+    price: "Rp 449.000/tahun",
+    detail: "Termasuk APK Listener · Maks. 3 printer",
   },
   {
     id: "PREMIUM",
     name: "Premium Tahunan",
-    price: "Rp 599.000/tahun",
-    detail: "Unlimited printer · Support AnyDesk",
+    price: "Rp 749.000/tahun",
+    detail: "Termasuk APK Listener · Unlimited printer",
   },
 ];
 

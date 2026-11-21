@@ -22,7 +22,6 @@ import {
   FileCheck2,
   Users,
   ChevronDown,
-  Download,
 } from "lucide-react";
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
@@ -90,13 +89,13 @@ const PLANS = [
     price: "Rp 79.000",
     period: "/bulan",
     featured: false,
-    note: "Hanya Rp 2.600 per hari",
+    note: "Add-On APK Listener +Rp 25rb/bln",
     features: [
       "Cetak dokumen tanpa batas kuota",
       "Hingga 2 printer (1 B&W + 1 Warna)",
       "Mode Duplex, F4 & Foto 4×6",
-      "QRIS GoPay Merchant + APK Listener gratis",
-      "Grafik omzet 7 hari, CSV & bel kasir",
+      "QRIS GoPay Merchant (konfirmasi kasir)",
+      "Opsional Add-On Listener +Rp 25.000/bln",
     ],
     cta: "Pilih Bulanan",
     action: "register" as const,
@@ -104,14 +103,14 @@ const PLANS = [
   {
     id: "PRO",
     name: "Pro Tahunan",
-    price: "Rp 349.000",
+    price: "Rp 449.000",
     period: "/tahun",
     featured: true,
-    note: "Setara Rp 29.000/bln (Hemat 63%)",
+    note: "Setara Rp 37rb/bln · Termasuk APK Listener",
     features: [
       "Cetak dokumen tanpa batas 1 tahun",
+      "Sudah termasuk APK Ngeprint Listener",
       "Hingga 3 printer aktif bersamaan",
-      "QRIS GoPay Merchant + APK Listener gratis",
       "Poster Standee QR A5/A4 & URL custom",
       "Mode Duplex, F4 & Foto 4×6 + setup WA",
     ],
@@ -121,14 +120,14 @@ const PLANS = [
   {
     id: "PREMIUM",
     name: "Premium",
-    price: "Rp 599.000",
+    price: "Rp 749.000",
     period: "/tahun",
     featured: false,
-    note: "Untuk percetakan ramai (Unlimited printer)",
+    note: "Unlimited printer · Termasuk APK Listener",
     features: [
       "Seluruh fitur pada paket Pro",
+      "Sudah termasuk APK Ngeprint Listener",
       "Jumlah printer terhubung tanpa batas",
-      "Dukungan kertas A4, F4 & Foto 4×6",
       "Prioritas bantuan remote AnyDesk",
       "Pembaruan fitur & aplikasi gratis",
     ],
@@ -703,12 +702,10 @@ export function LandingClient() {
             </div>
           </div>
           <a
-            href="/downloads/ngeprint-listener.apk"
-            download="ngeprint-listener.apk"
+            href="#harga"
             className="btn-action inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#1f1b16]/15 bg-white px-4 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
           >
-            <Download className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.5} />
-            <span>Unduh APK Listener Gratis</span>
+            <span>Lihat Paket Pro &amp; Add-On</span>
           </a>
         </div>
 
@@ -824,15 +821,6 @@ export function LandingClient() {
                 <Link href="/dashboard" className="hover:text-[#1f1b16]">
                   Panel antrean cetak
                 </Link>
-              </li>
-              <li>
-                <a
-                  href="/downloads/ngeprint-listener.apk"
-                  download="ngeprint-listener.apk"
-                  className="hover:text-[#1f1b16]"
-                >
-                  Unduh Ngeprint Listener (.apk)
-                </a>
               </li>
             </ul>
           </div>
