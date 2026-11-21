@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 
-const REFERRAL_BONUS_DAYS = 15;
+const REFERRAL_BONUS_DAYS = 10;
 
 /**
- * Gives +15 bonus active days to the referring shop once a referred shop
+ * Gives +10 bonus active days to the referring shop once a referred shop
  * completes its first PAID subscription plan invoice (BULANAN / PRO / PREMIUM).
  */
 export async function rewardReferrerIfEligible(

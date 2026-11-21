@@ -616,7 +616,7 @@ export function BillingTab({
         )}
       </div>
 
-      {/* Program Referral Mitra (+15 Hari Gratis) */}
+      {/* Program Referral Mitra (+10 Hari Gratis) */}
       <div className="rounded-xl border border-[#171717]/10 bg-white p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-start gap-3">
@@ -625,12 +625,12 @@ export function BillingTab({
             </div>
             <div>
               <h3 className="text-sm font-medium text-[#171717]">
-                Program Referral Mitra — Ajak 1 Toko, Gratis +15 Hari Aktif
+                Program Referral Mitra — Ajak 1 Toko, Gratis +10 Hari Aktif
               </h3>
               <p className="mt-0.5 text-xs leading-relaxed text-[#525252]">
                 Bagikan link referral di bawah ke pemilik fotokopi/ATK lain.
                 Setiap kali toko yang Anda ajak mengaktifkan paket Bulanan/Pro/Premium,
-                masa aktif toko Anda <strong>otomatis bertambah +15 hari gratis</strong>!
+                masa aktif toko Anda <strong>otomatis bertambah +10 hari gratis</strong>!
               </p>
             </div>
           </div>
