@@ -174,12 +174,7 @@ function DashboardContent() {
   const [decodingQris, setDecodingQris] = useState(false);
   const [qrisDecodeMsg, setQrisDecodeMsg] = useState<string | null>(null);
 
-  // Queue filter, search, onboarding, & password state
-  const [jobSearch, setJobSearch] = useState("");
-  const [jobFilter, setJobFilter] = useState<
-    "ALL" | "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED"
-  >("ALL");
-  const [hideOnboarding, setHideOnboarding] = useState(false);
+  // Password & modal state
   const [pwForm, setPwForm] = useState({
     currentPassword: "",
     newPassword: "",
