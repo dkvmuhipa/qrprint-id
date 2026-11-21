@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Download, ExternalLink, Smartphone, Trash2 } from "lucide-react";
+import { Check, Copy, Database, Download, ExternalLink, Smartphone, Trash2 } from "lucide-react";
 import type { OverviewData } from "./types";
 
 interface AdminSystemTabProps {
@@ -190,6 +190,13 @@ export function AdminSystemTab({
             >
               <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
               <span>Unduh Ngeprint Listener v1.1 (.apk)</span>
+            </a>
+            <a
+              href="/api/admin/backup"
+              className="btn-action inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#171717] px-3.5 text-xs font-medium text-white hover:bg-[#333]"
+            >
+              <Database className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>Unduh Backup DB (.db)</span>
             </a>
             <a
               href="/api/health"
