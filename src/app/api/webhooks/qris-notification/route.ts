@@ -123,7 +123,7 @@ export async function POST(req: Request) {
         orderBy: { createdAt: "desc" },
       });
 
-      if (!matchingInvoice) {
+      if (!matchingInvoice || !matchingInvoice.shop || !matchingInvoice.shopId) {
         return NextResponse.json({
           ok: true,
           matched: false,

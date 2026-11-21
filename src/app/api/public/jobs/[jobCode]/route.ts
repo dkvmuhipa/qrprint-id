@@ -53,7 +53,7 @@ export async function GET(
     });
   }
 
-  const midtransConfig = resolveMidtransConfig(job.shop);
+  const midtransConfig = resolveMidtransConfig(job.shop || {});
 
   // Auto-sync Midtrans status so localhost testing works even without webhook tunnel!
   if (
@@ -130,9 +130,9 @@ export async function GET(
         printStatus: job.printStatus,
         fileDeletedAt: job.fileDeletedAt,
         createdAt: job.createdAt,
-        shopName: job.shop.name,
-        shopCode: job.shop.shopCode,
-        qrisName: job.shop.qrisName,
+        shopName: job.shop?.name || job.shopNameSnapshot || "Toko",
+        shopCode: job.shop?.shopCode || job.shopCodeSnapshot || "",
+        qrisName: job.shop?.qrisName || "QRIS Toko",
       },
     },
     { headers: { "Cache-Control": "no-store, max-age=0" } }

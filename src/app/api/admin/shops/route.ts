@@ -158,9 +158,9 @@ export async function PATCH(req: Request) {
         where: { id: invoiceId },
         include: { shop: true },
       });
-      if (!inv) {
+      if (!inv || !inv.shop || !inv.shopId) {
         return NextResponse.json(
-          { error: "Invoice tidak ditemukan." },
+          { error: "Invoice atau toko terkait tidak ditemukan." },
           { status: 404 }
         );
       }
@@ -344,12 +344,47 @@ export async function PATCH(req: Request) {
       });
     }
 
-    // 9. Delete a Shop permanently (spam / test cleanup)
+    // 9. Delete a Shop while PRESERVING all PAID transactions (invoices & print jobs) for accounting
     if (action === "DELETE_SHOP" && shopId) {
-      const shop = await prisma.shop.delete({ where: { id: shopId } });
+      const targetShop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!targetShop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+
+      // Snapshot shop identity on all PAID invoices & PAID print jobs so financial reports stay 100% intact
+      const [paidInvCount, paidJobCount] = await Promise.all([
+        prisma.subscriptionInvoice.updateMany({
+          where: { shopId, status: "PAID" },
+          data: {
+            shopNameSnapshot: targetShop.name,
+            shopCodeSnapshot: targetShop.shopCode,
+          },
+        }),
+        prisma.printJob.updateMany({
+          where: { shopId, paymentStatus: "PAID" },
+          data: {
+            shopNameSnapshot: targetShop.name,
+            shopCodeSnapshot: targetShop.shopCode,
+          },
+        }),
+      ]);
+
+      // Clean up unpaid/cancelled invoices & jobs before deleting the shop
+      await prisma.subscriptionInvoice.deleteMany({
+        where: { shopId, status: { not: "PAID" } },
+      });
+      await prisma.printJob.deleteMany({
+        where: { shopId, paymentStatus: { not: "PAID" } },
+      });
+
+      await prisma.shop.delete({ where: { id: shopId } });
+
       return NextResponse.json({
         ok: true,
-        message: `Akun toko ${shop.name} (${shop.shopCode}) telah dihapus permanen.`,
+        message: `Akun toko ${targetShop.name} (${targetShop.shopCode}) dihapus. ${paidInvCount.count} invoice lunas & ${paidJobCount.count} transaksi cetak lunas tetap disimpan di pembukuan.`,
       });
     }
 

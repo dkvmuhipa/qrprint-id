@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     });
 
     if (subInvoice) {
-      const config = resolveMidtransConfig(subInvoice.shop);
+      const config = resolveMidtransConfig(subInvoice.shop || {});
       if (!config) {
         return NextResponse.json(
           { error: "Midtrans belum dikonfigurasi." },
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
         );
       }
 
-      if (isPaid && subInvoice.status !== "PAID") {
+      if (isPaid && subInvoice.status !== "PAID" && subInvoice.shop && subInvoice.shopId) {
         const fulfillment = buildShopUpdateForPaidInvoice(
           subInvoice.plan,
           subInvoice.shop
@@ -110,7 +110,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, ignored: true });
     }
 
-    const config = resolveMidtransConfig(job.shop);
+    const config = resolveMidtransConfig(job.shop || {});
     if (!config) {
       return NextResponse.json(
         { error: "Midtrans belum dikonfigurasi pada toko ini." },

@@ -225,13 +225,27 @@ export async function GET() {
     dailyTrend,
     plans: Object.values(SAAS_PLANS),
     shops: enrichedShops,
-    invoices,
+    invoices: invoices.map((inv) => ({
+      ...inv,
+      shop: inv.shop || {
+        shopCode: inv.shopCodeSnapshot || "deleted",
+        name: inv.shopNameSnapshot
+          ? `${inv.shopNameSnapshot} (Dihapus)`
+          : "Toko Dihapus",
+        email: "-",
+        phone: "-",
+      },
+    })),
     demos,
     recentJobs: recentJobs.map((j) => ({
       id: j.id,
       jobCode: j.jobCode,
-      shopCode: j.shop.shopCode,
-      shopName: j.shop.name,
+      shopCode: j.shop?.shopCode || j.shopCodeSnapshot || "deleted",
+      shopName:
+        j.shop?.name ||
+        (j.shopNameSnapshot
+          ? `${j.shopNameSnapshot} (Dihapus)`
+          : "Toko Dihapus"),
       customerName: j.customerName,
       fileName: j.fileName,
       pageCount: j.pageCount,

@@ -47,11 +47,13 @@ model Shop {
 }
 
 model PrintJob {
-  id              String    @id @default(cuid())
-  jobCode         String    @unique
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  customerName    String    @default("Pelanggan")
+  id               String    @id @default(cuid())
+  jobCode          String    @unique
+  shopId           String?
+  shop             Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  shopNameSnapshot String?
+  shopCodeSnapshot String?
+  customerName     String    @default("Pelanggan")
   fileName        String
   storedFilePath  String?
   mimeType        String
@@ -76,11 +78,13 @@ model PrintJob {
 }
 
 model SubscriptionInvoice {
-  id              String    @id @default(cuid())
-  invoiceCode     String    @unique
-  shopId          String
-  shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  plan            String
+  id               String    @id @default(cuid())
+  invoiceCode      String    @unique
+  shopId           String?
+  shop             Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  shopNameSnapshot String?
+  shopCodeSnapshot String?
+  plan             String
   amount          Int
   durationDays    Int?
   paymentProvider String    @default("SIMULATION")
