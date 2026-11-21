@@ -227,10 +227,18 @@ export default function PanduanPage() {
               Daftar Demo 24 Jam
             </Link>
             <a
-              href="mailto:admin@gellona.id?subject=Bantuan%20Setup%20Mitra%20Ngeprint"
+              href="https://wa.me/6285961194621?text=Halo%20Admin%20Ngeprint%2C%20saya%20butuh%20bantuan%20setup%20toko%20fotokopi."
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-[#16a34a] px-4 text-xs font-medium text-white hover:bg-[#15803d]"
+            >
+              Chat WA Admin (085961194621)
+            </a>
+            <a
+              href="mailto:gellonaindonesia@gmail.com?subject=Bantuan%20Setup%20Mitra%20Ngeprint"
               className="inline-flex h-10 items-center justify-center rounded-lg border border-white/20 px-4 text-xs font-medium text-white hover:bg-white/10"
             >
-              Hubungi Support
+              Email Admin
             </a>
           </div>
         </div>

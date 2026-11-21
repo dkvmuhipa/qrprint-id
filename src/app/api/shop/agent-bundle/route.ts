@@ -79,7 +79,7 @@ export async function GET(req: Request) {
       "Biarkan jendela hitam tetap terbuka (boleh di-minimize).",
       "Cek status 'Online' di Dashboard -> menu Print Agent.",
       "",
-      "Butuh bantuan? Hubungi admin@gellona.id",
+      "Butuh bantuan? Hubungi WA 085961194621 atau email gellonaindonesia@gmail.com",
       "",
     ].join("\r\n");
 

@@ -165,14 +165,23 @@ export default function LoginPage() {
                     Bantuan Reset Kata Sandi
                   </p>
                   <p className="mt-0.5 leading-relaxed">
-                    Demi keamanan akun toko, reset kata sandi diproses langsung oleh tim <strong>Gellona Teknologi</strong>. Kirimkan email atau kode toko Anda ke{" "}
+                    Demi keamanan akun toko, reset kata sandi diproses langsung oleh tim <strong>Gellona Teknologi</strong>. Hubungi admin via WhatsApp{" "}
                     <a
-                      href="mailto:admin@gellona.id?subject=Reset%20Kata%20Sandi%20Ngeprint"
+                      href="https://wa.me/6285961194621?text=Halo%20Admin%20Ngeprint%2C%20saya%20ingin%20reset%20kata%20sandi%20akun%20toko%20saya."
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono-num font-medium text-[#16a34a] underline"
+                    >
+                      085961194621
+                    </a>{" "}
+                    atau email{" "}
+                    <a
+                      href="mailto:gellonaindonesia@gmail.com?subject=Reset%20Kata%20Sandi%20Ngeprint"
                       className="font-medium text-[#d9381e] underline"
                     >
-                      admin@gellona.id
+                      gellonaindonesia@gmail.com
                     </a>{" "}
-                    untuk mendapatkan kata sandi sementara.
+                    dengan menyertakan email/kode toko Anda.
                   </p>
                 </div>
               )}

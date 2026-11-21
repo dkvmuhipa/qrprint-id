@@ -262,8 +262,10 @@ export default function BrosurPage() {
                 </strong>
               </p>
               <p className="pt-1 text-[11px] text-white/60">
-                Bantuan setup langsung di PC kasir: <strong>admin@gellona.id</strong>{" "}
-                · Gellona Teknologi
+                Hubungi Admin Gellona Teknologi: WA{" "}
+                <strong className="font-mono-num text-white/90">085961194621</strong>{" "}
+                · Email{" "}
+                <strong className="text-white/90">gellonaindonesia@gmail.com</strong>
               </p>
             </div>
 

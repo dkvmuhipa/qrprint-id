@@ -258,16 +258,28 @@ export function BillingTab({
                   </span>
                 </button>
               ) : (
-                <a
-                  href={`mailto:admin@gellona.id?subject=${encodeURIComponent(
-                    `Konfirmasi Pembayaran Invoice ${activePendingInvoice.invoiceCode} (${shop.shopCode})`
-                  )}&body=${encodeURIComponent(
-                    `Halo Admin Gellona Teknologi,\n\nSaya sudah menyelesaikan pembayaran untuk:\n- Toko: ${shop.name} (/s/${shop.shopCode})\n- Invoice: ${activePendingInvoice.invoiceCode}\n- Paket: ${activePendingInvoice.plan}\n- Total: ${formatRupiah(activePendingInvoice.amount)}\n\nMohon bantuannya untuk aktivasi paket. Terima kasih.`
-                  )}`}
-                  className="btn-action inline-flex h-10 items-center justify-center rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17]"
-                >
-                  Konfirmasi Pembayaran ke Admin Gellona
-                </a>
+                <>
+                  <a
+                    href={`https://wa.me/6285961194621?text=${encodeURIComponent(
+                      `Halo Admin Gellona Teknologi, saya sudah membayar tagihan Ngeprint:\n- Toko: ${shop.name} (/s/${shop.shopCode})\n- Invoice: ${activePendingInvoice.invoiceCode}\n- Item: ${formatInvoicePlanLabel(activePendingInvoice.plan)}\n- Total: ${formatRupiah(activePendingInvoice.amount)}\n\nMohon dicek ya, terima kasih.`
+                    )}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-action inline-flex h-10 items-center justify-center rounded-lg bg-[#16a34a] px-5 text-xs font-medium text-white hover:bg-[#15803d]"
+                  >
+                    Konfirmasi via WA (085961194621)
+                  </a>
+                  <a
+                    href={`mailto:gellonaindonesia@gmail.com?subject=${encodeURIComponent(
+                      `Konfirmasi Pembayaran Invoice ${activePendingInvoice.invoiceCode} (${shop.shopCode})`
+                    )}&body=${encodeURIComponent(
+                      `Halo Admin Gellona Teknologi,\n\nSaya sudah menyelesaikan pembayaran untuk:\n- Toko: ${shop.name} (/s/${shop.shopCode})\n- Invoice: ${activePendingInvoice.invoiceCode}\n- Paket: ${activePendingInvoice.plan}\n- Total: ${formatRupiah(activePendingInvoice.amount)}\n\nMohon bantuannya untuk aktivasi paket. Terima kasih.`
+                    )}`}
+                    className="btn-action inline-flex h-10 items-center justify-center rounded-lg border border-[#171717]/15 bg-white px-4 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                  >
+                    Via Email
+                  </a>
+                </>
               )}
 
               <button
