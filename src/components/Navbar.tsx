@@ -64,6 +64,12 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           >
             Privasi
           </a>
+          <Link
+            href="/panduan"
+            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          >
+            Panduan
+          </Link>
         </nav>
 
         <div className="flex items-center gap-4">
