@@ -59,6 +59,7 @@ import {
   downloadShopPosterPng,
   exportShopJobsCsv,
   playCashierBell,
+  type PosterThemeId,
 } from "@/components/dashboard/helpers";
 
 function DashboardContent() {
@@ -184,6 +185,7 @@ function DashboardContent() {
   const [pwMsg, setPwMsg] = useState<string | null>(null);
   const [pwIsError, setPwIsError] = useState(false);
   const [posterSize, setPosterSize] = useState<"A5" | "A4">("A5");
+  const [posterTheme, setPosterTheme] = useState<PosterThemeId>("vermilion");
   const [downloadingPoster, setDownloadingPoster] = useState(false);
   const [receiptJob, setReceiptJob] = useState<PrintJobItem | null>(null);
   const [showDailyRecap, setShowDailyRecap] = useState(false);
@@ -386,6 +388,7 @@ function DashboardContent() {
         qrImage,
         qrUrl,
         posterSize,
+        theme: posterTheme,
       });
     } finally {
       setDownloadingPoster(false);
@@ -1267,11 +1270,13 @@ function DashboardContent() {
               qrImage={qrImage}
               qrUrl={qrUrl}
               posterSize={posterSize}
+              posterTheme={posterTheme}
               downloadingPoster={downloadingPoster}
               printingThermal={printingThermal}
               thermalMsg={thermalMsg}
               copiedText={copiedText}
               onSetPosterSize={setPosterSize}
+              onSetPosterTheme={setPosterTheme}
               onDownloadPosterPng={handleDownloadPosterPng}
               onCopyUrl={copyToClipboard}
               onPrintMiniQr58mm={handlePrintMiniQr58mm}
