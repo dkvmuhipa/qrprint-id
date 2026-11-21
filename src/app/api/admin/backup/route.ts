@@ -9,9 +9,6 @@ import { getCurrentAdmin } from "@/lib/admin-auth";
 
 const execFileAsync = promisify(execFile);
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const admin = await getCurrentAdmin();
   if (!admin) {
