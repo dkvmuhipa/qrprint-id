@@ -33,9 +33,19 @@ import {
   X,
   ShoppingCart,
   Trash2,
+  Bluetooth,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { formatInvoicePlanLabel } from "@/lib/plans";
+import {
+  buildMiniQrEscPos,
+  buildReceiptEscPos,
+  getConnectedBluetoothPrinterName,
+  printMiniQr58mmWindow,
+  printReceipt58mmWindow,
+  printViaRawBt,
+  printViaWebBluetooth,
+} from "@/lib/thermal-58mm";
 
 function playCashierBell() {
   if (typeof window === "undefined") return;
@@ -139,12 +149,15 @@ interface ShopInfo {
   agentLastSeen: string | null;
   isAgentOnline: boolean;
   printers: string[];
+  allPrinters?: string[];
   bwPrinter: string;
   colorPrinter: string;
   photoPrinter?: string;
   bwPrinters?: string[];
   colorPrinters?: string[];
   photoPrinters?: string[];
+  thermalPrinter?: string;
+  autoPrintReceipt?: boolean;
   qrisName: string;
   hasStaticQris?: boolean;
   staticQrisPreview?: string;
@@ -327,6 +340,8 @@ function DashboardContent() {
     bwPrinters: ["Default Printer"] as string[],
     colorPrinters: ["Default Printer"] as string[],
     photoPrinters: ["Default Printer"] as string[],
+    thermalPrinter: "",
+    autoPrintReceipt: false,
     staticQrisString: "",
     midtransServerKey: "",
     midtransIsProd: false,
@@ -354,6 +369,195 @@ function DashboardContent() {
   const [posterSize, setPosterSize] = useState<"A5" | "A4">("A5");
   const [downloadingPoster, setDownloadingPoster] = useState(false);
   const [receiptJob, setReceiptJob] = useState<PrintJobItem | null>(null);
+  const [printingThermal, setPrintingThermal] = useState(false);
+  const [thermalMsg, setThermalMsg] = useState<{
+    type: "ok" | "err";
+    text: string;
+  } | null>(null);
+  const [btDeviceName, setBtDeviceName] = useState<string | null>(null);
+
+  function buildReceiptPayload(job: PrintJobItem) {
+    return {
+      shopName: data?.shop?.name || "Ngeprint",
+      shopAddress: data?.shop?.address || "",
+      jobCode: job.jobCode,
+      createdAt: job.createdAt,
+      customerName: job.customerName,
+      fileName: job.fileName,
+      pageCount: job.pageCount,
+      pageRange: job.pageRange,
+      copies: job.copies,
+      colorMode: job.colorMode,
+      paperSize: job.paperSize,
+      duplex: job.duplex,
+      paymentMethod: job.paymentMethod,
+      totalPrice: job.totalPrice,
+    };
+  }
+
+  function handlePrintReceipt58mm(job: PrintJobItem) {
+    setThermalMsg(null);
+    try {
+      printReceipt58mmWindow(buildReceiptPayload(job));
+      setThermalMsg({
+        type: "ok",
+        text: "Jendela cetak 58mm dibuka. Pilih printer thermal Bluetooth/USB Anda.",
+      });
+    } catch (err) {
+      setThermalMsg({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal membuka cetak 58mm.",
+      });
+    }
+  }
+
+  async function handlePrintReceiptBluetooth(job: PrintJobItem) {
+    setPrintingThermal(true);
+    setThermalMsg(null);
+    try {
+      const escpos = buildReceiptEscPos(buildReceiptPayload(job));
+      const { deviceName } = await printViaWebBluetooth(escpos);
+      setBtDeviceName(deviceName);
+      setThermalMsg({
+        type: "ok",
+        text: `Struk 58mm terkirim ke Bluetooth (${deviceName}).`,
+      });
+    } catch (err) {
+      setThermalMsg({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal cetak via Bluetooth.",
+      });
+    } finally {
+      setPrintingThermal(false);
+    }
+  }
+
+  function handlePrintReceiptRawBt(job: PrintJobItem) {
+    setThermalMsg(null);
+    try {
+      const escpos = buildReceiptEscPos(buildReceiptPayload(job));
+      printViaRawBt(escpos);
+      setThermalMsg({
+        type: "ok",
+        text: "Perintah ESC/POS dikirim ke aplikasi RawBT Android.",
+      });
+    } catch (err) {
+      setThermalMsg({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal kirim ke RawBT.",
+      });
+    }
+  }
+
+  function handlePrintMiniQr58mm() {
+    if (!data?.shop || !qrImage) return;
+    setThermalMsg(null);
+    try {
+      const pUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/s/${data.shop.shopCode}`
+          : `/s/${data.shop.shopCode}`;
+      printMiniQr58mmWindow({
+        shopName: data.shop.name,
+        shopAddress: data.shop.address,
+        portalUrl: pUrl,
+        bwPrice: data.shop.bwPrice,
+        colorPrice: data.shop.colorPrice,
+        qrDataUrl: qrImage,
+      });
+      setThermalMsg({
+        type: "ok",
+        text: "Jendela cetak Mini QR 58mm dibuka.",
+      });
+    } catch (err) {
+      setThermalMsg({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal membuka cetak Mini QR 58mm.",
+      });
+    }
+  }
+
+  async function handlePrintMiniQrBluetooth() {
+    if (!data?.shop) return;
+    setPrintingThermal(true);
+    setThermalMsg(null);
+    try {
+      const pUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/s/${data.shop.shopCode}`
+          : `/s/${data.shop.shopCode}`;
+      const escpos = buildMiniQrEscPos({
+        shopName: data.shop.name,
+        shopAddress: data.shop.address,
+        portalUrl: pUrl,
+        bwPrice: data.shop.bwPrice,
+        colorPrice: data.shop.colorPrice,
+      });
+      const { deviceName } = await printViaWebBluetooth(escpos);
+      setBtDeviceName(deviceName);
+      setThermalMsg({
+        type: "ok",
+        text: `Mini QR 58mm tercetak via Bluetooth (${deviceName}).`,
+      });
+    } catch (err) {
+      setThermalMsg({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal cetak Mini QR via Bluetooth.",
+      });
+    } finally {
+      setPrintingThermal(false);
+    }
+  }
+
+  function handlePrintMiniQrRawBt() {
+    if (!data?.shop) return;
+    setThermalMsg(null);
+    try {
+      const pUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/s/${data.shop.shopCode}`
+          : `/s/${data.shop.shopCode}`;
+      const escpos = buildMiniQrEscPos({
+        shopName: data.shop.name,
+        shopAddress: data.shop.address,
+        portalUrl: pUrl,
+        bwPrice: data.shop.bwPrice,
+        colorPrice: data.shop.colorPrice,
+      });
+      printViaRawBt(escpos);
+      setThermalMsg({
+        type: "ok",
+        text: "Mini QR 58mm dikirim ke aplikasi RawBT Android.",
+      });
+    } catch (err) {
+      setThermalMsg({
+        type: "err",
+        text: err instanceof Error ? err.message : "Gagal kirim Mini QR ke RawBT.",
+      });
+    }
+  }
+
+  function buildSampleTestJob(): PrintJobItem {
+    return {
+      id: "test-58mm",
+      jobCode: "NP-TEST",
+      customerName: "Tes Printer 58mm",
+      fileName: "Contoh-Dokumen-Skripsi.pdf",
+      pageCount: 5,
+      copies: 1,
+      colorMode: "BW",
+      paperSize: "A4",
+      duplex: false,
+      pageRange: "ALL",
+      totalPrice: (data?.shop?.bwPrice || 500) * 5,
+      paymentMethod: "QRIS",
+      paymentStatus: "PAID",
+      printStatus: "COMPLETED",
+      storedFilePath: null,
+      fileDeletedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+  }
 
   async function handleDownloadPosterPng() {
     if (!data?.shop || !qrImage) return;
@@ -662,6 +866,8 @@ function DashboardContent() {
             bwPrinters: json.shop.bwPrinters || [json.shop.bwPrinter || "Default Printer"],
             colorPrinters: json.shop.colorPrinters || [json.shop.colorPrinter || "Default Printer"],
             photoPrinters: json.shop.photoPrinters || [json.shop.photoPrinter || "Default Printer"],
+            thermalPrinter: json.shop.thermalPrinter || "",
+            autoPrintReceipt: Boolean(json.shop.autoPrintReceipt),
             staticQrisString: "",
             midtransServerKey: "",
             midtransIsProd: Boolean(json.shop.midtransIsProd),
@@ -813,6 +1019,8 @@ function DashboardContent() {
         bwPrinters: settingsForm.bwPrinters,
         colorPrinters: settingsForm.colorPrinters,
         photoPrinters: settingsForm.photoPrinters,
+        thermalPrinter: settingsForm.thermalPrinter,
+        autoPrintReceipt: settingsForm.autoPrintReceipt,
         midtransIsProd: settingsForm.midtransIsProd,
       };
       if (settingsForm.staticQrisString.trim() !== "") {
@@ -1906,8 +2114,62 @@ function DashboardContent() {
                       className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
                     >
                       <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      <span>Cetak langsung</span>
+                      <span>Cetak Poster A4/A5</span>
                     </button>
+                  </div>
+
+                  {/* Mini QR Thermal 58mm (Bluetooth / USB) */}
+                  <div className="rounded-xl border border-[#171717]/10 bg-[#fafafa] p-3.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-[#171717]">
+                        Cetak Mini QR Thermal 58mm
+                      </p>
+                      <span className="font-mono-num rounded bg-white px-2 py-0.5 text-[10px] text-[#525252] border border-[#171717]/10">
+                        Bluetooth / USB
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-[#737373]">
+                      Punya printer struk 58mm? Cetak QR toko langsung di kertas thermal untuk ditempel sementara di meja kasir.
+                    </p>
+                    <div className="mt-2.5 grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        disabled={!qrImage}
+                        onClick={handlePrintMiniQr58mm}
+                        className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg bg-[#171717] px-2 text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:opacity-50"
+                      >
+                        <Printer className="h-3 w-3" strokeWidth={1.5} />
+                        <span>Cetak 58mm</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={printingThermal}
+                        onClick={handlePrintMiniQrBluetooth}
+                        className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#171717]/15 bg-white px-2 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+                      >
+                        <Bluetooth className="h-3 w-3" strokeWidth={1.5} />
+                        <span>{printingThermal ? "Kirim..." : "Bluetooth"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handlePrintMiniQrRawBt}
+                        className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#171717]/15 bg-white px-2 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                      >
+                        <Receipt className="h-3 w-3" strokeWidth={1.5} />
+                        <span>RawBT HP</span>
+                      </button>
+                    </div>
+                    {thermalMsg && tab === "qr" && (
+                      <p
+                        className={`mt-2 text-[11px] ${
+                          thermalMsg.type === "ok"
+                            ? "text-[#16a34a]"
+                            : "text-[#dc2626]"
+                        }`}
+                      >
+                        {thermalMsg.text}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2988,6 +3250,127 @@ function DashboardContent() {
                     )}
                   </div>
                 )}
+
+                {/* Printer Thermal 58mm (Struk Otomatis — Bluetooth / USB) */}
+                <div className="sm:col-span-2 rounded-xl border border-[#171717]/10 bg-[#fafafa] p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs font-medium text-[#171717]">
+                        Printer Thermal 58mm — Auto-Cetak Struk (Bluetooth / USB)
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-[#737373]">
+                        Gratis di semua paket (tidak mengurangi slot printer dokumen). Pairing printer Bluetooth 58mm ke Windows sebagai printer (misal <code className="font-mono-num">POS-58</code> / <code className="font-mono-num">RPP02N</code>) atau isi Port COM Bluetooth (misal <code className="font-mono-num">COM4</code>).
+                      </p>
+                    </div>
+                    <span className="font-mono-num rounded bg-white px-2 py-0.5 text-[11px] font-medium text-[#16a34a] border border-[#16a34a]/25">
+                      58mm ESC/POS
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                        Pilih dari Printer Windows Terdeteksi
+                      </label>
+                      <select
+                        value={
+                          (shop.allPrinters || shop.printers).includes(
+                            settingsForm.thermalPrinter
+                          )
+                            ? settingsForm.thermalPrinter
+                            : ""
+                        }
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            thermalPrinter: e.target.value,
+                          })
+                        }
+                        className="h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs outline-none focus:border-[#171717]"
+                      >
+                        <option value="">
+                          — Tidak dipilih / ketik manual di samping —
+                        </option>
+                        {(shop.allPrinters || shop.printers).map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                        Nama Printer atau Port COM Bluetooth
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: POS-58, RPP02N, atau COM4"
+                        value={settingsForm.thermalPrinter}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            thermalPrinter: e.target.value,
+                          })
+                        }
+                        className="h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 font-mono-num text-xs outline-none focus:border-[#171717]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-[#171717]/8 pt-3">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-[#171717]">
+                      <input
+                        type="checkbox"
+                        checked={settingsForm.autoPrintReceipt}
+                        onChange={(e) =>
+                          setSettingsForm({
+                            ...settingsForm,
+                            autoPrintReceipt: e.target.checked,
+                          })
+                        }
+                        className="h-4 w-4 rounded border-[#171717]/30 accent-[#d9381e]"
+                      />
+                      <span>
+                        Cetak struk 58mm otomatis via Print Agent setiap pesanan lunas selesai dicetak
+                      </span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePrintReceipt58mm(buildSampleTestJob())}
+                        className="btn-action inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-2.5 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                      >
+                        <Printer className="h-3 w-3" strokeWidth={1.5} />
+                        <span>Tes 58mm</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={printingThermal}
+                        onClick={() =>
+                          handlePrintReceiptBluetooth(buildSampleTestJob())
+                        }
+                        className="btn-action inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-[#171717] px-2.5 text-[11px] font-medium text-white hover:bg-[#171717]/90 disabled:opacity-50"
+                      >
+                        <Bluetooth className="h-3 w-3" strokeWidth={1.5} />
+                        <span>
+                          {printingThermal ? "Mencetak..." : "Tes Bluetooth"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {thermalMsg && tab === "settings" && (
+                    <p
+                      className={`mt-2 text-[11px] ${
+                        thermalMsg.type === "ok"
+                          ? "text-[#16a34a]"
+                          : "text-[#dc2626]"
+                      }`}
+                    >
+                      {thermalMsg.text}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Static-to-Dynamic QRIS Toko Box (All Banks & E-Wallets) */}
@@ -3667,37 +4050,77 @@ function DashboardContent() {
               </p>
             </div>
 
-            <div className="no-print mt-5 grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                onClick={() => {
-                  const text = [
-                    `*NOTA CETAK — ${shop.name}*`,
-                    `Kode: ${receiptJob.jobCode}`,
-                    `Tanggal: ${new Date(receiptJob.createdAt).toLocaleString("id-ID")}`,
-                    `Pelanggan: ${receiptJob.customerName}`,
-                    `File: ${receiptJob.fileName}`,
-                    `Rincian: ${receiptJob.pageCount} hal (${receiptJob.pageRange}) x ${receiptJob.copies}, ${receiptJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"}, ${receiptJob.paperSize}${receiptJob.duplex ? ", Bolak-balik" : ""}`,
-                    `Metode: ${receiptJob.paymentMethod} (LUNAS)`,
-                    `*Total: ${formatRupiah(receiptJob.totalPrice)}*`,
-                  ].join("\n");
-                  copyToClipboard(text, "receipt_wa");
-                }}
-                className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
-              >
-                <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>
-                  {copiedText === "receipt_wa" ? "Tersalin!" : "Salin utk WA"}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => window.print()}
-                className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#171717] text-xs font-medium text-white hover:bg-[#171717]/90"
-              >
-                <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>Cetak Struk</span>
-              </button>
+            <div className="no-print mt-5 space-y-2">
+              {thermalMsg && (
+                <div
+                  className={`rounded-lg border px-3 py-2 text-[11px] ${
+                    thermalMsg.type === "ok"
+                      ? "border-[#16a34a]/25 bg-[#16a34a]/8 text-[#16a34a]"
+                      : "border-[#dc2626]/25 bg-[#dc2626]/8 text-[#dc2626]"
+                  }`}
+                >
+                  {thermalMsg.text}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt58mm(receiptJob)}
+                  className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#171717] text-xs font-medium text-white hover:bg-[#171717]/90"
+                >
+                  <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span>Cetak Struk 58mm</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={printingThermal}
+                  onClick={() => handlePrintReceiptBluetooth(receiptJob)}
+                  className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
+                >
+                  <Bluetooth className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span>
+                    {printingThermal
+                      ? "Mengirim..."
+                      : btDeviceName || getConnectedBluetoothPrinterName()
+                      ? "BT 58mm (Siap)"
+                      : "Bluetooth 58mm"}
+                  </span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceiptRawBt(receiptJob)}
+                  className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                >
+                  <Receipt className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span>RawBT (HP Android)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = [
+                      `*NOTA CETAK — ${shop.name}*`,
+                      `Kode: ${receiptJob.jobCode}`,
+                      `Tanggal: ${new Date(receiptJob.createdAt).toLocaleString("id-ID")}`,
+                      `Pelanggan: ${receiptJob.customerName}`,
+                      `File: ${receiptJob.fileName}`,
+                      `Rincian: ${receiptJob.pageCount} hal (${receiptJob.pageRange}) x ${receiptJob.copies}, ${receiptJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"}, ${receiptJob.paperSize}${receiptJob.duplex ? ", Bolak-balik" : ""}`,
+                      `Metode: ${receiptJob.paymentMethod} (LUNAS)`,
+                      `*Total: ${formatRupiah(receiptJob.totalPrice)}*`,
+                    ].join("\n");
+                    copyToClipboard(text, "receipt_wa");
+                  }}
+                  className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                >
+                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span>
+                    {copiedText === "receipt_wa" ? "Tersalin!" : "Salin utk WA"}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

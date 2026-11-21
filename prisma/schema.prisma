@@ -12,36 +12,38 @@ model Shop {
   shopCode            String                @unique
   shopCodeChangeCount Int                   @default(0)
   name                String
-  ownerName         String                @default("Pemilik Toko")
-  email             String                @unique
-  phone             String
-  address           String
-  passwordHash      String
-  plan              String                @default("DEMO")
-  planStatus        String                @default("ACTIVE")
-  planExpiresAt     DateTime?
-  hasListenerAddon  Boolean               @default(false)
-  extraPrinterSlots Int                   @default(0)
-  bwPrice           Int                   @default(500)
-  colorPrice        Int                   @default(1500)
-  duplexDiscount    Int                   @default(10)
-  photoPrice        Int                   @default(3000)
-  agentKey          String                @unique
-  agentMachineHash  String?
-  agentLastSeen     DateTime?
-  agentPrinters     String                @default("[]")
-  bwPrinter         String                @default("Default Printer")
-  colorPrinter      String                @default("Default Printer")
-  photoPrinter      String                @default("Default Printer")
-  qrisName          String                @default("QRIS Toko")
-  staticQrisString  String?
-  staticQrisHash    String?
-  midtransServerKey String?
-  midtransIsProd    Boolean               @default(false)
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
-  jobs              PrintJob[]
-  invoices          SubscriptionInvoice[]
+  ownerName           String                @default("Pemilik Toko")
+  email               String                @unique
+  phone               String
+  address             String
+  passwordHash        String
+  plan                String                @default("DEMO")
+  planStatus          String                @default("ACTIVE")
+  planExpiresAt       DateTime?
+  hasListenerAddon    Boolean               @default(false)
+  extraPrinterSlots   Int                   @default(0)
+  bwPrice             Int                   @default(500)
+  colorPrice          Int                   @default(1500)
+  duplexDiscount      Int                   @default(10)
+  photoPrice          Int                   @default(3000)
+  agentKey            String                @unique
+  agentMachineHash    String?
+  agentLastSeen       DateTime?
+  agentPrinters       String                @default("[]")
+  bwPrinter           String                @default("Default Printer")
+  colorPrinter        String                @default("Default Printer")
+  photoPrinter        String                @default("Default Printer")
+  thermalPrinter      String                @default("")
+  autoPrintReceipt    Boolean               @default(false)
+  qrisName            String                @default("QRIS Toko")
+  staticQrisString    String?
+  staticQrisHash      String?
+  midtransServerKey   String?
+  midtransIsProd      Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  jobs                PrintJob[]
+  invoices            SubscriptionInvoice[]
 }
 
 model PrintJob {

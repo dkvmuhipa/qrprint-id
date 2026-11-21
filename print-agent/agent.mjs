@@ -73,6 +73,9 @@ function parseArgs() {
       process.env.QRPRINT_AGENT_KEY ||
       "",
     sumatraPath: process.env.SUMATRA_PDF_PATH || "",
+    thermalPrinter: String(process.env.THERMAL_PRINTER_NAME || "").trim(),
+    autoPrintReceipt:
+      String(process.env.AUTO_PRINT_RECEIPT || "").toLowerCase() === "true",
     live:
       String(process.env.DRY_RUN || "").toLowerCase() === "false" ||
       String(process.env.LIVE_MODE || "").toLowerCase() === "true",
@@ -83,6 +86,8 @@ function parseArgs() {
     if (arg.startsWith("--url=")) config.url = arg.slice(6).replace(/\/$/, "");
     if (arg.startsWith("--key=")) config.key = arg.slice(6);
     if (arg.startsWith("--sumatra=")) config.sumatraPath = arg.slice(10);
+    if (arg.startsWith("--thermal=")) config.thermalPrinter = arg.slice(10);
+    if (arg === "--auto-receipt") config.autoPrintReceipt = true;
     if (arg === "--live") config.live = true;
     if (arg === "--dry-run") config.live = false;
   }
@@ -282,6 +287,195 @@ async function sendToWindowsPrinter(
   }
 }
 
+// =========================================================================
+// THERMAL 58MM AUTO-RECEIPT ENGINE (Bluetooth COM Port & Windows Spooler RAW)
+// =========================================================================
+
+function sanitizeAscii58(input) {
+  return String(input || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function padRow58(left, right, width = 32) {
+  const l = sanitizeAscii58(left);
+  const r = sanitizeAscii58(right);
+  const gap = width - l.length - r.length;
+  if (gap >= 1) return l + " ".repeat(gap) + r;
+  return l.slice(0, Math.max(4, width - r.length - 1)) + " " + r;
+}
+
+function wrapText58(text, width = 32) {
+  const clean = sanitizeAscii58(text);
+  if (!clean) return [];
+  const words = clean.split(" ");
+  const lines = [];
+  let cur = "";
+  for (const w of words) {
+    if (!cur) cur = w.slice(0, width);
+    else if (cur.length + 1 + w.length <= width) cur += " " + w;
+    else {
+      lines.push(cur);
+      cur = w.slice(0, width);
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function buildThermalReceiptEscPos(shopInfo, job) {
+  const chunks = [];
+  const pushRaw = (...bytes) => chunks.push(...bytes);
+  const pushLine = (txt = "") => {
+    const clean = sanitizeAscii58(txt);
+    for (let i = 0; i < clean.length; i++) chunks.push(clean.charCodeAt(i));
+    chunks.push(0x0a);
+  };
+  const rp = (n) => "Rp " + Math.round(Number(n) || 0).toLocaleString("id-ID");
+  const dt = new Date(job.createdAt || Date.now()).toLocaleString("id-ID", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  // ESC @ (init) + Center + Bold + Tall
+  pushRaw(0x1b, 0x40, 0x1b, 0x61, 1, 0x1b, 0x45, 1, 0x1d, 0x21, 0x01);
+  pushLine(shopInfo.shopName || "Ngeprint");
+  pushRaw(0x1d, 0x21, 0x00, 0x1b, 0x45, 0);
+  if (shopInfo.shopAddress) {
+    for (const l of wrapText58(shopInfo.shopAddress)) pushLine(l);
+  }
+  pushLine("Nota Cetak Mandiri - Ngeprint");
+  pushLine("-".repeat(32));
+
+  // Queue Code
+  pushLine("KODE ANTREAN");
+  pushRaw(0x1b, 0x45, 1, 0x1d, 0x21, 0x11);
+  pushLine(job.jobCode || "-");
+  pushRaw(0x1d, 0x21, 0x00, 0x1b, 0x45, 0);
+  pushLine("-".repeat(32));
+
+  // Left-aligned details
+  pushRaw(0x1b, 0x61, 0);
+  pushLine(padRow58("Tanggal", dt));
+  pushLine(padRow58("Pelanggan", job.customerName || "Pelanggan"));
+  pushLine("Dokumen:");
+  for (const l of wrapText58(job.fileName || "Dokumen")) pushLine(" " + l);
+
+  const pages = `${job.pageCount || 1} hal (${job.pageRange || "ALL"}) x${job.copies || 1}`;
+  const spec = `${job.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} | ${job.paperSize || "A4"}${job.duplex ? " | Duplex" : ""}`;
+  pushLine(padRow58("Halaman", pages));
+  pushLine(padRow58("Jenis", spec));
+  pushLine("-".repeat(32));
+  pushLine(padRow58("Metode", `${job.paymentMethod || "QRIS"} (LUNAS)`));
+
+  // Total Bold Tall
+  pushRaw(0x1b, 0x45, 1, 0x1d, 0x21, 0x01);
+  pushLine(padRow58("TOTAL", rp(job.totalPrice)));
+  pushRaw(0x1d, 0x21, 0x00, 0x1b, 0x45, 0);
+  pushLine("-".repeat(32));
+
+  // Footer
+  pushRaw(0x1b, 0x61, 1);
+  pushLine("Terima kasih telah mencetak.");
+  pushLine("File dihapus otomatis setelah");
+  pushLine("selesai dicetak.");
+  // Feed 4 lines + partial cut
+  pushRaw(0x1b, 0x64, 4, 0x1d, 0x56, 66, 0);
+
+  return Buffer.from(chunks);
+}
+
+async function sendRawEscPosWindows(targetPrinter, escposBuffer, tempDir) {
+  if (process.platform !== "win32") return;
+  const target = String(targetPrinter || "").trim();
+  if (!target) return;
+
+  // Mode 1: Bluetooth Virtual COM Port (contoh: COM4, COM5)
+  if (/^COM\d{1,3}$/i.test(target)) {
+    const portPath = `\\\\.\\${target.toUpperCase()}`;
+    await fs.writeFile(portPath, escposBuffer);
+    return;
+  }
+
+  // Mode 2: Paired Windows Bluetooth / USB Thermal Printer via winspool.Drv RAW
+  const safePrinter = target.replace(/['"`$;&|]/g, "");
+  const binPath = path.join(tempDir, `receipt-${Date.now()}.bin`);
+  await fs.writeFile(binPath, escposBuffer);
+
+  const escapedBin = binPath.replace(/'/g, "''");
+  const escapedPrinter = safePrinter.replace(/'/g, "''");
+
+  const psScript = `
+Add-Type -TypeDefinition @"
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+public class RawPrintHelper {
+  [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Ansi)]
+  public class DOCINFOA {
+    [MarshalAs(UnmanagedType.LPStr)] public string pDocName;
+    [MarshalAs(UnmanagedType.LPStr)] public string pOutputFile;
+    [MarshalAs(UnmanagedType.LPStr)] public string pDataType;
+  }
+  [DllImport("winspool.Drv", EntryPoint="OpenPrinterA", SetLastError=true, CharSet=CharSet.Ansi)]
+  public static extern bool OpenPrinter(string szPrinter, out IntPtr hPrinter, IntPtr pd);
+  [DllImport("winspool.Drv", EntryPoint="ClosePrinter", SetLastError=true)]
+  public static extern bool ClosePrinter(IntPtr hPrinter);
+  [DllImport("winspool.Drv", EntryPoint="StartDocPrinterA", SetLastError=true, CharSet=CharSet.Ansi)]
+  public static extern bool StartDocPrinter(IntPtr hPrinter, Int32 level, [In, MarshalAs(UnmanagedType.LPStruct)] DOCINFOA di);
+  [DllImport("winspool.Drv", EntryPoint="EndDocPrinter", SetLastError=true)]
+  public static extern bool EndDocPrinter(IntPtr hPrinter);
+  [DllImport("winspool.Drv", EntryPoint="StartPagePrinter", SetLastError=true)]
+  public static extern bool StartPagePrinter(IntPtr hPrinter);
+  [DllImport("winspool.Drv", EntryPoint="EndPagePrinter", SetLastError=true)]
+  public static extern bool EndPagePrinter(IntPtr hPrinter);
+  [DllImport("winspool.Drv", EntryPoint="WritePrinter", SetLastError=true)]
+  public static extern bool WritePrinter(IntPtr hPrinter, byte[] pBytes, Int32 dwCount, out Int32 dwWritten);
+
+  public static void SendFile(string printerName, string filePath) {
+    byte[] bytes = File.ReadAllBytes(filePath);
+    IntPtr hPrinter = IntPtr.Zero;
+    if (!OpenPrinter(printerName, out hPrinter, IntPtr.Zero)) {
+      throw new Exception("Gagal membuka printer thermal: " + printerName);
+    }
+    try {
+      DOCINFOA di = new DOCINFOA();
+      di.pDocName = "Ngeprint Struk 58mm";
+      di.pDataType = "RAW";
+      if (StartDocPrinter(hPrinter, 1, di)) {
+        if (StartPagePrinter(hPrinter)) {
+          int written = 0;
+          WritePrinter(hPrinter, bytes, bytes.Length, out written);
+          EndPagePrinter(hPrinter);
+        }
+        EndDocPrinter(hPrinter);
+      }
+    } finally {
+      ClosePrinter(hPrinter);
+    }
+  }
+}
+"@
+[RawPrintHelper]::SendFile('${escapedPrinter}', '${escapedBin}')
+`;
+
+  try {
+    await execFileAsync(
+      "powershell.exe",
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", psScript],
+      { timeout: 15000, windowsHide: true }
+    );
+  } finally {
+    await fs.unlink(binPath).catch(() => {});
+  }
+}
+
 function log(msg) {
   const time = new Date().toLocaleTimeString("id-ID");
   console.log(`[${time}] ${msg}`);
@@ -459,6 +653,43 @@ async function main() {
           if (localPath) {
             await fs.unlink(localPath).catch(() => {});
             log(`File lokal dihapus otomatis (Privacy by Design).`);
+          }
+
+          // Auto-Cetak Struk Thermal 58mm (Bluetooth / USB) jika diaktifkan di Dashboard atau .env
+          const activeThermalPrinter =
+            (data.thermalPrinter && String(data.thermalPrinter).trim()) ||
+            config.thermalPrinter;
+          const shouldAutoReceipt =
+            Boolean(data.autoPrintReceipt) || config.autoPrintReceipt;
+
+          if (shouldAutoReceipt && activeThermalPrinter) {
+            try {
+              const receiptBuf = buildThermalReceiptEscPos(
+                {
+                  shopName: data.shopName || initial?.shopName || "Ngeprint",
+                  shopAddress: data.shopAddress || "",
+                },
+                job
+              );
+              if (config.live) {
+                await sendRawEscPosWindows(
+                  activeThermalPrinter,
+                  receiptBuf,
+                  tempDir
+                );
+                log(
+                  `[Thermal 58mm] Struk ${job.jobCode} tercetak ke "${activeThermalPrinter}".`
+                );
+              } else {
+                log(
+                  `[SIMULASI Thermal 58mm] Struk ${job.jobCode} -> "${activeThermalPrinter}".`
+                );
+              }
+            } catch (thermalErr) {
+              log(
+                `[Thermal 58mm Peringatan] Gagal cetak struk ke "${activeThermalPrinter}": ${thermalErr.message}`
+              );
+            }
           }
 
           await fetch(`${config.url}/api/agent/jobs/${job.id}/status`, {

@@ -51,6 +51,9 @@ export async function GET(req: Request) {
       `AGENT_KEY=${shop.agentKey}`,
       "POLL_INTERVAL_MS=3000",
       "DRY_RUN=false",
+      "# Opsional: Printer Thermal 58mm (Bluetooth / USB) — bisa juga diatur langsung dari Dashboard",
+      `THERMAL_PRINTER_NAME=${shop.thermalPrinter || ""}`,
+      `AUTO_PRINT_RECEIPT=${shop.autoPrintReceipt ? "true" : "false"}`,
       "",
     ].join("\r\n");
 

@@ -146,12 +146,15 @@ export async function GET() {
         );
         return effMax !== null ? printers.slice(0, effMax) : printers;
       })(),
+      allPrinters: printers,
       bwPrinter: parsePrinterPool(shop.bwPrinter)[0] || "Default Printer",
       colorPrinter: parsePrinterPool(shop.colorPrinter)[0] || "Default Printer",
       photoPrinter: parsePrinterPool(shop.photoPrinter)[0] || "Default Printer",
       bwPrinters: parsePrinterPool(shop.bwPrinter),
       colorPrinters: parsePrinterPool(shop.colorPrinter),
       photoPrinters: parsePrinterPool(shop.photoPrinter),
+      thermalPrinter: shop.thermalPrinter || "",
+      autoPrintReceipt: Boolean(shop.autoPrintReceipt),
       qrisName: shop.qrisName,
       hasStaticQris: Boolean(shop.staticQrisString),
       staticQrisPreview: shop.staticQrisString
@@ -379,6 +382,12 @@ export async function PATCH(req: Request) {
         bwPrinter: serializePrinterPool(nextBwPool),
         colorPrinter: serializePrinterPool(nextColorPool),
         photoPrinter: serializePrinterPool(nextPhotoPool),
+        ...(body.thermalPrinter !== undefined
+          ? { thermalPrinter: String(body.thermalPrinter || "").trim().slice(0, 120) }
+          : {}),
+        ...(body.autoPrintReceipt !== undefined
+          ? { autoPrintReceipt: Boolean(body.autoPrintReceipt) }
+          : {}),
         qrisName: detectedQrisMerchant
           ? detectedQrisMerchant
           : body.qrisName
