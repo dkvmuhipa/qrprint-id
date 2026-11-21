@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   QrCode,
@@ -165,6 +165,18 @@ export function LandingClient() {
     "windows"
   );
   const [openFaqIdx, setOpenFaqIdx] = useState<number | null>(0);
+
+  // Selalu mulai dari paling atas saat halaman direfresh (bersihkan hash lama agar tidak lompat ke bawah)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+  }, []);
   const [demoOpen, setDemoOpen] = useState(false);
   const [demoForm, setDemoForm] = useState({
     name: "",
@@ -768,7 +780,18 @@ export function LandingClient() {
       <footer className="border-t border-[#1f1b16]/8 bg-[#fdfbf7] py-12">
         <div className="mx-auto grid max-w-6xl gap-8 px-6 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  if (window.location.hash) {
+                    window.history.replaceState(null, "", "/");
+                  }
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="flex cursor-pointer items-center gap-2 text-left"
+            >
               <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
                 <Printer className="h-4 w-4" strokeWidth={1.5} />
               </div>
@@ -778,7 +801,7 @@ export function LandingClient() {
               <span className="font-mono-num text-xs text-[#7b7266]">
                 by Gellona
               </span>
-            </div>
+            </button>
             <p className="mt-3 text-xs leading-relaxed text-[#5e554a]">
               Produk dari <strong className="font-medium text-[#1f1b16]">Gellona Teknologi</strong>. Sistem antrean cetak mandiri berbasis QR untuk toko fotokopi dan percetakan di Indonesia.
             </p>

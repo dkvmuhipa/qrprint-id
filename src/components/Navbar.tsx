@@ -7,10 +7,25 @@ import { Menu, X, Printer } from "lucide-react";
 export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
   const [open, setOpen] = useState(false);
 
+  function handleLogoClick(e: React.MouseEvent<HTMLAnchorElement>) {
+    setOpen(false);
+    if (typeof window !== "undefined" && window.location.pathname === "/") {
+      e.preventDefault();
+      if (window.location.hash) {
+        window.history.replaceState(null, "", "/");
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   return (
     <header className="sticky top-0 z-40 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <Link href="/" className="flex items-center gap-2.5">
+        <Link
+          href="/"
+          onClick={handleLogoClick}
+          className="flex items-center gap-2.5"
+        >
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
             <Printer className="h-4 w-4" strokeWidth={1.5} />
           </div>
