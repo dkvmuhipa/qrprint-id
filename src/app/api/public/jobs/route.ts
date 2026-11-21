@@ -161,7 +161,8 @@ export async function POST(req: Request) {
     const safeDisplayName = file.name.replace(/[\r\n<>:"/\\|?*]+/g, "_").slice(0, 120);
     const jobCode = generateJobCode();
 
-    let paymentProvider = paymentMethod === "CASH" ? "CASH" : "SIMULATION";
+    let effectivePaymentMethod = paymentMethod;
+    let paymentProvider = "CASH";
     let paymentOrderId: string | null = null;
     let qrisUrl: string | null = null;
     let qrisString: string | null = null;
@@ -225,6 +226,11 @@ export async function POST(req: Request) {
           finalTotalPrice
         );
       }
+
+      // Production safety: if shop has neither Midtrans nor Static QRIS configured, fall back to CASH (never simulation)
+      if (paymentProvider === "CASH") {
+        effectivePaymentMethod = "CASH";
+      }
     }
 
     const job = await prisma.printJob.create({
@@ -243,7 +249,7 @@ export async function POST(req: Request) {
         duplex: effectiveDuplex,
         pageRange,
         totalPrice: finalTotalPrice,
-        paymentMethod,
+        paymentMethod: effectivePaymentMethod,
         paymentProvider,
         paymentOrderId,
         qrisUrl,

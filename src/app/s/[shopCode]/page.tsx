@@ -37,6 +37,7 @@ interface PublicShop {
   photoPrice: number;
   duplexDiscount: number;
   qrisName: string;
+  hasQrisPayment?: boolean;
   isAgentOnline: boolean;
   plan?: string;
   allowExtraPaper?: boolean;
@@ -94,7 +95,6 @@ function CustomerScanPortalContent({
 
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [qrisDataUrl, setQrisDataUrl] = useState<string>("");
-  const [simulatingPay, setSimulatingPay] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
@@ -112,6 +112,9 @@ function CustomerScanPortalContent({
           setShopError(data.error || "Toko tidak ditemukan");
         } else {
           setShop(data.shop);
+          if (data.shop && data.shop.hasQrisPayment === false) {
+            setPaymentMethod("CASH");
+          }
         }
       } catch {
         if (active) setShopError("Gagal memuat informasi toko");
@@ -251,30 +254,6 @@ function CustomerScanPortalContent({
       setSubmitError("Gagal mengirim dokumen ke server");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleSimulateQrisPay() {
-    if (!activeJob) return;
-    setSimulatingPay(true);
-    try {
-      const res = await fetch(`/api/public/jobs/${activeJob.jobCode}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "SIMULATE_PAY" }),
-      });
-      if (res.ok) {
-        const refreshed = await fetch(
-          `/api/public/jobs/${activeJob.jobCode}?t=${Date.now()}`,
-          { cache: "no-store" }
-        );
-        if (refreshed.ok) {
-          const data = await refreshed.json();
-          setActiveJob(data.job);
-        }
-      }
-    } finally {
-      setSimulatingPay(false);
     }
   }
 
@@ -527,9 +506,7 @@ function CustomerScanPortalContent({
                             ? activeJob.midtransIsProd
                               ? "Pembayaran QRIS Midtrans"
                               : "QRIS Midtrans (Sandbox)"
-                            : activeJob.paymentProvider === "MERCHANT_QRIS"
-                            ? "QRIS Toko (Nominal Otomatis)"
-                            : "Pembayaran QRIS (Simulasi)"}
+                            : "QRIS Toko (Nominal Otomatis)"}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-[#7b7266]">
@@ -613,7 +590,7 @@ function CustomerScanPortalContent({
                             </span>
                           </button>
                         </div>
-                      ) : activeJob.paymentProvider === "MERCHANT_QRIS" ? (
+                      ) : (
                         <div className="mt-2 space-y-2.5 text-xs text-[#5e554a]">
                           <p>
                             Pindai kode QRIS di atas dengan GoPay, OVO, DANA, ShopeePay, atau Mobile Banking. Nominal unik{" "}
@@ -623,28 +600,9 @@ function CustomerScanPortalContent({
                             otomatis terisi agar pembayaran langsung terverifikasi otomatis.
                           </p>
                           <p className="rounded-lg bg-[#f7f4ee] p-2.5 text-[11px] text-[#7b7266]">
-                            Mohon bayar sesuai nominal tepat (termasuk 2 digit kode unik) agar printer langsung mencetak secara otomatis tanpa perlu konfirmasi manual.
+                            Mohon bayar sesuai nominal tepat (termasuk 2 digit kode unik) agar printer langsung mencetak secara otomatis.
                           </p>
                         </div>
-                      ) : (
-                        <>
-                          <p className="text-xs text-[#7b7266]">
-                            Gunakan tombol simulasi di bawah untuk menguji alur cetak otomatis
-                          </p>
-                          <button
-                            disabled={simulatingPay}
-                            onClick={handleSimulateQrisPay}
-                            className="btn-action mt-4 inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
-                          >
-                            <span>
-                              {simulatingPay
-                                ? "Memverifikasi pembayaran..."
-                                : `Simulasikan pelunasan QRIS (${formatRupiah(
-                                    activeJob.totalPrice
-                                  )})`}
-                            </span>
-                          </button>
-                        </>
                       )}
                     </>
                   ) : (
@@ -1042,8 +1000,9 @@ function CustomerScanPortalContent({
               <div className="grid grid-cols-2 gap-2.5">
                 <button
                   type="button"
+                  disabled={shop.hasQrisPayment === false}
                   onClick={() => setPaymentMethod("QRIS")}
-                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
+                  className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                     paymentMethod === "QRIS"
                       ? "border-[#1f1b16] bg-white"
                       : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
@@ -1058,7 +1017,9 @@ function CustomerScanPortalContent({
                       QRIS instan
                     </p>
                     <p className="mt-0.5 text-[11px] text-[#7b7266]">
-                      Otomatis langsung cetak
+                      {shop.hasQrisPayment === false
+                        ? "Belum diaktifkan toko"
+                        : "Otomatis langsung cetak"}
                     </p>
                   </div>
                 </button>

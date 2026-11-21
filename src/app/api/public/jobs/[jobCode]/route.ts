@@ -185,42 +185,5 @@ export async function POST(
     return NextResponse.json({ ok: true, job: updated });
   }
 
-  if (action !== "SIMULATE_PAY") {
-    return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
-  }
-
-  if (job.printStatus === "CANCELLED") {
-    return NextResponse.json(
-      { error: "Pesanan ini sudah dibatalkan." },
-      { status: 400 }
-    );
-  }
-
-  // Strictly restrict SIMULATE_PAY to explicit SIMULATION QRIS jobs only — never MIDTRANS, MERCHANT_QRIS, or CASH
-  if (
-    job.paymentProvider !== "SIMULATION" ||
-    job.paymentMethod !== "QRIS"
-  ) {
-    return NextResponse.json(
-      {
-        error:
-          "Simulasi pembayaran tidak diizinkan untuk metode pembayaran ini. Selesaikan pembayaran QRIS atau konfirmasi di kasir.",
-      },
-      { status: 403 }
-    );
-  }
-
-  if (job.paymentStatus === "PAID") {
-    return NextResponse.json({ ok: true, job });
-  }
-
-  const updated = await prisma.printJob.update({
-    where: { id: job.id },
-    data: {
-      paymentStatus: "PAID",
-      printStatus: "QUEUED",
-    },
-  });
-
-  return NextResponse.json({ ok: true, job: updated });
+  return NextResponse.json({ error: "Aksi tidak dikenal." }, { status: 400 });
 }

@@ -680,7 +680,7 @@ function DashboardContent() {
 
   async function handleInvoiceAction(
     invoiceId: string,
-    action: "SIMULATE_PAY" | "CHECK_STATUS" | "CANCEL"
+    action: "CHECK_STATUS" | "CANCEL"
   ) {
     setPayingInvoiceId(invoiceId);
     setBillingMsg(null);
@@ -1969,7 +1969,9 @@ function DashboardContent() {
                     <p className="text-[11px] text-[#737373]">
                       {activePendingInvoice.paymentProvider === "MIDTRANS"
                         ? "QRIS Midtrans · Otomatis aktif setelah pembayaran"
-                        : "QRIS Gellona Teknologi · Mode simulasi"}
+                        : activePendingInvoice.paymentProvider === "MERCHANT_QRIS"
+                        ? "QRIS Resmi Gellona Teknologi · Nominal otomatis"
+                        : "Tagihan Resmi Gellona Teknologi · Verifikasi Admin"}
                     </p>
                   </div>
 
@@ -2013,24 +2015,7 @@ function DashboardContent() {
                     </div>
 
                     <div className="flex flex-wrap gap-2.5">
-                      <button
-                        disabled={payingInvoiceId === activePendingInvoice.id}
-                        onClick={() =>
-                          handleInvoiceAction(
-                            activePendingInvoice.id,
-                            "SIMULATE_PAY"
-                          )
-                        }
-                        className="btn-action inline-flex h-10 cursor-pointer items-center justify-center rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
-                      >
-                        {payingInvoiceId === activePendingInvoice.id
-                          ? "Memverifikasi..."
-                          : `Konfirmasi / Simulasi Bayar (${formatRupiah(
-                              activePendingInvoice.amount
-                            )})`}
-                      </button>
-
-                      {activePendingInvoice.paymentProvider === "MIDTRANS" && (
+                      {activePendingInvoice.paymentProvider === "MIDTRANS" ? (
                         <button
                           disabled={payingInvoiceId === activePendingInvoice.id}
                           onClick={() =>
@@ -2039,11 +2024,26 @@ function DashboardContent() {
                               "CHECK_STATUS"
                             )
                           }
-                          className="btn-action inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-4 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                          className="btn-action inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
                         >
                           <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.5} />
-                          <span>Cek status Midtrans</span>
+                          <span>
+                            {payingInvoiceId === activePendingInvoice.id
+                              ? "Memeriksa..."
+                              : "Periksa status pembayaran"}
+                          </span>
                         </button>
+                      ) : (
+                        <a
+                          href={`mailto:admin@gellona.id?subject=${encodeURIComponent(
+                            `Konfirmasi Pembayaran Invoice ${activePendingInvoice.invoiceCode} (${shop.shopCode})`
+                          )}&body=${encodeURIComponent(
+                            `Halo Admin Gellona Teknologi,\n\nSaya sudah menyelesaikan pembayaran untuk:\n- Toko: ${shop.name} (/s/${shop.shopCode})\n- Invoice: ${activePendingInvoice.invoiceCode}\n- Paket: ${activePendingInvoice.plan}\n- Total: ${formatRupiah(activePendingInvoice.amount)}\n\nMohon bantuannya untuk aktivasi paket. Terima kasih.`
+                          )}`}
+                          className="btn-action inline-flex h-10 items-center justify-center rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                        >
+                          Konfirmasi Pembayaran ke Admin Gellona
+                        </a>
                       )}
 
                       <button
@@ -3229,7 +3229,7 @@ function DashboardContent() {
 
                 <div>
                   <p className="mb-1.5 text-xs font-medium text-[#171717]">
-                    1. Mode simulasi (uji alur tanpa mengeluarkan kertas)
+                    1. Uji koneksi tanpa kertas (opsional untuk pengecekan)
                   </p>
                   <div className="flex items-center justify-between gap-2 rounded-lg bg-[#141415] p-3.5 text-xs text-[#ededed]">
                     <code className="font-mono-num overflow-x-auto">

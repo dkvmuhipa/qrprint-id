@@ -54,6 +54,9 @@ export async function GET(
         photoPrice: shop.photoPrice,
         duplexDiscount: shop.duplexDiscount,
         qrisName: shop.qrisName,
+        hasQrisPayment: Boolean(
+          shop.staticQrisString || shop.midtransServerKey
+        ),
         isAgentOnline,
         plan: entitlement.plan.id,
         allowExtraPaper: entitlement.plan.allowExtraPaper,

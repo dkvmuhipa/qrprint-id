@@ -57,7 +57,7 @@ export async function POST(req: Request) {
     });
 
     const invoiceCode = generateInvoiceCode();
-    let paymentProvider = "SIMULATION";
+    let paymentProvider = "MANUAL_TRANSFER";
     let paymentOrderId: string | null = null;
     let qrisUrl: string | null = null;
     let qrisString: string | null = null;
@@ -78,13 +78,13 @@ export async function POST(req: Request) {
         qrisUrl = charge.qrisUrl;
         qrisString = charge.qrisString;
       } catch {
-        // Fallback to platform static QRIS or simulation
+        // Fallback to platform static QRIS or manual transfer
       }
     }
 
     const platformStaticQris = (process.env.PLATFORM_STATIC_QRIS || "").trim();
     if (
-      paymentProvider === "SIMULATION" &&
+      paymentProvider === "MANUAL_TRANSFER" &&
       platformStaticQris &&
       isValidStaticQris(platformStaticQris)
     ) {
@@ -155,22 +155,7 @@ export async function PATCH(req: Request) {
 
     let isPaidNow = false;
 
-    if (action === "SIMULATE_PAY") {
-      // Block self-service payment simulation in production unless explicitly enabled for demos
-      const allowSim =
-        process.env.NODE_ENV !== "production" ||
-        process.env.ALLOW_PAYMENT_SIMULATION === "true";
-      if (!allowSim || invoice.paymentProvider !== "SIMULATION") {
-        return NextResponse.json(
-          {
-            error:
-              "Konfirmasi pembayaran langganan dilakukan otomatis via QRIS/Midtrans atau verifikasi manual oleh Admin Gellona Teknologi.",
-          },
-          { status: 403 }
-        );
-      }
-      isPaidNow = true;
-    } else if (
+    if (
       action === "CHECK_STATUS" &&
       invoice.paymentProvider === "MIDTRANS" &&
       invoice.paymentOrderId

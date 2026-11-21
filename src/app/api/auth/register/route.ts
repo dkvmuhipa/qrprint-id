@@ -167,7 +167,7 @@ export async function POST(req: Request) {
 
     if (requestedPlan.id !== "DEMO" && requestedPlan.price > 0) {
       const invoiceCode = generateInvoiceCode();
-      let paymentProvider = "SIMULATION";
+      let paymentProvider = "MANUAL_TRANSFER";
       let paymentOrderId: string | null = null;
       let qrisUrl: string | null = null;
       let qrisString: string | null = null;
@@ -188,13 +188,13 @@ export async function POST(req: Request) {
           qrisUrl = charge.qrisUrl;
           qrisString = charge.qrisString;
         } catch {
-          // Fallback to platform static QRIS or simulation QRIS
+          // Fallback to platform static QRIS or manual transfer
         }
       }
 
       const platformStaticQris = (process.env.PLATFORM_STATIC_QRIS || "").trim();
       if (
-        paymentProvider === "SIMULATION" &&
+        paymentProvider === "MANUAL_TRANSFER" &&
         platformStaticQris &&
         isValidStaticQris(platformStaticQris)
       ) {
