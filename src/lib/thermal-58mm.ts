@@ -428,37 +428,37 @@ function openThermal58mmPopup(title: string, bodyHtml: string): void {
       background: #fff;
       color: #000;
       font-family: "Courier New", Courier, monospace;
-      font-size: 11px;
+      font-size: 12px;
       line-height: 1.35;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
     .sheet {
-      width: 48mm;
+      width: 57mm;
       margin: 0 auto;
-      padding: 2mm 0 6mm;
+      padding: 2mm 1mm 6mm;
     }
     .center { text-align: center; }
     .bold { font-weight: 700; }
-    .shop-name { font-size: 14px; font-weight: 700; line-height: 1.2; }
-    .muted { font-size: 10px; }
+    .shop-name { font-size: 16px; font-weight: 700; line-height: 1.2; }
+    .muted { font-size: 11px; }
     .code-box {
-      font-size: 18px;
+      font-size: 21px;
       font-weight: 700;
-      letter-spacing: 1px;
-      margin: 2px 0;
+      letter-spacing: 1.5px;
+      margin: 3px 0;
     }
     .hr {
       border: 0;
       border-top: 1px dashed #000;
-      margin: 5px 0;
+      margin: 6px 0;
     }
     .row {
       display: flex;
       justify-content: space-between;
       gap: 6px;
       align-items: baseline;
-      margin: 2px 0;
+      margin: 2.5px 0;
     }
     .row .val {
       text-align: right;
@@ -468,21 +468,21 @@ function openThermal58mmPopup(title: string, bodyHtml: string): void {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: 700;
-      margin-top: 3px;
+      margin-top: 4px;
     }
     .qr-img {
       display: block;
-      width: 38mm;
-      height: 38mm;
-      margin: 4px auto;
+      width: 46mm;
+      height: 46mm;
+      margin: 5px auto;
       image-rendering: pixelated;
     }
     .footer {
       text-align: center;
-      font-size: 9.5px;
-      margin-top: 4px;
+      font-size: 10.5px;
+      margin-top: 5px;
     }
   </style>
 </head>
