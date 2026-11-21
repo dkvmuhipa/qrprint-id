@@ -1116,6 +1116,43 @@ function DashboardContent() {
               </div>
             )}
 
+          {/* Soft Anti-Churn Renewal Reminder Banner (H-3 for paid plans, <=6h for Demo) */}
+          {entitlement.canAcceptJobs &&
+            !activePendingInvoice &&
+            ((shop.plan !== "DEMO" &&
+              entitlement.daysLeft !== null &&
+              entitlement.daysLeft <= 3) ||
+              (shop.plan === "DEMO" &&
+                entitlement.hoursLeft !== null &&
+                entitlement.hoursLeft <= 6)) && (
+              <div className="no-print mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#b45309]/30 bg-[#fffbeb] p-4 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle
+                    className="mt-0.5 h-4 w-4 shrink-0 text-[#b45309]"
+                    strokeWidth={1.5}
+                  />
+                  <div>
+                    <p className="font-medium text-[#171717]">
+                      {shop.plan === "DEMO"
+                        ? `Masa uji coba Demo tinggal ${entitlement.hoursLeft} jam lagi`
+                        : `Masa aktif paket ${entitlement.plan.name} tinggal ${entitlement.daysLeft} hari lagi`}
+                    </p>
+                    <p className="mt-0.5 text-[#525252]">
+                      Perpanjang lebih awal agar portal QR cetak pelanggan di
+                      meja kasir tidak sempat berhenti.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTab("billing")}
+                  className="btn-action h-8 shrink-0 cursor-pointer rounded-lg bg-[#171717] px-3.5 text-xs font-medium text-white hover:bg-[#171717]/90"
+                >
+                  Perpanjang Sekarang
+                </button>
+              </div>
+            )}
+
           {/* Page Header */}
           <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>

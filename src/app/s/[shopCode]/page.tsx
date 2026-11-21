@@ -26,6 +26,10 @@ import {
   Palette,
 } from "lucide-react";
 import { calculatePrintPrice, formatRupiah } from "@/lib/utils";
+import {
+  countSingleFilePages,
+  mergeFilesToSinglePdf,
+} from "@/lib/merge-files-pdf";
 
 interface PublicShop {
   shopCode: string;
@@ -80,6 +84,9 @@ function CustomerScanPortalContent({
   const [loadingShop, setLoadingShop] = useState(true);
 
   const [file, setFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<
+    Array<{ file: File; pages: number }>
+  >([]);
   const [detectedPages, setDetectedPages] = useState<number>(1);
   const [countingPages, setCountingPages] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -191,30 +198,50 @@ function CustomerScanPortalContent({
     return () => clearInterval(timer);
   }, [activeJob?.jobCode, activeJob?.printStatus]);
 
-  async function handleFileSelect(selected: File | null) {
+  async function handleFilesAdd(fileList: FileList | null) {
     setSubmitError(null);
-    if (!selected) {
-      setFile(null);
-      setDetectedPages(1);
+    if (!fileList || fileList.length === 0) return;
+
+    const incoming = Array.from(fileList).slice(0, 10 - selectedFiles.length);
+    if (incoming.length === 0) {
+      setSubmitError("Maksimal 10 file dalam 1 pesanan.");
       return;
     }
-    setFile(selected);
 
-    if (selected.type === "application/pdf") {
-      setCountingPages(true);
-      try {
-        const buf = await selected.arrayBuffer();
-        const doc = await PDFDocument.load(buf, { ignoreEncryption: true });
-        setDetectedPages(Math.max(1, doc.getPageCount()));
-      } catch {
-        setDetectedPages(1);
-      } finally {
-        setCountingPages(false);
+    setCountingPages(true);
+    try {
+      const counted = await Promise.all(
+        incoming.map(async (f) => ({
+          file: f,
+          pages: await countSingleFilePages(f),
+        }))
+      );
+      const next = [...selectedFiles, ...counted].slice(0, 10);
+      const totalBytes = next.reduce((acc, item) => acc + item.file.size, 0);
+      if (totalBytes > 20 * 1024 * 1024) {
+        setSubmitError(
+          "Total ukuran gabungan file melebihi batas 20 MB. Hapus sebagian file terlebih dahulu."
+        );
+        return;
       }
-    } else {
-      setDetectedPages(1);
-      setPageRange("ALL");
+      setSelectedFiles(next);
+      setFile(next[0]?.file || null);
+      const totalPgs = next.reduce((acc, item) => acc + item.pages, 0);
+      setDetectedPages(Math.max(1, totalPgs));
+      if (next.length > 1) {
+        setPageRange("ALL");
+      }
+    } finally {
+      setCountingPages(false);
     }
+  }
+
+  function handleRemoveFile(idx: number) {
+    const next = selectedFiles.filter((_, i) => i !== idx);
+    setSelectedFiles(next);
+    setFile(next[0]?.file || null);
+    const totalPgs = next.reduce((acc, item) => acc + item.pages, 0);
+    setDetectedPages(Math.max(1, totalPgs || 1));
   }
 
   const priceCalc = useMemo(() => {
@@ -235,13 +262,18 @@ function CustomerScanPortalContent({
 
   async function handleUploadAndOrder(e: React.FormEvent) {
     e.preventDefault();
-    if (!file || !shop) return;
+    if (selectedFiles.length === 0 || !shop) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const uploadFile =
+        selectedFiles.length > 1
+          ? await mergeFilesToSinglePdf(selectedFiles.map((s) => s.file))
+          : selectedFiles[0].file;
+
       const fd = new FormData();
       fd.append("shopCode", shop.shopCode);
-      fd.append("file", file);
+      fd.append("file", uploadFile);
       fd.append("customerName", customerName || "Pelanggan");
       if (customerWhatsapp.trim()) {
         fd.append("customerWhatsapp", customerWhatsapp.trim());
@@ -322,6 +354,7 @@ function CustomerScanPortalContent({
   function resetOrder() {
     setActiveJob(null);
     setFile(null);
+    setSelectedFiles([]);
     setDetectedPages(1);
     setCopies(1);
     setPageRange("ALL");
@@ -841,66 +874,111 @@ function CustomerScanPortalContent({
               </div>
             )}
 
-            {/* File Dropzone */}
+            {/* File Dropzone (Single or Multi-File 1x QRIS) */}
             <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
-              <label className="mb-2.5 block text-xs font-medium text-[#1f1b16]">
-                1. Pilih dokumen PDF atau foto
-              </label>
-
-              <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#1f1b16]/25 bg-[#f7f4ee]/70 px-4 py-7 text-center transition-colors hover:border-[#1f1b16] hover:bg-[#efe9df]/50">
-                <input
-                  type="file"
-                  accept=".pdf,image/jpeg,image/png,image/webp"
-                  onChange={(e) =>
-                    handleFileSelect(e.target.files?.[0] || null)
-                  }
-                  className="hidden"
-                />
-                {file ? (
-                  <>
-                    {filePreviewUrl ? (
-                      <div className="overflow-hidden rounded-xl border border-[#1f1b16]/15 bg-white p-1.5 shadow-2xs">
-                        <img
-                          src={filePreviewUrl}
-                          alt={`Pratinjau ${file.name}`}
-                          className="max-h-36 max-w-[220px] rounded-lg object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#1f1b16] text-[#fdfbf7]">
-                        <FileText className="h-6 w-6" strokeWidth={1.5} />
-                      </div>
-                    )}
-                    <p className="mt-2.5 max-w-full truncate text-sm font-medium text-[#1f1b16]">
-                      {file.name}
-                    </p>
-                    <p className="font-mono-num mt-1 text-xs text-[#5e554a]">
-                      {countingPages
-                        ? "Menghitung lembar halaman PDF..."
-                        : `${file.type === "application/pdf" ? "PDF · " : "Foto · "}${detectedPages} halaman · ${(
-                            file.size /
-                            1024 /
-                            1024
-                          ).toFixed(2)} MB`}
-                    </p>
-                    <span className="mt-2 text-xs font-medium text-[#d9381e] underline">
-                      Ganti dokumen lain
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#1f1b16]/12 bg-white text-[#1f1b16]">
-                      <UploadCloud className="h-5 w-5" strokeWidth={1.5} />
-                    </div>
-                    <p className="mt-3 text-sm font-medium text-[#1f1b16]">
-                      Ketuk untuk memilih file dari ponsel Anda
-                    </p>
-                    <p className="mt-1 text-xs text-[#7b7266]">
-                      Mendukung PDF, JPG, PNG, WEBP hingga 20 MB
-                    </p>
-                  </>
+              <div className="mb-2.5 flex items-center justify-between gap-2">
+                <label className="block text-xs font-medium text-[#1f1b16]">
+                  1. Pilih dokumen PDF atau foto (bisa lebih dari 1 file)
+                </label>
+                {selectedFiles.length > 1 && (
+                  <span className="font-mono-num rounded bg-[#16a34a]/10 px-2 py-0.5 text-[10px] font-semibold text-[#15803d]">
+                    {selectedFiles.length} file · 1× bayar
+                  </span>
                 )}
-              </label>
+              </div>
+
+              {selectedFiles.length === 0 ? (
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#1f1b16]/25 bg-[#f7f4ee]/70 px-4 py-7 text-center transition-colors hover:border-[#1f1b16] hover:bg-[#efe9df]/50">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      handleFilesAdd(e.target.files);
+                      e.target.value = "";
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#1f1b16]/12 bg-white text-[#1f1b16]">
+                    <UploadCloud className="h-5 w-5" strokeWidth={1.5} />
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-[#1f1b16]">
+                    Ketuk untuk memilih 1 atau beberapa file dari HP
+                  </p>
+                  <p className="mt-1 text-xs text-[#7b7266]">
+                    PDF, JPG, PNG, WEBP · Maks. 10 file (total 20 MB) dalam 1×
+                    bayar QRIS
+                  </p>
+                </label>
+              ) : (
+                <div className="space-y-3">
+                  {selectedFiles.length === 1 && filePreviewUrl && (
+                    <div className="flex justify-center rounded-xl border border-[#1f1b16]/12 bg-white p-2">
+                      <img
+                        src={filePreviewUrl}
+                        alt={`Pratinjau ${selectedFiles[0].file.name}`}
+                        className="max-h-36 max-w-[240px] rounded-lg object-contain"
+                      />
+                    </div>
+                  )}
+
+                  <div className="divide-y divide-[#1f1b16]/8 rounded-xl border border-[#1f1b16]/12 bg-white">
+                    {selectedFiles.map((item, idx) => (
+                      <div
+                        key={`${item.file.name}-${idx}`}
+                        className="flex items-center justify-between gap-2.5 px-3 py-2.5 text-xs"
+                      >
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
+                            <FileText className="h-4 w-4" strokeWidth={1.5} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-[#1f1b16]">
+                              {item.file.name}
+                            </p>
+                            <p className="font-mono-num text-[11px] text-[#7b7266]">
+                              {item.pages} hal ·{" "}
+                              {(item.file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(idx)}
+                          title="Hapus file ini"
+                          className="shrink-0 cursor-pointer rounded-md p-1.5 text-[#7b7266] hover:bg-[#dc2626]/10 hover:text-[#dc2626]"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="font-mono-num text-[#5e554a]">
+                      {countingPages
+                        ? "Menghitung halaman..."
+                        : `Total: ${selectedFiles.length} file · ${detectedPages} halaman`}
+                    </span>
+                    {selectedFiles.length < 10 && (
+                      <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-3 py-1.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]">
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,image/jpeg,image/png,image/webp"
+                          onChange={(e) => {
+                            handleFilesAdd(e.target.files);
+                            e.target.value = "";
+                          }}
+                          className="hidden"
+                        />
+                        <Plus className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={2} />
+                        <span>Tambah file lagi</span>
+                      </label>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Print Options */}

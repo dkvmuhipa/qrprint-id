@@ -725,6 +725,14 @@ export default function SuperAdminPage() {
                               Midtrans {shop.midtransIsProd ? "Live" : "Sandbox"}
                             </span>
                           )}
+                          {(!shop.canAcceptJobs ||
+                            (shop.daysLeft !== null && shop.daysLeft <= 3)) && (
+                            <span className="rounded bg-[#b45309]/12 px-1.5 py-0.5 font-mono-num text-[10px] font-medium text-[#b45309]">
+                              {!shop.canAcceptJobs
+                                ? "Perlu Perpanjangan"
+                                : `H-${shop.daysLeft} Expired`}
+                            </span>
+                          )}
                         </div>
 
                         <p className="mt-1 text-sm font-medium text-[#171717]">
@@ -772,6 +780,32 @@ export default function SuperAdminPage() {
                           <UserCheck className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
                           <span>Buka Dashboard</span>
                         </button>
+
+                        {(!shop.canAcceptJobs ||
+                          (shop.daysLeft !== null && shop.daysLeft <= 3)) &&
+                          shop.phone && (
+                            <a
+                              href={`https://wa.me/${(() => {
+                                const d = shop.phone.replace(/\D/g, "");
+                                return d.startsWith("0")
+                                  ? `62${d.slice(1)}`
+                                  : d.startsWith("62")
+                                  ? d
+                                  : `62${d}`;
+                              })()}?text=${encodeURIComponent(
+                                `Halo Kak ${shop.ownerName} (${shop.name}), mengingatkan masa aktif Ngeprint paket ${shop.plan} ${
+                                  !shop.canAcceptJobs
+                                    ? "sudah berakhir"
+                                    : `tinggal ${shop.daysLeft} hari lagi`
+                                }. Yuk perpanjang langsung dari Dashboard → Langganan & Paket agar layanan cetak QR di toko tetap lancar. Terima kasih!`
+                              )}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#16a34a]/30 bg-[#16a34a]/10 px-2.5 text-xs font-medium text-[#15803d] hover:bg-[#16a34a]/15"
+                            >
+                              <span>Ingatkan WA</span>
+                            </a>
+                          )}
 
                         <Link
                           href={`/s/${shop.shopCode}`}
