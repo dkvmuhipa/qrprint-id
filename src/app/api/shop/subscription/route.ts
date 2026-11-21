@@ -13,6 +13,7 @@ import {
   resolveMidtransConfig,
 } from "@/lib/midtrans";
 import { convertStaticQrisToDynamic, isValidStaticQris } from "@/lib/qris";
+import { rewardReferrerIfEligible } from "@/lib/referral";
 
 export async function GET() {
   const shop = await getCurrentShop();
@@ -205,6 +206,8 @@ export async function PATCH(req: Request) {
         data: fulfillment.data,
       }),
     ]);
+
+    await rewardReferrerIfEligible(shop.id, invoice.plan).catch(() => null);
 
     return NextResponse.json({
       paid: true,

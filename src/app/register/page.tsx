@@ -36,6 +36,7 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planParam = (searchParams.get("plan") || "").toUpperCase();
+  const refParam = (searchParams.get("ref") || "").trim();
   const resolvedInitialPlan = PLAN_OPTIONS.some((p) => p.id === planParam)
     ? planParam
     : "DEMO";
@@ -118,6 +119,7 @@ function RegisterForm() {
           bwPrice: bwNum,
           colorPrice: colorNum,
           plan: form.plan,
+          ...(refParam ? { refCode: refParam } : {}),
         }),
       });
       const data = await res.json();
@@ -176,7 +178,14 @@ function RegisterForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-            {error && (
+            {refParam && (
+            <div className="mb-4 rounded-lg border border-[#15803d]/25 bg-[#15803d]/8 px-3.5 py-2.5 text-xs text-[#15803d]">
+              Undangan Referral Mitra:{" "}
+              <strong className="font-mono-num">/s/{refParam}</strong>
+            </div>
+          )}
+
+          {error && (
               <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3.5 text-xs font-medium text-[#dc2626]">
                 {error}
               </div>

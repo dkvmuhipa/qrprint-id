@@ -36,6 +36,17 @@ export async function POST(req: Request) {
     const file = formData.get("file") as File | null;
     const customerName =
       String(formData.get("customerName") || "").trim() || "Pelanggan";
+    const rawWa = String(formData.get("customerWhatsapp") || "")
+      .replace(/\D/g, "")
+      .slice(0, 16);
+    const customerWhatsapp =
+      rawWa.length >= 9
+        ? rawWa.startsWith("0")
+          ? `62${rawWa.slice(1)}`
+          : rawWa.startsWith("62")
+          ? rawWa
+          : `62${rawWa}`
+        : null;
     const copies = Math.max(1, Math.min(50, Number(formData.get("copies")) || 1));
     const colorMode =
       String(formData.get("colorMode") || "BW") === "COLOR" ? "COLOR" : "BW";
@@ -238,6 +249,7 @@ export async function POST(req: Request) {
         jobCode,
         shopId: shop.id,
         customerName: customerName.slice(0, 60),
+        customerWhatsapp,
         fileName: safeDisplayName,
         storedFilePath,
         mimeType: verifiedType.mimeType,

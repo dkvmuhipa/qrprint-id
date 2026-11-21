@@ -143,6 +143,24 @@ export async function POST(req: Request) {
     const parsedBw = Math.round(Number(bwPrice));
     const parsedColor = Math.round(Number(colorPrice));
 
+    const cleanRefCode = String(body.refCode || "").trim().slice(0, 40);
+    let referredByShopId: string | null = null;
+    if (cleanRefCode) {
+      const referrer = await prisma.shop.findFirst({
+        where: {
+          OR: [
+            { shopCode: cleanRefCode },
+            { shopCode: cleanRefCode.toLowerCase() },
+            { shopCode: cleanRefCode.toUpperCase() },
+          ],
+        },
+        select: { id: true },
+      });
+      if (referrer) {
+        referredByShopId = referrer.id;
+      }
+    }
+
     const shop = await prisma.shop.create({
       data: {
         shopCode,
@@ -160,6 +178,7 @@ export async function POST(req: Request) {
           Number.isFinite(parsedColor) && parsedColor >= 100 ? parsedColor : 1500,
         agentKey,
         qrisName: `QRIS ${cleanName.toUpperCase()}`,
+        referredByShopId,
       },
     });
 

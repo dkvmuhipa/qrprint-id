@@ -37,6 +37,7 @@ export interface ShopInfo {
   hasMidtransKey?: boolean;
   midtransServerKeyMasked?: string;
   midtransIsProd?: boolean;
+  referralCount?: number;
 }
 
 export interface PlanDefItem {
@@ -84,6 +85,7 @@ export interface PrintJobItem {
   id: string;
   jobCode: string;
   customerName: string;
+  customerWhatsapp?: string | null;
   fileName: string;
   storedFilePath: string | null;
   pageCount: number;

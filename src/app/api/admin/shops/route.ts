@@ -16,6 +16,7 @@ import {
   sanitizeShopSlug,
 } from "@/lib/utils";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
+import { rewardReferrerIfEligible } from "@/lib/referral";
 
 export async function POST(req: Request) {
   const admin = await getCurrentAdmin();
@@ -177,6 +178,8 @@ export async function PATCH(req: Request) {
           data: fulfillment.data,
         }),
       ]);
+
+      await rewardReferrerIfEligible(inv.shopId, inv.plan).catch(() => null);
 
       return NextResponse.json({
         ok: true,

@@ -5,6 +5,7 @@ import {
   Banknote,
   CheckCircle2,
   FileText,
+  MessageCircle,
   Printer,
   QrCode,
   Receipt,
@@ -472,6 +473,21 @@ export function QueueTab({
                         />
                         <span>Struk</span>
                       </button>
+                    )}
+
+                    {job.customerWhatsapp && job.paymentStatus === "PAID" && (
+                      <a
+                        href={`https://wa.me/${job.customerWhatsapp}?text=${encodeURIComponent(
+                          `Halo Kak ${job.customerName}, cetakan Anda di ${shop.name} (${job.jobCode} · ${job.fileName}) sudah selesai dicetak dan siap diambil di meja kasir. Terima kasih!`
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Kabari pelanggan lewat WhatsApp bahwa cetakan siap diambil"
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#16a34a]/25 bg-[#16a34a]/10 px-2.5 text-xs font-medium text-[#15803d] hover:bg-[#16a34a]/15"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        <span>Kabari WA</span>
+                      </a>
                     )}
 
                     {job.printStatus === "PRINTING" && job.storedFilePath && (

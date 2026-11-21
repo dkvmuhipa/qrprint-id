@@ -40,6 +40,9 @@ model Shop {
   staticQrisHash      String?
   midtransServerKey   String?
   midtransIsProd      Boolean               @default(false)
+  referredByShopId    String?
+  referralRewarded    Boolean               @default(false)
+  referralCount       Int                   @default(0)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   jobs                PrintJob[]
@@ -54,6 +57,7 @@ model PrintJob {
   shopNameSnapshot String?
   shopCodeSnapshot String?
   customerName     String    @default("Pelanggan")
+  customerWhatsapp String?
   fileName        String
   storedFilePath  String?
   mimeType        String

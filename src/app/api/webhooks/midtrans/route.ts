@@ -6,6 +6,7 @@ import {
 } from "@/lib/midtrans";
 import { deleteUploadedFile } from "@/lib/storage";
 import { buildShopUpdateForPaidInvoice } from "@/lib/plans";
+import { rewardReferrerIfEligible } from "@/lib/referral";
 
 export async function GET() {
   return NextResponse.json({
@@ -90,6 +91,10 @@ export async function POST(req: Request) {
             data: fulfillment.data,
           }),
         ]);
+        await rewardReferrerIfEligible(
+          subInvoice.shopId,
+          subInvoice.plan
+        ).catch(() => null);
       } else if (isFailed && subInvoice.status === "PENDING") {
         await prisma.subscriptionInvoice.update({
           where: { id: subInvoice.id },

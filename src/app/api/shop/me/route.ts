@@ -208,6 +208,7 @@ export async function GET() {
         ? `${shop.midtransServerKey.slice(0, 10)}••••${shop.midtransServerKey.slice(-4)}`
         : "",
       midtransIsProd: shop.midtransIsProd,
+      referralCount: shop.referralCount,
     },
     entitlement,
     plans: Object.values(SAAS_PLANS),

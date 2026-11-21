@@ -9,6 +9,7 @@ import {
   canUseListener,
   formatInvoicePlanLabel,
 } from "@/lib/plans";
+import { rewardReferrerIfEligible } from "@/lib/referral";
 
 /**
  * Ekstrak nominal Rupiah dari teks notifikasi Android (GoPay Merchant, GoBiz, DANA Bisnis, OVO, BRI, BCA, dll).
@@ -148,6 +149,11 @@ export async function POST(req: Request) {
           data: fulfillment.data,
         }),
       ]);
+
+      await rewardReferrerIfEligible(
+        matchingInvoice.shopId,
+        matchingInvoice.plan
+      ).catch(() => null);
 
       return NextResponse.json({
         ok: true,

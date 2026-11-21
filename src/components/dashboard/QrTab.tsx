@@ -1,6 +1,6 @@
 "use client";
 
-import { Bluetooth, Download, Printer, QrCode, Receipt } from "lucide-react";
+import { Bluetooth, Copy, Download, Printer, QrCode, Receipt, Share2 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { POSTER_THEMES, type PosterThemeId } from "./helpers";
 import type { ShopInfo } from "./types";
@@ -346,6 +346,51 @@ export function QrTab({
                 {thermalMsg.text}
               </p>
             )}
+          </div>
+
+          {/* Pre-Order Remote Print Share Box (WA Status & Bio IG) */}
+          <div className="rounded-xl border border-[#16a34a]/20 bg-[#f0fdf4] p-3.5">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-[#171717]">
+                Promosi "Pesan dari Kos, Tinggal Ambil"
+              </p>
+              <span className="rounded bg-white px-2 py-0.5 text-[10px] font-medium text-[#15803d] border border-[#16a34a]/20">
+                WA &amp; Bio IG
+              </span>
+            </div>
+            <p className="mt-1 text-[11px] text-[#525252]">
+              Bagikan link ini ke Bio Instagram, Google Maps, atau Status WA
+              supaya pelanggan bisa kirim PDF &amp; bayar QRIS dari kos/kampus,
+              lalu tinggal ambil hasil cetakan tanpa antre!
+            </p>
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const bioText = `Cetak PDF/Foto tanpa antre di ${shop.name}! Upload dari HP & bayar QRIS, tinggal ambil 👉 ${qrUrl}`;
+                  onCopyUrl(bioText, "promo_bio");
+                }}
+                className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-2.5 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+              >
+                <Copy className="h-3 w-3" strokeWidth={1.5} />
+                <span>
+                  {copiedText === "promo_bio"
+                    ? "Teks Tersalin!"
+                    : "Salin Teks Bio IG/WA"}
+                </span>
+              </button>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(
+                  `Mau ngeprint di ${shop.name} tanpa antre? Kirim file PDF/foto & bayar QRIS dari HP sekarang, tinggal ambil hasil cetakannya di toko:\n${qrUrl}`
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-action inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-[#16a34a] px-2.5 text-[11px] font-medium text-white hover:bg-[#15803d]"
+              >
+                <Share2 className="h-3 w-3" strokeWidth={1.5} />
+                <span>Bagikan ke WA</span>
+              </a>
+            </div>
           </div>
         </div>
       </div>

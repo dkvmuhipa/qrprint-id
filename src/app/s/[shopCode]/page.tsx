@@ -83,6 +83,7 @@ function CustomerScanPortalContent({
   const [detectedPages, setDetectedPages] = useState<number>(1);
   const [countingPages, setCountingPages] = useState(false);
   const [customerName, setCustomerName] = useState("");
+  const [customerWhatsapp, setCustomerWhatsapp] = useState("");
   const [colorMode, setColorMode] = useState<"BW" | "COLOR">("BW");
   const [paperSize, setPaperSize] = useState<"A4" | "F4" | "PHOTO_4X6">("A4");
   const [copies, setCopies] = useState(1);
@@ -242,6 +243,9 @@ function CustomerScanPortalContent({
       fd.append("shopCode", shop.shopCode);
       fd.append("file", file);
       fd.append("customerName", customerName || "Pelanggan");
+      if (customerWhatsapp.trim()) {
+        fd.append("customerWhatsapp", customerWhatsapp.trim());
+      }
       fd.append("copies", String(copies));
       fd.append("colorMode", colorMode);
       fd.append("paperSize", paperSize);
@@ -905,16 +909,31 @@ function CustomerScanPortalContent({
                 2. Pengaturan cetak kertas
               </p>
 
-              <div>
-                <label className="mb-1 block text-xs text-[#5e554a]">
-                  Nama pemesan (opsional, untuk penanda di baki printer)
-                </label>
-                <input
-                  placeholder="Andi"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
-                />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    Nama pemesan (penanda di baki printer)
+                  </label>
+                  <input
+                    placeholder="Contoh: Andi"
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-[#5e554a]">
+                    No. WA (opsional — dikabari saat siap diambil)
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="08xxxxxxxxxx (pesan dari kos)"
+                    value={customerWhatsapp}
+                    onChange={(e) => setCustomerWhatsapp(e.target.value)}
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                  />
+                </div>
               </div>
 
               {/* Color Mode — Hidden when PHOTO_4X6 since Photo uses fixed photoPrice */}
