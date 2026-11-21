@@ -4,22 +4,24 @@ import { Loader2, Save, RotateCcw } from "lucide-react";
 
 interface StickySaveBarProps {
   saving: boolean;
+  errorText?: string | null;
   onReset: () => void;
   onSave: () => void;
 }
 
 export function StickySaveBar({
   saving,
+  errorText,
   onReset,
   onSave,
 }: StickySaveBarProps) {
   return (
     <div className="no-print fixed right-4 bottom-4 left-4 z-40 mx-auto max-w-3xl">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#171717]/15 bg-[#1f1b16] px-4 py-3 text-white shadow-2xl">
-        <div className="flex items-center gap-2.5 text-xs">
-          <span className="h-2 w-2 rounded-full bg-[#d9381e]" />
-          <span className="font-medium">
-            Ada perubahan pengaturan yang belum disimpan
+        <div className="flex min-w-0 flex-1 items-center gap-2.5 text-xs">
+          <span className="h-2 w-2 shrink-0 rounded-full bg-[#d9381e]" />
+          <span className="truncate font-medium">
+            {errorText ? errorText : "Ada perubahan pengaturan yang belum disimpan"}
           </span>
         </div>
         <div className="flex items-center gap-2">

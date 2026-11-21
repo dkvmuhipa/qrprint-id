@@ -165,6 +165,7 @@ function DashboardContent() {
   const [settingsInitialized, setSettingsInitialized] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState<string | null>(null);
+  const [settingsErr, setSettingsErr] = useState<string | null>(null);
   const [decodingQris, setDecodingQris] = useState(false);
   const [qrisDecodeMsg, setQrisDecodeMsg] = useState<string | null>(null);
 
@@ -692,10 +693,10 @@ function DashboardContent() {
   const hasUnsavedSettings = Boolean(
     settingsInitialized &&
       data?.shop &&
-      (settingsForm.shopCode !== data.shop.shopCode ||
-        settingsForm.name !== data.shop.name ||
-        settingsForm.address !== data.shop.address ||
-        settingsForm.qrisName !== data.shop.qrisName ||
+      (settingsForm.shopCode.trim() !== (data.shop.shopCode || "").trim() ||
+        settingsForm.name.trim() !== (data.shop.name || "").trim() ||
+        settingsForm.address.trim() !== (data.shop.address || "").trim() ||
+        settingsForm.qrisName.trim() !== (data.shop.qrisName || "").trim() ||
         Number(settingsForm.bwPrice) !== Number(data.shop.bwPrice) ||
         Number(settingsForm.colorPrice) !== Number(data.shop.colorPrice) ||
         Number(settingsForm.photoPrice) !== Number(data.shop.photoPrice) ||
@@ -704,8 +705,8 @@ function DashboardContent() {
         settingsForm.colorPrinter !== data.shop.colorPrinter ||
         settingsForm.photoPrinter !==
           (data.shop.photoPrinter || "Default Printer") ||
-        (settingsForm.thermalPrinter || "") !==
-          (data.shop.thermalPrinter || "") ||
+        (settingsForm.thermalPrinter || "").trim() !==
+          (data.shop.thermalPrinter || "").trim() ||
         Boolean(settingsForm.autoPrintReceipt) !==
           Boolean(data.shop.autoPrintReceipt) ||
         Boolean(settingsForm.midtransIsProd) !==
@@ -747,6 +748,7 @@ function DashboardContent() {
 
     setSavingSettings(true);
     setSettingsMsg(null);
+    setSettingsErr(null);
     try {
       const payload: Record<string, unknown> = {
         ...(isChangingSlug ? { shopCode: settingsForm.shopCode } : {}),
@@ -781,15 +783,46 @@ function DashboardContent() {
       const resJson = await res.json().catch(() => ({}));
       if (res.ok) {
         setSettingsMsg("Pengaturan toko, QRIS & printer telah disimpan");
-        setSettingsForm((prev) => ({
-          ...prev,
-          staticQrisString: "",
-          midtransServerKey: "",
-        }));
+        setSettingsErr(null);
         setQrisDecodeMsg(null);
-        await fetchDashboard();
+        // Re-fetch and force-sync settingsForm with the exact saved server state
+        const freshRes = await fetch("/api/shop/me", { cache: "no-store" });
+        if (freshRes.ok) {
+          const freshJson: DashboardData = await freshRes.json();
+          setData(freshJson);
+          const s = freshJson.shop;
+          setSettingsForm({
+            shopCode: s.shopCode,
+            name: s.name,
+            address: s.address,
+            qrisName: s.qrisName,
+            bwPrice: s.bwPrice,
+            colorPrice: s.colorPrice,
+            photoPrice: s.photoPrice,
+            duplexDiscount: s.duplexDiscount,
+            bwPrinter: s.bwPrinter,
+            colorPrinter: s.colorPrinter,
+            photoPrinter: s.photoPrinter || "Default Printer",
+            bwPrinters: s.bwPrinters || [s.bwPrinter || "Default Printer"],
+            colorPrinters: s.colorPrinters || [
+              s.colorPrinter || "Default Printer",
+            ],
+            photoPrinters: s.photoPrinters || [
+              s.photoPrinter || "Default Printer",
+            ],
+            thermalPrinter: s.thermalPrinter || "",
+            autoPrintReceipt: Boolean(s.autoPrintReceipt),
+            staticQrisString: "",
+            midtransServerKey: "",
+            midtransIsProd: Boolean(s.midtransIsProd),
+          });
+        } else {
+          await fetchDashboard();
+        }
       } else {
-        setSettingsMsg(resJson.error || "Gagal menyimpan pengaturan");
+        const errMsg = resJson.error || "Gagal menyimpan pengaturan";
+        setSettingsMsg(errMsg);
+        setSettingsErr(errMsg);
       }
     } finally {
       setSavingSettings(false);
@@ -1319,7 +1352,11 @@ function DashboardContent() {
       {tab === "settings" && hasUnsavedSettings && (
         <StickySaveBar
           saving={savingSettings}
-          onReset={handleResetSettings}
+          errorText={settingsErr}
+          onReset={() => {
+            setSettingsErr(null);
+            handleResetSettings();
+          }}
           onSave={() => handleSaveSettings()}
         />
       )}
