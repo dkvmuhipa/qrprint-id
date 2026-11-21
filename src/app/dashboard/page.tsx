@@ -40,12 +40,16 @@ import { formatInvoicePlanLabel } from "@/lib/plans";
 import {
   buildMiniQrEscPos,
   buildReceiptEscPos,
-  getConnectedBluetoothPrinterName,
   printMiniQr58mmWindow,
   printReceipt58mmWindow,
   printViaRawBt,
   printViaWebBluetooth,
 } from "@/lib/thermal-58mm";
+import type { DashboardData, PrintJobItem } from "@/components/dashboard/types";
+import { ReceiptModal } from "@/components/dashboard/ReceiptModal";
+import { DailyRecapModal } from "@/components/dashboard/DailyRecapModal";
+import { AgentTab } from "@/components/dashboard/AgentTab";
+import { StickySaveBar } from "@/components/dashboard/StickySaveBar";
 
 function playCashierBell() {
   if (typeof window === "undefined") return;
@@ -123,126 +127,6 @@ function exportShopJobsCsv(shopCode: string, jobs: PrintJobItem[]) {
   a.download = `laporan-omzet-${shopCode}-${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-}
-
-interface ShopInfo {
-  id: string;
-  shopCode: string;
-  shopCodeChangeCount?: number;
-  name: string;
-  ownerName: string;
-  email: string;
-  phone: string;
-  address: string;
-  plan: string;
-  planStatus: string;
-  planExpiresAt: string | null;
-  hasListenerAddon?: boolean;
-  extraPrinterSlots?: number;
-  effectiveMaxPrinters?: number | null;
-  canUseListener?: boolean;
-  bwPrice: number;
-  colorPrice: number;
-  duplexDiscount: number;
-  photoPrice: number;
-  agentKey: string;
-  agentLastSeen: string | null;
-  isAgentOnline: boolean;
-  printers: string[];
-  allPrinters?: string[];
-  bwPrinter: string;
-  colorPrinter: string;
-  photoPrinter?: string;
-  bwPrinters?: string[];
-  colorPrinters?: string[];
-  photoPrinters?: string[];
-  thermalPrinter?: string;
-  autoPrintReceipt?: boolean;
-  qrisName: string;
-  hasStaticQris?: boolean;
-  staticQrisPreview?: string;
-  hasMidtransKey?: boolean;
-  midtransServerKeyMasked?: string;
-  midtransIsProd?: boolean;
-}
-
-interface PlanDefItem {
-  id: string;
-  name: string;
-  price: number;
-  periodLabel: string;
-  durationDays: number | null;
-  maxJobs: number | null;
-  maxPrinters: number | null;
-  allowExtraPaper: boolean;
-  allowDuplex: boolean;
-  description: string;
-  features: string[];
-}
-
-interface EntitlementInfo {
-  plan: PlanDefItem;
-  isExpired: boolean;
-  daysLeft: number | null;
-  hoursLeft: number | null;
-  quotaUsed: number;
-  quotaLimit: number | null;
-  isQuotaExceeded: boolean;
-  canAcceptJobs: boolean;
-  blockReason: string | null;
-}
-
-interface SubscriptionInvoiceItem {
-  id: string;
-  invoiceCode: string;
-  plan: string;
-  amount: number;
-  durationDays: number | null;
-  paymentProvider: string;
-  paymentOrderId: string | null;
-  qrisUrl: string | null;
-  qrisString: string | null;
-  status: string;
-  paidAt: string | null;
-  createdAt: string;
-}
-
-interface PrintJobItem {
-  id: string;
-  jobCode: string;
-  customerName: string;
-  fileName: string;
-  storedFilePath: string | null;
-  pageCount: number;
-  copies: number;
-  colorMode: string;
-  paperSize: string;
-  duplex: boolean;
-  pageRange: string;
-  totalPrice: number;
-  paymentMethod: string;
-  paymentStatus: string;
-  printStatus: string;
-  fileDeletedAt: string | null;
-  createdAt: string;
-}
-
-interface DashboardData {
-  shop: ShopInfo;
-  entitlement: EntitlementInfo;
-  plans: PlanDefItem[];
-  invoices: SubscriptionInvoiceItem[];
-  stats: {
-    todayRevenue: number;
-    totalRevenue: number;
-    qrisRevenue?: number;
-    cashRevenue?: number;
-    totalPagesPrinted?: number;
-    dailyRevenue7d?: Array<{ date: string; revenue: number; jobs: number }>;
-    activeQueue: number;
-    completedCount: number;
-  };
-  jobs: PrintJobItem[];
 }
 
 function DashboardContent() {
@@ -369,6 +253,7 @@ function DashboardContent() {
   const [posterSize, setPosterSize] = useState<"A5" | "A4">("A5");
   const [downloadingPoster, setDownloadingPoster] = useState(false);
   const [receiptJob, setReceiptJob] = useState<PrintJobItem | null>(null);
+  const [showDailyRecap, setShowDailyRecap] = useState(false);
   const [printingThermal, setPrintingThermal] = useState(false);
   const [thermalMsg, setThermalMsg] = useState<{
     type: "ok" | "err";
@@ -882,8 +767,20 @@ function DashboardContent() {
 
   useEffect(() => {
     fetchDashboard();
-    const timer = setInterval(fetchDashboard, 3000);
-    return () => clearInterval(timer);
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      fetchDashboard();
+    }, 3000);
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        fetchDashboard();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [fetchDashboard]);
 
   useEffect(() => {
@@ -986,8 +883,76 @@ function DashboardContent() {
     }
   }
 
-  async function handleSaveSettings(e: React.FormEvent) {
-    e.preventDefault();
+  function handleResetSettings() {
+    if (!data?.shop) return;
+    const s = data.shop;
+    setSettingsForm({
+      shopCode: s.shopCode,
+      name: s.name,
+      address: s.address,
+      qrisName: s.qrisName,
+      bwPrice: s.bwPrice,
+      colorPrice: s.colorPrice,
+      photoPrice: s.photoPrice,
+      duplexDiscount: s.duplexDiscount,
+      bwPrinter: s.bwPrinter,
+      colorPrinter: s.colorPrinter,
+      photoPrinter: s.photoPrinter || "Default Printer",
+      bwPrinters: s.bwPrinters || [s.bwPrinter || "Default Printer"],
+      colorPrinters: s.colorPrinters || [s.colorPrinter || "Default Printer"],
+      photoPrinters: s.photoPrinters || [s.photoPrinter || "Default Printer"],
+      thermalPrinter: s.thermalPrinter || "",
+      autoPrintReceipt: Boolean(s.autoPrintReceipt),
+      staticQrisString: "",
+      midtransServerKey: "",
+      midtransIsProd: Boolean(s.midtransIsProd),
+    });
+    setSettingsMsg(null);
+  }
+
+  const hasUnsavedSettings = Boolean(
+    settingsInitialized &&
+      data?.shop &&
+      (settingsForm.shopCode !== data.shop.shopCode ||
+        settingsForm.name !== data.shop.name ||
+        settingsForm.address !== data.shop.address ||
+        settingsForm.qrisName !== data.shop.qrisName ||
+        Number(settingsForm.bwPrice) !== Number(data.shop.bwPrice) ||
+        Number(settingsForm.colorPrice) !== Number(data.shop.colorPrice) ||
+        Number(settingsForm.photoPrice) !== Number(data.shop.photoPrice) ||
+        Number(settingsForm.duplexDiscount) !== Number(data.shop.duplexDiscount) ||
+        settingsForm.bwPrinter !== data.shop.bwPrinter ||
+        settingsForm.colorPrinter !== data.shop.colorPrinter ||
+        settingsForm.photoPrinter !==
+          (data.shop.photoPrinter || "Default Printer") ||
+        (settingsForm.thermalPrinter || "") !==
+          (data.shop.thermalPrinter || "") ||
+        Boolean(settingsForm.autoPrintReceipt) !==
+          Boolean(data.shop.autoPrintReceipt) ||
+        Boolean(settingsForm.midtransIsProd) !==
+          Boolean(data.shop.midtransIsProd) ||
+        settingsForm.staticQrisString.trim() !== "" ||
+        settingsForm.midtransServerKey.trim() !== "" ||
+        JSON.stringify(settingsForm.bwPrinters) !==
+          JSON.stringify(
+            data.shop.bwPrinters || [data.shop.bwPrinter || "Default Printer"]
+          ) ||
+        JSON.stringify(settingsForm.colorPrinters) !==
+          JSON.stringify(
+            data.shop.colorPrinters || [
+              data.shop.colorPrinter || "Default Printer",
+            ]
+          ) ||
+        JSON.stringify(settingsForm.photoPrinters) !==
+          JSON.stringify(
+            data.shop.photoPrinters || [
+              data.shop.photoPrinter || "Default Printer",
+            ]
+          ))
+  );
+
+  async function handleSaveSettings(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     const currentCode = data?.shop.shopCode || "";
     const changeCount = data?.shop.shopCodeChangeCount ?? 0;
     const isChangingSlug =
@@ -1373,6 +1338,14 @@ function DashboardContent() {
                     <VolumeX className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
                   )}
                   <span>{soundEnabled ? "Suara aktif" : "Suara senyap"}</span>
+                </button>
+
+                <button
+                  onClick={() => setShowDailyRecap(true)}
+                  className="btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/15 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                >
+                  <Receipt className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.5} />
+                  <span>Rekap Hari Ini (58mm)</span>
                 </button>
 
                 <button
@@ -3779,351 +3752,54 @@ function DashboardContent() {
 
           {/* TAB 5: WINDOWS PRINT AGENT */}
           {tab === "agent" && (
-            <div className="space-y-5 rounded-xl border border-[#171717]/8 bg-white p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <h2 className="text-base font-medium text-[#171717]">
-                    Perintah terminal Windows Print Agent
-                  </h2>
-                  <p className="mt-0.5 text-xs text-[#737373]">
-                    Jalankan agen di PC kasir agar dokumen lunas langsung
-                    dicetak ke printer USB
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-md border border-[#171717]/10 bg-[#fafafa] px-3 py-1 text-xs font-medium text-[#171717]">
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      shop.isAgentOnline ? "bg-[#16a34a]" : "bg-[#b45309]"
-                    }`}
-                  />
-                  {shop.isAgentOnline ? "Terhubung" : "Belum aktif"}
-                </span>
-              </div>
-
-              {/* Beginner-Friendly 1-Click ZIP Installer Hero Card */}
-              <div className="rounded-xl border border-[#d9381e]/25 bg-[#d9381e]/5 p-5">
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                  <div className="space-y-1">
-                    <span className="inline-block rounded bg-[#d9381e] px-2 py-0.5 text-[10px] font-medium text-white">
-                      Direkomendasikan untuk pemula
-                    </span>
-                    <h3 className="text-sm font-medium text-[#171717]">
-                      Unduh Paket Print Agent Siap Pakai (.zip) — Khusus {shop.name}
-                    </h3>
-                    <p className="text-xs leading-relaxed text-[#525252]">
-                      Sudah berisi program Print Agent, file <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">.env</code> toko Anda, auto-installer Node.js &amp; SumatraPDF, serta auto-start saat komputer menyala.
-                    </p>
-                  </div>
-                  <a
-                    href="/api/shop/agent-bundle"
-                    download={`ngeprint-agent-${shop.shopCode}.zip`}
-                    className="btn-action inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17]"
-                  >
-                    <Download className="h-4 w-4" strokeWidth={1.5} />
-                    <span>Unduh Paket ZIP Siap Pakai</span>
-                  </a>
-                </div>
-                <div className="mt-3.5 grid gap-2 border-t border-[#d9381e]/15 pt-3 text-[11px] text-[#525252] sm:grid-cols-3">
-                  <p>
-                    <strong className="text-[#171717]">1. Unduh &amp; Ekstrak:</strong>{" "}
-                    Klik tombol merah di atas lalu ekstrak folder ZIP di PC kasir.
-                  </p>
-                  <p>
-                    <strong className="text-[#171717]">2. Klik ganda 1 file:</strong>{" "}
-                    Jalankan <code className="font-mono-num rounded bg-white px-1 text-[#171717]">PASANG-DAN-JALANKAN.bat</code>.
-                  </p>
-                  <p>
-                    <strong className="text-[#171717]">3. Selesai:</strong>{" "}
-                    Status berubah <strong>Terhubung</strong> &amp; printer USB otomatis terdeteksi.
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-4">
-                <p className="text-xs text-[#737373]">
-                  Kunci otentikasi agen toko
-                </p>
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <code className="font-mono-num truncate text-xs font-medium text-[#171717]">
-                    {shop.agentKey}
-                  </code>
-                  <button
-                    onClick={() => copyToClipboard(shop.agentKey, "key")}
-                    className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md bg-[#171717] px-3 py-1.5 text-xs font-medium text-white"
-                  >
-                    {copiedText === "key" ? (
-                      <Check className="h-3.5 w-3.5" strokeWidth={1.5} />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
-                    )}
-                    <span>
-                      {copiedText === "key" ? "Tersalin" : "Salin kunci"}
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* 1-Click .env Download for Print Agent */}
-              <div className="flex flex-col justify-between gap-3 rounded-lg border border-[#d9381e]/20 bg-[#d9381e]/5 p-4 sm:flex-row sm:items-center">
-                <div className="text-xs">
-                  <p className="font-medium text-[#171717]">
-                    Konfigurasi Cepat 1-Klik (File .env Siap Pakai)
-                  </p>
-                  <p className="mt-0.5 text-[#525252]">
-                    Unduh file <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">.env</code> yang sudah terisi URL server &amp; Agent Key toko Anda, lalu letakkan di dalam folder <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">print-agent\</code> dan klik ganda <code className="font-mono-num rounded bg-white px-1 py-0.5 text-[#171717]">start-agent.bat</code>.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleDownloadAgentEnv}
-                  className="btn-action inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#d9381e] px-3.5 text-xs font-medium text-white hover:bg-[#be2e17]"
-                >
-                  <Download className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  <span>Unduh .env Siap Pakai</span>
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-4 text-xs">
-                  <p className="font-medium text-[#171717]">
-                    SumatraPDF Precision Engine (Disarankan)
-                  </p>
-                  <p className="mt-1 leading-relaxed text-[#525252]">
-                    Jalankan <code className="font-mono-num rounded bg-white px-1.5 py-0.5 border border-[#171717]/10">print-agent\install-sumatra.bat</code> sekali saja di PC kasir agar Print Agent dapat mengeksekusi <strong>rentang halaman (misal 1-3)</strong>, <strong>mode Hitam Putih / Warna</strong>, <strong>bolak-balik (Duplex)</strong>, dan <strong>ukuran kertas A4/F4/4×6</strong> secara presisi ke printer fisik.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-[#171717]">
-                    1. Uji koneksi tanpa kertas (opsional untuk pengecekan)
-                  </p>
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-[#141415] p-3.5 text-xs text-[#ededed]">
-                    <code className="font-mono-num overflow-x-auto">
-                      {dryRunCmd}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(dryRunCmd, "dry")}
-                      className="shrink-0 cursor-pointer rounded-md bg-[#232325] px-2.5 py-1 text-xs font-medium text-[#ededed] hover:bg-[#232325]/80"
-                    >
-                      {copiedText === "dry" ? "Tersalin" : "Salin"}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="mb-1.5 text-xs font-medium text-[#171717]">
-                    2. Mode produksi (cetak langsung ke printer fisik Windows)
-                  </p>
-                  <div className="flex items-center justify-between gap-2 rounded-lg bg-[#141415] p-3.5 text-xs text-[#4cc38a]">
-                    <code className="font-mono-num overflow-x-auto">
-                      {liveCmd}
-                    </code>
-                    <button
-                      onClick={() => copyToClipboard(liveCmd, "live")}
-                      className="shrink-0 cursor-pointer rounded-md bg-[#232325] px-2.5 py-1 text-xs font-medium text-[#ededed] hover:bg-[#232325]/80"
-                    >
-                      {copiedText === "live" ? "Tersalin" : "Salin"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-xs font-medium text-[#171717]">
-                  Daftar printer terdeteksi ({shop.printers.length}
-                  {entitlement.plan.maxPrinters !== null
-                    ? ` · batas paket ${entitlement.plan.maxPrinters} printer`
-                    : ""}
-                  )
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {shop.printers.length > 0 ? (
-                    shop.printers.map((p) => (
-                      <span
-                        key={p}
-                        className="inline-flex items-center gap-2 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-3 py-1.5 text-xs text-[#171717]"
-                      >
-                        <Printer
-                          className="h-3.5 w-3.5 text-[#737373]"
-                          strokeWidth={1.5}
-                        />
-                        <span>{p}</span>
-                      </span>
-                    ))
-                  ) : (
-                    <p className="text-xs text-[#737373]">
-                      Belum ada printer terdaftar, jalankan perintah di atas
-                      pada PC Windows toko
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
+            <AgentTab
+              shop={shop}
+              entitlement={entitlement}
+              dryRunCmd={dryRunCmd}
+              liveCmd={liveCmd}
+              copiedText={copiedText}
+              onCopy={copyToClipboard}
+              onDownloadEnv={handleDownloadAgentEnv}
+            />
           )}
         </div>
       </main>
 
+      {/* STICKY SAVE BAR FOR UNSAVED SETTINGS */}
+      {tab === "settings" && hasUnsavedSettings && (
+        <StickySaveBar
+          saving={savingSettings}
+          onReset={handleResetSettings}
+          onSave={() => handleSaveSettings()}
+        />
+      )}
+
+      {/* DAILY CLOSING RECAP MODAL (58mm THERMAL / WA) */}
+      {showDailyRecap && (
+        <DailyRecapModal
+          shop={shop}
+          stats={stats}
+          copiedText={copiedText}
+          onClose={() => setShowDailyRecap(false)}
+          onCopyWa={copyToClipboard}
+        />
+      )}
+
       {/* RECEIPT / NOTA CETAK MODAL */}
       {receiptJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-sm rounded-2xl border border-[#171717]/12 bg-white p-6 shadow-2xl">
-            <button
-              type="button"
-              onClick={() => setReceiptJob(null)}
-              aria-label="Tutup struk"
-              className="no-print absolute top-4 right-4 cursor-pointer rounded-lg p-1.5 text-[#737373] hover:bg-[#f4f4f5] hover:text-[#171717]"
-            >
-              <X className="h-4 w-4" strokeWidth={1.5} />
-            </button>
-
-            <div className="print-poster space-y-3 text-xs text-[#171717]">
-              <div className="border-b border-dashed border-[#171717]/20 pb-3 text-center">
-                <p className="font-mono-num text-[10px] uppercase tracking-wider text-[#737373]">
-                  Nota Pembayaran Cetak · Ngeprint
-                </p>
-                <p className="mt-1 text-base font-semibold text-[#171717]">
-                  {shop.name}
-                </p>
-                <p className="mt-0.5 text-[11px] text-[#737373]">
-                  {shop.address}
-                </p>
-              </div>
-
-              <div className="space-y-1.5 border-b border-dashed border-[#171717]/20 pb-3">
-                <div className="flex justify-between gap-2">
-                  <span className="text-[#737373]">Kode Antrean</span>
-                  <span className="font-mono-num font-medium">
-                    {receiptJob.jobCode}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-[#737373]">Tanggal</span>
-                  <span className="font-mono-num">
-                    {new Date(receiptJob.createdAt).toLocaleString("id-ID", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-[#737373]">Pelanggan</span>
-                  <span className="font-medium">{receiptJob.customerName}</span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-[#737373]">Dokumen</span>
-                  <span className="max-w-[190px] truncate font-medium">
-                    {receiptJob.fileName}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-[#737373]">Rincian</span>
-                  <span className="font-mono-num text-right">
-                    {receiptJob.pageCount} hal ({receiptJob.pageRange}) ×{" "}
-                    {receiptJob.copies} ·{" "}
-                    {receiptJob.colorMode === "COLOR" ? "Warna" : "HP"} ·{" "}
-                    {receiptJob.paperSize}
-                    {receiptJob.duplex ? " · Duplex" : ""}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex justify-between gap-2">
-                  <span className="text-[#737373]">Metode Bayar</span>
-                  <span className="font-mono-num font-medium">
-                    {receiptJob.paymentMethod} (LUNAS)
-                  </span>
-                </div>
-                <div className="flex items-baseline justify-between gap-2 pt-1">
-                  <span className="text-sm font-medium">Total Bayar</span>
-                  <span className="font-mono-num text-lg font-semibold text-[#171717]">
-                    {formatRupiah(receiptJob.totalPrice)}
-                  </span>
-                </div>
-              </div>
-
-              <p className="border-t border-dashed border-[#171717]/20 pt-3 text-center text-[10px] text-[#737373]">
-                Terima kasih telah mencetak di {shop.name}. Dokumen Anda dihapus otomatis setelah selesai dicetak.
-              </p>
-            </div>
-
-            <div className="no-print mt-5 space-y-2">
-              {thermalMsg && (
-                <div
-                  className={`rounded-lg border px-3 py-2 text-[11px] ${
-                    thermalMsg.type === "ok"
-                      ? "border-[#16a34a]/25 bg-[#16a34a]/8 text-[#16a34a]"
-                      : "border-[#dc2626]/25 bg-[#dc2626]/8 text-[#dc2626]"
-                  }`}
-                >
-                  {thermalMsg.text}
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handlePrintReceipt58mm(receiptJob)}
-                  className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#171717] text-xs font-medium text-white hover:bg-[#171717]/90"
-                >
-                  <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  <span>Cetak Struk 58mm</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={printingThermal}
-                  onClick={() => handlePrintReceiptBluetooth(receiptJob)}
-                  className="btn-action inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
-                >
-                  <Bluetooth className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  <span>
-                    {printingThermal
-                      ? "Mengirim..."
-                      : btDeviceName || getConnectedBluetoothPrinterName()
-                      ? "BT 58mm (Siap)"
-                      : "Bluetooth 58mm"}
-                  </span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handlePrintReceiptRawBt(receiptJob)}
-                  className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
-                >
-                  <Receipt className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  <span>RawBT (HP Android)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const text = [
-                      `*NOTA CETAK — ${shop.name}*`,
-                      `Kode: ${receiptJob.jobCode}`,
-                      `Tanggal: ${new Date(receiptJob.createdAt).toLocaleString("id-ID")}`,
-                      `Pelanggan: ${receiptJob.customerName}`,
-                      `File: ${receiptJob.fileName}`,
-                      `Rincian: ${receiptJob.pageCount} hal (${receiptJob.pageRange}) x ${receiptJob.copies}, ${receiptJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"}, ${receiptJob.paperSize}${receiptJob.duplex ? ", Bolak-balik" : ""}`,
-                      `Metode: ${receiptJob.paymentMethod} (LUNAS)`,
-                      `*Total: ${formatRupiah(receiptJob.totalPrice)}*`,
-                    ].join("\n");
-                    copyToClipboard(text, "receipt_wa");
-                  }}
-                  className="btn-action inline-flex h-8 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
-                >
-                  <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  <span>
-                    {copiedText === "receipt_wa" ? "Tersalin!" : "Salin utk WA"}
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ReceiptModal
+          shop={shop}
+          receiptJob={receiptJob}
+          printingThermal={printingThermal}
+          btDeviceName={btDeviceName}
+          thermalMsg={thermalMsg}
+          copiedText={copiedText}
+          onClose={() => setReceiptJob(null)}
+          onPrint58mm={handlePrintReceipt58mm}
+          onPrintBluetooth={handlePrintReceiptBluetooth}
+          onPrintRawBt={handlePrintReceiptRawBt}
+          onCopyWa={copyToClipboard}
+        />
       )}
     </div>
   );

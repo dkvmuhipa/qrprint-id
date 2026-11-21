@@ -29,6 +29,18 @@ export interface ThermalMiniQrData {
   qrDataUrl?: string;
 }
 
+export interface ThermalDailyRecapData {
+  shopName: string;
+  shopAddress?: string;
+  dateLabel: string;
+  todayJobsCount: number;
+  todayPagesPrinted: number;
+  todayQrisRevenue: number;
+  todayCashRevenue: number;
+  todayRevenue: number;
+  printedAt?: Date;
+}
+
 const COLS_58MM = 32;
 
 function sanitizeAscii(input: string): string {
@@ -567,4 +579,80 @@ export function printMiniQr58mmWindow(
   `;
 
   openThermal58mmPopup(`Mini QR 58mm - ${data.shopName}`, bodyHtml);
+}
+
+export function buildDailyRecapEscPos(data: ThermalDailyRecapData): Uint8Array {
+  const b = new EscPosBuilder();
+  const printedAt = (data.printedAt || new Date()).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  b.init()
+    .align("center")
+    .bold(true)
+    .size("tall")
+    .line(data.shopName || "Ngeprint")
+    .size("normal")
+    .bold(false);
+
+  if (data.shopAddress) {
+    for (const l of wrapText(data.shopAddress, COLS_58MM)) {
+      b.line(l);
+    }
+  }
+
+  b.line("REKAP TUTUP KASIR HARIAN")
+    .line(data.dateLabel)
+    .divider("-")
+    .align("left")
+    .line(padRow("Pesanan Lunas", `${data.todayJobsCount} order`))
+    .line(padRow("Total Lembar", `${data.todayPagesPrinted} hal`))
+    .divider("-")
+    .line(padRow("QRIS", formatRp(data.todayQrisRevenue)))
+    .line(padRow("Tunai Kasir", formatRp(data.todayCashRevenue)))
+    .divider("-")
+    .bold(true)
+    .size("tall")
+    .line(padRow("TOTAL OMZET", formatRp(data.todayRevenue)))
+    .size("normal")
+    .bold(false)
+    .divider("-")
+    .align("center")
+    .line(`Dicetak pukul ${printedAt} WIB`)
+    .line("Ngeprint by Gellona Teknologi")
+    .feed(4)
+    .cut();
+
+  return b.build();
+}
+
+export function printDailyRecap58mmWindow(data: ThermalDailyRecapData): void {
+  const printedAt = (data.printedAt || new Date()).toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const bodyHtml = `
+    <div class="center">
+      <div class="shop-name">${escapeHtml(data.shopName)}</div>
+      ${data.shopAddress ? `<div class="muted">${escapeHtml(data.shopAddress)}</div>` : ""}
+      <div class="bold" style="margin-top:4px;">REKAP TUTUP KASIR HARIAN</div>
+      <div class="muted">${escapeHtml(data.dateLabel)}</div>
+    </div>
+    <hr class="hr" />
+    <div class="row"><span>Pesanan Lunas</span><span class="val bold">${data.todayJobsCount} order</span></div>
+    <div class="row"><span>Total Lembar</span><span class="val bold">${data.todayPagesPrinted} hal</span></div>
+    <hr class="hr" />
+    <div class="row"><span>Pembayaran QRIS</span><span class="val">${escapeHtml(formatRp(data.todayQrisRevenue))}</span></div>
+    <div class="row"><span>Pembayaran Tunai</span><span class="val">${escapeHtml(formatRp(data.todayCashRevenue))}</span></div>
+    <hr class="hr" />
+    <div class="total-row"><span>TOTAL</span><span>${escapeHtml(formatRp(data.todayRevenue))}</span></div>
+    <hr class="hr" />
+    <div class="footer">
+      Dicetak pukul ${escapeHtml(printedAt)}<br/>
+      Ngeprint by Gellona Teknologi
+    </div>
+  `;
+
+  openThermal58mmPopup(`Rekap Kasir ${data.dateLabel} - 58mm`, bodyHtml);
 }

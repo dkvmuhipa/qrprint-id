@@ -18,32 +18,64 @@ import {
   serializePrinterPool,
 } from "@/lib/utils";
 
+// Throttle stale-job cleanup to at most once every 60 seconds per shop
+const lastCleanupByShop = new Map<string, number>();
+
 export async function GET() {
   const shop = await getCurrentShop();
   if (!shop) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  await expireStalePendingJobs(shop.id).catch(() => 0);
+  const nowMs = Date.now();
+  const lastCleanup = lastCleanupByShop.get(shop.id) || 0;
+  if (nowMs - lastCleanup > 60_000) {
+    lastCleanupByShop.set(shop.id, nowMs);
+    await expireStalePendingJobs(shop.id).catch(() => 0);
+  }
 
-  const [jobs, totalJobsCount, invoices] = await Promise.all([
-    prisma.printJob.findMany({
-      where: { shopId: shop.id },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-    }),
-    prisma.printJob.count({
-      where: {
-        shopId: shop.id,
-        printStatus: { not: "CANCELLED" },
-      },
-    }),
-    prisma.subscriptionInvoice.findMany({
-      where: { shopId: shop.id },
-      orderBy: { createdAt: "desc" },
-      take: 15,
-    }),
-  ]);
+  const [jobs, totalJobsCount, invoices, allPaidJobs, activeQueue, completedCount] =
+    await Promise.all([
+      prisma.printJob.findMany({
+        where: { shopId: shop.id },
+        orderBy: { createdAt: "desc" },
+        take: 80,
+      }),
+      prisma.printJob.count({
+        where: {
+          shopId: shop.id,
+          printStatus: { not: "CANCELLED" },
+        },
+      }),
+      prisma.subscriptionInvoice.findMany({
+        where: { shopId: shop.id },
+        orderBy: { createdAt: "desc" },
+        take: 15,
+      }),
+      // Full paid summary across entire shop history (not truncated to 50/80 rows)
+      prisma.printJob.findMany({
+        where: { shopId: shop.id, paymentStatus: "PAID" },
+        select: {
+          totalPrice: true,
+          paymentMethod: true,
+          pageCount: true,
+          copies: true,
+          createdAt: true,
+        },
+      }),
+      prisma.printJob.count({
+        where: {
+          shopId: shop.id,
+          printStatus: { in: ["QUEUED", "PRINTING", "WAITING_PAYMENT"] },
+        },
+      }),
+      prisma.printJob.count({
+        where: {
+          shopId: shop.id,
+          printStatus: "COMPLETED",
+        },
+      }),
+    ]);
 
   const entitlement = evaluateShopEntitlement({
     planId: shop.plan,
@@ -54,48 +86,59 @@ export async function GET() {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
-  const todayRevenue = jobs
-    .filter((j) => j.paymentStatus === "PAID" && j.createdAt >= todayStart)
-    .reduce((acc, j) => acc + j.totalPrice, 0);
+  let todayRevenue = 0;
+  let todayQrisRevenue = 0;
+  let todayCashRevenue = 0;
+  let todayJobsCount = 0;
+  let todayPagesPrinted = 0;
+  let totalRevenue = 0;
+  let qrisRevenue = 0;
+  let cashRevenue = 0;
+  let totalPagesPrinted = 0;
 
-  const paidJobs = jobs.filter((j) => j.paymentStatus === "PAID");
-  const totalRevenue = paidJobs.reduce((acc, j) => acc + j.totalPrice, 0);
-  const qrisRevenue = paidJobs
-    .filter((j) => j.paymentMethod === "QRIS")
-    .reduce((acc, j) => acc + j.totalPrice, 0);
-  const cashRevenue = paidJobs
-    .filter((j) => j.paymentMethod !== "QRIS")
-    .reduce((acc, j) => acc + j.totalPrice, 0);
-  const totalPagesPrinted = paidJobs.reduce(
-    (acc, j) => acc + j.pageCount * j.copies,
-    0
-  );
+  for (const j of allPaidJobs) {
+    const pages = j.pageCount * j.copies;
+    totalRevenue += j.totalPrice;
+    totalPagesPrinted += pages;
+    if (j.paymentMethod === "QRIS") {
+      qrisRevenue += j.totalPrice;
+    } else {
+      cashRevenue += j.totalPrice;
+    }
 
-  // Build 7-day daily revenue & order count series
+    if (j.createdAt >= todayStart) {
+      todayRevenue += j.totalPrice;
+      todayJobsCount += 1;
+      todayPagesPrinted += pages;
+      if (j.paymentMethod === "QRIS") {
+        todayQrisRevenue += j.totalPrice;
+      } else {
+        todayCashRevenue += j.totalPrice;
+      }
+    }
+  }
+
+  // Build 7-day daily revenue & order count series from full paid history
   const dailyRevenue7d = Array.from({ length: 7 }, (_, idx) => {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() - (6 - idx));
     const nextD = new Date(d);
     nextD.setDate(nextD.getDate() + 1);
-    const dayJobs = paidJobs.filter(
-      (j) => j.createdAt >= d && j.createdAt < nextD
-    );
+    let revenue = 0;
+    let count = 0;
+    for (const j of allPaidJobs) {
+      if (j.createdAt >= d && j.createdAt < nextD) {
+        revenue += j.totalPrice;
+        count += 1;
+      }
+    }
     return {
       date: d.toLocaleDateString("id-ID", { day: "numeric", month: "short" }),
-      revenue: dayJobs.reduce((acc, j) => acc + j.totalPrice, 0),
-      jobs: dayJobs.length,
+      revenue,
+      jobs: count,
     };
   });
-
-  const activeQueue = jobs.filter(
-    (j) =>
-      j.printStatus === "QUEUED" ||
-      j.printStatus === "PRINTING" ||
-      j.printStatus === "WAITING_PAYMENT"
-  ).length;
-
-  const completedCount = jobs.filter((j) => j.printStatus === "COMPLETED").length;
 
   const isAgentOnline = shop.agentLastSeen
     ? Date.now() - new Date(shop.agentLastSeen).getTime() < 20000
@@ -171,10 +214,15 @@ export async function GET() {
     invoices,
     stats: {
       todayRevenue,
+      todayQrisRevenue,
+      todayCashRevenue,
+      todayJobsCount,
+      todayPagesPrinted,
       totalRevenue,
       qrisRevenue,
       cashRevenue,
       totalPagesPrinted,
+      totalPaidCount: allPaidJobs.length,
       dailyRevenue7d,
       activeQueue,
       completedCount,
