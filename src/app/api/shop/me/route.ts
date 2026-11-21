@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getCurrentShop } from "@/lib/auth";
@@ -239,11 +240,13 @@ export async function PATCH(req: Request) {
     }
 
     let nextStaticQris: string | null | undefined = undefined;
+    let nextStaticQrisHash: string | null | undefined = undefined;
     let detectedQrisMerchant: string | null = null;
     if (body.staticQrisString !== undefined) {
       const raw = String(body.staticQrisString || "").trim();
       if (raw === "") {
         nextStaticQris = null;
+        nextStaticQrisHash = null;
       } else {
         if (!isValidStaticQris(raw)) {
           return NextResponse.json(
@@ -254,7 +257,28 @@ export async function PATCH(req: Request) {
             { status: 400 }
           );
         }
+        const qrisHash = crypto.createHash("sha256").update(raw).digest("hex");
+        // Lapisan 2: Cegah pemakaian ulang QRIS yang sama di akun Demo berbeda
+        if (shop.plan === "DEMO") {
+          const duplicateQrisShop = await prisma.shop.findFirst({
+            where: {
+              id: { not: shop.id },
+              staticQrisHash: qrisHash,
+            },
+            select: { id: true },
+          });
+          if (duplicateQrisShop) {
+            return NextResponse.json(
+              {
+                error:
+                  "QRIS Merchant ini sudah pernah digunakan pada akun toko lain. Silakan masuk ke akun sebelumnya atau aktifkan paket berbayar untuk membuka cabang baru.",
+              },
+              { status: 409 }
+            );
+          }
+        }
         nextStaticQris = raw;
+        nextStaticQrisHash = qrisHash;
         detectedQrisMerchant = extractQrisMerchantName(raw);
       }
     }
@@ -300,7 +324,10 @@ export async function PATCH(req: Request) {
           ? String(body.qrisName).trim()
           : shop.qrisName,
         ...(nextStaticQris !== undefined
-          ? { staticQrisString: nextStaticQris }
+          ? {
+              staticQrisString: nextStaticQris,
+              staticQrisHash: nextStaticQrisHash ?? null,
+            }
           : {}),
         ...(body.midtransServerKey !== undefined
           ? {

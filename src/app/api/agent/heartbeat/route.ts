@@ -17,6 +17,32 @@ export async function POST(req: Request) {
   const maxAllowedPrinters = planDef.maxPrinters ?? 20;
 
   const body = await req.json().catch(() => ({}));
+  const machineHash = String(
+    req.headers.get("x-machine-hash") || body.machineHash || ""
+  )
+    .trim()
+    .slice(0, 128);
+
+  // Lapisan 3: Cegah 1 komputer kasir memakai kuota Demo 24 Jam berulang di akun berbeda
+  if (shop.plan === "DEMO" && machineHash.length >= 16) {
+    const usedOnAnotherShop = await prisma.shop.findFirst({
+      where: {
+        id: { not: shop.id },
+        agentMachineHash: machineHash,
+      },
+      select: { id: true },
+    });
+    if (usedOnAnotherShop) {
+      return NextResponse.json(
+        {
+          error:
+            "Komputer kasir ini sudah pernah menggunakan kuota Demo 24 Jam di akun toko lain. Silakan aktifkan paket Bulanan atau Pro di Dashboard.",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   const printers = Array.isArray(body.printers)
     ? body.printers
         .map((p: unknown) => String(p))
@@ -27,6 +53,7 @@ export async function POST(req: Request) {
     where: { id: shop.id },
     data: {
       agentLastSeen: new Date(),
+      ...(machineHash.length >= 16 ? { agentMachineHash: machineHash } : {}),
       ...(printers ? { agentPrinters: JSON.stringify(printers) } : {}),
     },
   });

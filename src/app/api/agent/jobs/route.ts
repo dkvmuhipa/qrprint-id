@@ -14,10 +14,36 @@ export async function GET(req: Request) {
   }
 
   const planDef = getPlanDef(shop.plan);
+  const machineHash = String(req.headers.get("x-machine-hash") || "")
+    .trim()
+    .slice(0, 128);
+
+  // Lapisan 3: Blokir polling antrean Demo bila PC kasir sudah pernah pakai Demo di akun lain
+  if (shop.plan === "DEMO" && machineHash.length >= 16) {
+    const usedOnAnotherShop = await prisma.shop.findFirst({
+      where: {
+        id: { not: shop.id },
+        agentMachineHash: machineHash,
+      },
+      select: { id: true },
+    });
+    if (usedOnAnotherShop) {
+      return NextResponse.json(
+        {
+          error:
+            "Komputer kasir ini sudah pernah menggunakan kuota Demo 24 Jam di akun toko lain. Silakan aktifkan paket Bulanan atau Pro di Dashboard.",
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   await prisma.shop.update({
     where: { id: shop.id },
-    data: { agentLastSeen: new Date() },
+    data: {
+      agentLastSeen: new Date(),
+      ...(machineHash.length >= 16 ? { agentMachineHash: machineHash } : {}),
+    },
   });
 
   const jobs = await prisma.printJob.findMany({

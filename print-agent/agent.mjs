@@ -19,6 +19,7 @@
 
 import fs from "fs/promises";
 import { constants as fsConstants, existsSync, readFileSync } from "fs";
+import crypto from "crypto";
 import path from "path";
 import os from "os";
 import { fileURLToPath } from "url";
@@ -322,8 +323,34 @@ async function main() {
   const printers = await detectWindowsPrinters();
   log(`Printer terdeteksi (${printers.length}): ${printers.join(", ")}`);
 
+  // Generate stable SHA-256 machine fingerprint (Windows MachineGuid -> fallback hostname+cpu)
+  async function getMachineHash() {
+    let rawId = "";
+    if (process.platform === "win32") {
+      try {
+        const { stdout } = await execFileAsync("reg", [
+          "query",
+          "HKLM\\SOFTWARE\\Microsoft\\Cryptography",
+          "/v",
+          "MachineGuid",
+        ]);
+        const m = stdout.match(/MachineGuid\s+REG_SZ\s+([^\r\n]+)/i);
+        if (m && m[1]) rawId = m[1].trim();
+      } catch {
+        // Fallback below
+      }
+    }
+    if (!rawId) {
+      rawId = `${os.hostname()}|${os.platform()}|${os.arch()}|${os.cpus()[0]?.model || ""}`;
+    }
+    return crypto.createHash("sha256").update(`ngeprint:${rawId}`).digest("hex");
+  }
+
+  const machineHash = await getMachineHash();
+
   const headers = {
     "x-agent-key": config.key,
+    "x-machine-hash": machineHash,
     "Content-Type": "application/json",
   };
 
@@ -334,13 +361,19 @@ async function main() {
         headers,
         body: JSON.stringify({
           printers,
+          machineHash,
           engine: sumatraExe ? "SUMATRA_PDF" : "WINDOWS_SHELL",
         }),
       });
       if (res.ok) {
         return await res.json();
       } else {
-        log(`Heartbeat ditolak (${res.status}). Periksa Agent Key.`);
+        const errData = await res.json().catch(() => ({}));
+        log(
+          `Heartbeat ditolak (${res.status}): ${
+            errData.error || "Periksa Agent Key."
+          }`
+        );
       }
     } catch (err) {
       log(`Server belum terjangkau (${config.url}): ${err.message}`);
@@ -364,9 +397,18 @@ async function main() {
     busy = true;
     try {
       const res = await fetch(`${config.url}/api/agent/jobs`, {
-        headers: { "x-agent-key": config.key },
+        headers: {
+          "x-agent-key": config.key,
+          "x-machine-hash": machineHash,
+        },
       });
-      if (!res.ok) return;
+      if (!res.ok) {
+        if (res.status === 403) {
+          const errData = await res.json().catch(() => ({}));
+          log(`Akses antrean diblokir: ${errData.error || "Kuota Demo terpakai."}`);
+        }
+        return;
+      }
       const data = await res.json();
       const jobs = data.jobs || [];
 

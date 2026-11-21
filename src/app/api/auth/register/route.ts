@@ -98,6 +98,26 @@ export async function POST(req: Request) {
       );
     }
 
+    // Lapisan 1: Cegah akun ganda dengan nomor WhatsApp yang sama
+    const phoneAlt62 = cleanPhone.startsWith("0")
+      ? "62" + cleanPhone.slice(1)
+      : cleanPhone;
+    const existingPhone = await prisma.shop.findFirst({
+      where: {
+        OR: [{ phone: cleanPhone }, { phone: phoneAlt62 }],
+      },
+      select: { id: true },
+    });
+    if (existingPhone) {
+      return NextResponse.json(
+        {
+          error:
+            "Nomor WhatsApp ini sudah terdaftar pada akun toko lain. Silakan masuk ke akun Anda yang sudah ada.",
+        },
+        { status: 409 }
+      );
+    }
+
     const passwordHash = await bcrypt.hash(rawPassword, 10);
     let shopCode = generateShopSlugFromName(cleanName);
     const slugTaken = await prisma.shop.findFirst({
