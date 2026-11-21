@@ -595,16 +595,17 @@ function DashboardContent() {
       setInvoiceQrDataUrl(activePendingInvoice.qrisUrl);
       return;
     }
-    const payload =
-      activePendingInvoice.qrisString ||
-      `00020101021226580016ID.NGEPRINT.SAAS0215GELLONA520459995303360540${activePendingInvoice.amount}5802ID5918GELLONA TEKNOLOGI62140510${activePendingInvoice.invoiceCode}`;
-    QRCode.toDataURL(payload, {
-      width: 240,
+    if (!activePendingInvoice.qrisString) {
+      setInvoiceQrDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(activePendingInvoice.qrisString, {
+      width: 280,
       margin: 2,
       color: { dark: "#171717", light: "#ffffff" },
     })
       .then(setInvoiceQrDataUrl)
-      .catch(() => {});
+      .catch(() => setInvoiceQrDataUrl(""));
   }, [activePendingInvoice]);
 
   async function handleCreateSubscriptionInvoice(planId: string) {

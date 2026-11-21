@@ -175,15 +175,25 @@ export function BillingTab({
               {formatRupiah(activePendingInvoice.amount)}
             </p>
 
-            {invoiceQrDataUrl && (
-              <div className="crop-frame my-4 rounded-xl border border-[#171717]/12 bg-white p-3">
-                <img
-                  src={invoiceQrDataUrl}
-                  alt="QRIS Langganan"
-                  className="h-44 w-44 object-contain"
-                />
-              </div>
-            )}
+                    {invoiceQrDataUrl ? (
+                      <div className="crop-frame my-4 rounded-xl border border-[#171717]/12 bg-white p-3">
+                        <img
+                          src={invoiceQrDataUrl}
+                          alt="QRIS Langganan"
+                          className="h-44 w-44 object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="my-4 w-full rounded-xl border border-dashed border-[#171717]/20 bg-[#fafafa] p-4 text-xs text-[#525252]">
+                        <p className="font-medium text-[#171717]">
+                          Pembayaran Manual / Verifikasi Admin
+                        </p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-[#737373]">
+                          QRIS otomatis platform belum dikonfigurasi di server.
+                          Klik tombol <strong>Konfirmasi Pembayaran ke Admin Gellona</strong> di samping untuk mendapatkan rekening/QRIS resmi.
+                        </p>
+                      </div>
+                    )}
 
             <p className="text-[11px] text-[#737373]">
               {activePendingInvoice.paymentProvider === "MIDTRANS"
