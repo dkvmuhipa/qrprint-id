@@ -98,6 +98,18 @@ function CustomerScanPortalContent({
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
+  const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!file || !file.type.startsWith("image/")) {
+      setFilePreviewUrl(null);
+      return;
+    }
+    const objUrl = URL.createObjectURL(file);
+    setFilePreviewUrl(objUrl);
+    return () => URL.revokeObjectURL(objUrl);
+  }, [file]);
 
   useEffect(() => {
     let active = true;
@@ -137,16 +149,17 @@ function CustomerScanPortalContent({
       setQrisDataUrl(activeJob.qrisUrl);
       return;
     }
-    const payload =
-      activeJob.qrisString ||
-      `00020101021226580016ID.NGEPRINT.WWW0215${shop?.shopCode || "TOKO"}520459995303360540${activeJob.totalPrice}5802ID5918${(shop?.qrisName || "NGEPRINT ID").slice(0, 18)}62120508${activeJob.jobCode}`;
-    QRCode.toDataURL(payload, {
-      width: 240,
+    if (!activeJob.qrisString) {
+      setQrisDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(activeJob.qrisString, {
+      width: 260,
       margin: 2,
       color: { dark: "#1f1b16", light: "#ffffff" },
     })
       .then(setQrisDataUrl)
-      .catch(() => {});
+      .catch(() => setQrisDataUrl(""));
   }, [activeJob, shop]);
 
   useEffect(() => {
@@ -709,6 +722,67 @@ function CustomerScanPortalContent({
                 ))}
               </div>
 
+              {/* Customer Digital Receipt Card (shown once PAID) */}
+              {activeJob.paymentStatus === "PAID" && (
+                <div className="mt-4 rounded-xl border border-dashed border-[#1f1b16]/25 bg-[#f7f4ee] p-4 text-xs">
+                  <div className="flex items-center justify-between gap-2 border-b border-dashed border-[#1f1b16]/15 pb-2.5">
+                    <div>
+                      <p className="font-mono-num text-[10px] tracking-wider text-[#7b7266] uppercase">
+                        Bukti Antrean Digital · Lunas
+                      </p>
+                      <p className="font-mono-num mt-0.5 text-lg font-bold tracking-wider text-[#1f1b16]">
+                        {activeJob.jobCode}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const txt = [
+                          `BUKTI CETAK — ${shop.name}`,
+                          `Kode Antrean: ${activeJob.jobCode}`,
+                          `File: ${activeJob.fileName}`,
+                          `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}`,
+                          `Bayar: ${activeJob.paymentMethod} (LUNAS)`,
+                          `Total: ${formatRupiah(activeJob.totalPrice)}`,
+                        ].join("\n");
+                        navigator.clipboard.writeText(txt);
+                        setCopiedReceipt(true);
+                        setTimeout(() => setCopiedReceipt(false), 2000);
+                      }}
+                      className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                    >
+                      <Copy className="h-3 w-3" strokeWidth={1.5} />
+                      <span>{copiedReceipt ? "Tersalin!" : "Salin Bukti"}</span>
+                    </button>
+                  </div>
+                  <div className="mt-2.5 space-y-1 text-[11px] text-[#5e554a]">
+                    <div className="flex justify-between gap-2">
+                      <span>Dokumen</span>
+                      <span className="max-w-[200px] truncate font-medium text-[#1f1b16]">
+                        {activeJob.fileName}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span>Rincian</span>
+                      <span className="font-mono-num text-right text-[#1f1b16]">
+                        {activeJob.pageCount} hal × {activeJob.copies} ·{" "}
+                        {activeJob.colorMode === "COLOR" ? "Warna" : "HP"} ·{" "}
+                        {activeJob.paperSize}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2 pt-1 font-medium text-[#1f1b16]">
+                      <span>Total Dibayar ({activeJob.paymentMethod})</span>
+                      <span className="font-mono-num text-[#16a34a]">
+                        {formatRupiah(activeJob.totalPrice)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[10px] text-[#7b7266]">
+                    Tunjukkan kode antrean di atas saat mengambil hasil cetakan di meja kasir.
+                  </p>
+                </div>
+              )}
+
               {/* Privacy Deleted Banner */}
               {activeJob.fileDeletedAt && (
                 <div className="mt-4 flex items-center gap-2.5 rounded-lg border border-[#16a34a]/30 bg-[#16a34a]/10 p-3.5 text-xs text-[#1f1b16]">
@@ -780,16 +854,26 @@ function CustomerScanPortalContent({
                 />
                 {file ? (
                   <>
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
-                      <FileText className="h-5 w-5" strokeWidth={1.5} />
-                    </div>
+                    {filePreviewUrl ? (
+                      <div className="overflow-hidden rounded-xl border border-[#1f1b16]/15 bg-white p-1.5 shadow-2xs">
+                        <img
+                          src={filePreviewUrl}
+                          alt={`Pratinjau ${file.name}`}
+                          className="max-h-36 max-w-[220px] rounded-lg object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#1f1b16] text-[#fdfbf7]">
+                        <FileText className="h-6 w-6" strokeWidth={1.5} />
+                      </div>
+                    )}
                     <p className="mt-2.5 max-w-full truncate text-sm font-medium text-[#1f1b16]">
                       {file.name}
                     </p>
                     <p className="font-mono-num mt-1 text-xs text-[#5e554a]">
                       {countingPages
                         ? "Menghitung lembar halaman PDF..."
-                        : `${detectedPages} halaman · ${(
+                        : `${file.type === "application/pdf" ? "PDF · " : "Foto · "}${detectedPages} halaman · ${(
                             file.size /
                             1024 /
                             1024

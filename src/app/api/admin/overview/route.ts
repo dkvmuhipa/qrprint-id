@@ -202,6 +202,7 @@ export async function GET() {
       hasPlatformStaticQris: Boolean(
         (process.env.PLATFORM_STATIC_QRIS || "").trim()
       ),
+      platformListenerKey: (process.env.PLATFORM_LISTENER_KEY || "").trim(),
       dbEngine: (process.env.DATABASE_URL || "").startsWith("file:")
         ? "SQLite (Local Disk)"
         : "PostgreSQL",

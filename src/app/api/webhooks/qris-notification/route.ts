@@ -4,7 +4,11 @@ import {
   expireStalePendingJobs,
   PENDING_JOB_EXPIRE_MINUTES,
 } from "@/lib/jobs-cleanup";
-import { canUseListener } from "@/lib/plans";
+import {
+  buildShopUpdateForPaidInvoice,
+  canUseListener,
+  formatInvoicePlanLabel,
+} from "@/lib/plans";
 
 /**
  * Ekstrak nominal Rupiah dari teks notifikasi Android (GoPay Merchant, GoBiz, DANA Bisnis, OVO, BRI, BCA, dll).
@@ -58,34 +62,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const shop = await prisma.shop.findUnique({ where: { agentKey } });
-    if (!shop) {
-      return NextResponse.json(
-        { error: "Agent Key toko tidak valid." },
-        { status: 401 }
-      );
-    }
-
-    // Gate automatic QRIS Listener to Pro/Premium plans or active Listener Add-On (+Rp 25.000/bln)
-    if (
-      !canUseListener({
-        planId: shop.plan,
-        planExpiresAt: shop.planExpiresAt,
-        hasListenerAddon: shop.hasListenerAddon,
-      })
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          matched: false,
-          error:
-            "Fitur Ngeprint Listener otomatis tersedia di paket Pro/Premium Tahunan atau Add-On Bulanan (+Rp 25.000/bln). Upgrade di Dashboard untuk mengaktifkan.",
-        },
-        { status: 403 }
-      );
-    }
-
-    // Support both JSON and form-urlencoded / plain text from MacroDroid or Tasker
+    // Parse payload once so both Platform SaaS Listener and Shop Listener share the same parser
     let rawText = "";
     let explicitAmount: number | null = null;
     const contentType = req.headers.get("content-type") || "";
@@ -115,6 +92,101 @@ export async function POST(req: Request) {
       }
     } else {
       rawText = await req.text().catch(() => "");
+    }
+
+    // MODE 1: PLATFORM SAAS LISTENER (Auto-approve SubscriptionInvoices when Gellona QRIS receives payment)
+    const platformListenerKey = (process.env.PLATFORM_LISTENER_KEY || "").trim();
+    if (platformListenerKey && agentKey === platformListenerKey) {
+      const detectedAmount = explicitAmount || extractRupiahAmount(rawText);
+      if (!detectedAmount) {
+        return NextResponse.json(
+          {
+            ok: false,
+            matched: false,
+            mode: "PLATFORM_SAAS",
+            error: "Nominal Rupiah tidak ditemukan di teks notifikasi.",
+            receivedText: rawText.slice(0, 160),
+          },
+          { status: 400 }
+        );
+      }
+
+      // Match latest PENDING SaaS invoice within 6 hours with exact unique amount
+      const invoiceCutoff = new Date(Date.now() - 6 * 60 * 60 * 1000);
+      const matchingInvoice = await prisma.subscriptionInvoice.findFirst({
+        where: {
+          status: "PENDING",
+          amount: detectedAmount,
+          createdAt: { gte: invoiceCutoff },
+        },
+        include: { shop: true },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (!matchingInvoice) {
+        return NextResponse.json({
+          ok: true,
+          matched: false,
+          mode: "PLATFORM_SAAS",
+          detectedAmount,
+          message: `Tidak ada tagihan SaaS tertunda dengan nominal tepat Rp ${detectedAmount}.`,
+        });
+      }
+
+      const fulfillment = buildShopUpdateForPaidInvoice(
+        matchingInvoice.plan,
+        matchingInvoice.shop
+      );
+
+      await prisma.$transaction([
+        prisma.subscriptionInvoice.update({
+          where: { id: matchingInvoice.id },
+          data: { status: "PAID", paidAt: new Date() },
+        }),
+        prisma.shop.update({
+          where: { id: matchingInvoice.shopId },
+          data: fulfillment.data,
+        }),
+      ]);
+
+      return NextResponse.json({
+        ok: true,
+        matched: true,
+        mode: "PLATFORM_SAAS",
+        detectedAmount,
+        invoiceCode: matchingInvoice.invoiceCode,
+        shopCode: matchingInvoice.shop.shopCode,
+        plan: matchingInvoice.plan,
+        message: `Tagihan ${matchingInvoice.invoiceCode} (${matchingInvoice.shop.name} · ${formatInvoicePlanLabel(matchingInvoice.plan)}) otomatis LUNAS & paket aktif!`,
+      });
+    }
+
+    // MODE 2: PARTNER SHOP LISTENER (Auto-confirm PrintJobs)
+    const shop = await prisma.shop.findUnique({ where: { agentKey } });
+    if (!shop) {
+      return NextResponse.json(
+        { error: "Agent Key toko tidak valid." },
+        { status: 401 }
+      );
+    }
+
+    // Gate automatic QRIS Listener to Pro/Premium plans or active Listener Add-On (+Rp 25.000/bln)
+    if (
+      !canUseListener({
+        planId: shop.plan,
+        planExpiresAt: shop.planExpiresAt,
+        hasListenerAddon: shop.hasListenerAddon,
+      })
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          matched: false,
+          error:
+            "Fitur Ngeprint Listener otomatis tersedia di paket Pro/Premium Tahunan atau Add-On Bulanan (+Rp 25.000/bln). Upgrade di Dashboard untuk mengaktifkan.",
+        },
+        { status: 403 }
+      );
     }
 
     const detectedAmount = explicitAmount || extractRupiahAmount(rawText);
