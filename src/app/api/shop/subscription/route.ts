@@ -156,13 +156,26 @@ export async function PATCH(req: Request) {
     let isPaidNow = false;
 
     if (action === "SIMULATE_PAY") {
+      // Block self-service payment simulation in production unless explicitly enabled for demos
+      const allowSim =
+        process.env.NODE_ENV !== "production" ||
+        process.env.ALLOW_PAYMENT_SIMULATION === "true";
+      if (!allowSim || invoice.paymentProvider !== "SIMULATION") {
+        return NextResponse.json(
+          {
+            error:
+              "Konfirmasi pembayaran langganan dilakukan otomatis via QRIS/Midtrans atau verifikasi manual oleh Admin Gellona Teknologi.",
+          },
+          { status: 403 }
+        );
+      }
       isPaidNow = true;
     } else if (
       action === "CHECK_STATUS" &&
       invoice.paymentProvider === "MIDTRANS" &&
       invoice.paymentOrderId
     ) {
-      const midtransConfig = resolveMidtransConfig(shop);
+      const midtransConfig = resolveMidtransConfig({});
       if (midtransConfig) {
         const status = await checkMidtransOrderStatus(
           midtransConfig,

@@ -2,12 +2,17 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { prisma } from "./prisma";
 
-const SESSION_COOKIE = "qrprint_session";
+const SESSION_COOKIE = "ngeprint_session";
+const LEGACY_SESSION_COOKIE = "qrprint_session";
 
 const EPHEMERAL_FALLBACK = crypto.randomBytes(32).toString("hex");
 function getSessionSecret(): string {
-  const envSecret = process.env.SESSION_SECRET?.trim();
-  if (envSecret && envSecret.length >= 24) {
+  const envSecret = (
+    process.env.SESSION_SECRET ||
+    process.env.AUTH_SECRET ||
+    ""
+  ).trim();
+  if (envSecret.length >= 24) {
     return envSecret;
   }
   return EPHEMERAL_FALLBACK;
@@ -67,11 +72,14 @@ export async function setShopSession(shopId: string) {
 export async function clearShopSession() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
+  cookieStore.delete(LEGACY_SESSION_COOKIE);
 }
 
 export async function getCurrentShop() {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
+  const token =
+    cookieStore.get(SESSION_COOKIE)?.value ||
+    cookieStore.get(LEGACY_SESSION_COOKIE)?.value;
   if (!token) return null;
   const session = verifySessionToken(token);
   if (!session) return null;

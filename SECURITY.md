@@ -1,37 +1,36 @@
-# Security Audit & Hardening Report — QRPrint.id
+# Security Audit & Hardening Report — Ngeprint by Gellona Teknologi
 
-**Last Audit Date:** 2026-11-20  
-**Scope:** Full-Stack Next.js App (`src/`), Prisma SQLite Schema, Midtrans QRIS Webhook, and Windows Print Agent (`print-agent/`).
+**Last Audit Date:** 2026-11-21  
+**Scope:** Full-Stack Next.js 16 App (`src/`), Prisma Schema, Midtrans & GoPay Merchant QRIS Webhooks, Windows Print Agent (`print-agent/`), and Android Companion (`android-listener/`).
 
 ---
 
 ## Audit Findings & Remediations
 
-### 🔴 High — Remediated
-1. **Command Injection Surface in Windows Print Agent (`print-agent/agent.mjs`)**
-   - **Risk:** Untrusted file extensions or printer names interpolated into PowerShell `Start-Process` invocations.
-   - **Fix Applied:** Enforced strict extension allowlist derived from verified MIME type (`.pdf`, `.jpg`, `.png`, `.webp`), sanitized `jobCode` to `[A-Z0-9-]`, and allowlisted `targetPrinter` exclusively against locally detected Windows printers.
+### 🔴 Critical — Remediated (2026-11-21)
+1. **Hardcoded Fallback Secret & Default Password in Super Admin Auth (`src/lib/admin-auth.ts`)**
+   - **Root Cause:** `admin-auth.ts` only read `SESSION_SECRET` (missing `AUTH_SECRET` alias) and fell back to a static public string, plus a hardcoded fallback admin password.
+   - **Fix Applied:** Unified secret lookup across `SESSION_SECRET || AUTH_SECRET` in both `auth.ts` and `admin-auth.ts`, replaced static fallback with cryptographically random `crypto.randomBytes(32)`, and made `verifyAdminCredentials` fail-closed when `ADMIN_EMAIL`/`ADMIN_PASSWORD` are unset.
 
-2. **Static Fallback Session Secret (`src/lib/auth.ts`)**
-   - **Risk:** Hardcoded fallback string for HMAC-SHA256 session cookie signing if `SESSION_SECRET` is omitted.
-   - **Fix Applied:** Removed static fallback; replaced with cryptographically random ephemeral fallback (`crypto.randomBytes(32)`) and enforced minimum 24-character `SESSION_SECRET` from environment.
+2. **Payment Bypass on GoPay Merchant QRIS & Cash Print Jobs (`src/app/api/public/jobs/[jobCode]/route.ts`)**
+   - **Root Cause:** `POST` `action: "SIMULATE_PAY"` only rejected `paymentProvider === "MIDTRANS"`, allowing `MERCHANT_QRIS` or `CASH` jobs to be marked `PAID` via public API.
+   - **Fix Applied:** Restricted `SIMULATE_PAY` strictly to `paymentProvider === "SIMULATION" && paymentMethod === "QRIS"` (`403` otherwise).
 
-### 🟡 Medium — Remediated
-3. **Client-Supplied MIME Spoofing & Inline File XSS (`src/app/api/public/jobs/route.ts`, `src/app/api/jobs/[id]/file/route.ts`)**
-   - **Risk:** File validation relied on client `Content-Type` header; inline file serving lacked sandbox headers.
-   - **Fix Applied:** Added server-side **magic-byte inspection** (`detectVerifiedFileType` in `src/lib/storage.ts`) for PDF, JPEG, PNG, and WEBP. Added `X-Content-Type-Options: nosniff` and `Content-Security-Policy: sandbox` on file download responses, plus path-traversal boundary check in `getUploadFullPath`.
+3. **Self-Service Subscription Upgrade Bypass in Production (`src/app/api/shop/subscription/route.ts`)**
+   - **Root Cause:** `PATCH` `action: "SIMULATE_PAY"` unconditionally marked any pending `SubscriptionInvoice` as `PAID`, and `CHECK_STATUS` passed the shop's own Midtrans config instead of the platform config.
+   - **Fix Applied:** Blocked `SIMULATE_PAY` in production (`403`) unless `ALLOW_PAYMENT_SIMULATION="true"` and `paymentProvider === "SIMULATION"`, and switched `CHECK_STATUS` to `resolveMidtransConfig({})`.
 
-4. **Missing Rate Limiting on Auth & Public Upload Endpoints (`src/lib/rate-limit.ts`)**
-   - **Risk:** Brute-force login attempts, registration spam, or disk exhaustion via repeated uploads.
-   - **Fix Applied:** Added sliding-window IP rate limiting (Cloudflare `cf-connecting-ip` aware) on `/api/auth/login` (10/15m), `/api/auth/register` (5/hr), `/api/demo` (5/hr), and `/api/public/jobs` (20/15m).
-
-5. **Missing HTTP Security Headers (`next.config.ts`)**
-   - **Fix Applied:** Added global headers: `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Permissions-Policy`.
+### 🟡 Medium — Tracked / Remediated
+4. **Prisma CLI Transitive Dependency Advisories (`npm audit`)**
+   - **Note:** `npm audit` reports advisories in `deepmerge-ts` and `effect` via `@prisma/config` (CLI tooling only, not runtime request paths). Upgrading requires Prisma v7 major migration — scheduled for next major dependency window.
+5. **Command Injection, MIME Magic-Byte Verification, Rate Limiting, & Security Headers**
+   - **Status:** Verified active across `print-agent/agent.mjs`, `src/lib/storage.ts`, `src/lib/rate-limit.ts`, and `next.config.ts`.
 
 ### 🟢 Passed Controls
-- **SQL Injection:** All database queries use parameterized Prisma ORM queries.
-- **Password Hashing:** `bcryptjs` with 10 salt rounds.
-- **Tenant Isolation (IDOR):** Shop dashboard mutations (`/api/jobs/[id]`, `/api/jobs/[id]/file`, `/api/shop/me`) strictly scope queries by authenticated `shopId`.
-- **Payment Webhook Integrity:** `/api/webhooks/midtrans` verifies SHA-512 `signature_key` using constant-time comparison (`crypto.timingSafeEqual`).
-- **Secrets Hygiene:** `.env`, `prisma/dev.db`, and `uploads/` are excluded in `.gitignore`; Midtrans Server Key is masked on `GET /api/shop/me` and never exposed on public endpoints.
-- **Privacy by Design:** Uploaded customer files are stored outside `public/` and permanently deleted from disk upon print completion or cancellation.
+- **SQL Injection:** Zero raw SQL queries; 100% parameterized Prisma ORM.
+- **XSS:** Zero `dangerouslySetInnerHTML`, `innerHTML`, or `eval()` in `src/`.
+- **Password Hashing:** `bcryptjs` (10 rounds) + `crypto.timingSafeEqual` for HMAC & admin credential checks.
+- **Tenant Isolation (IDOR):** All shop mutations (`/api/jobs/[id]`, `/api/jobs/[id]/file`, `/api/shop/me`, `/api/shop/agent-bundle`) strictly scope queries by authenticated `shopId`.
+- **Rate Limiting:** Active on `/api/auth/login`, `/api/auth/register`, `/api/admin/auth`, `/api/demo`, and `/api/public/jobs`.
+- **Secrets Hygiene:** `.env`, `prisma/dev.db`, `uploads/`, `*.jks`, and `key.properties` are excluded in `.gitignore`.
+- **Privacy by Design:** Customer files stored outside `public/`, served with `Content-Security-Policy: sandbox` & `X-Content-Type-Options: nosniff`, and permanently deleted upon completion, cancellation, or 30-minute auto-expiry.

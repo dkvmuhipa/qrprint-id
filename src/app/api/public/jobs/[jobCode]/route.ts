@@ -196,13 +196,17 @@ export async function POST(
     );
   }
 
-  if (job.paymentProvider === "MIDTRANS") {
+  // Strictly restrict SIMULATE_PAY to explicit SIMULATION QRIS jobs only — never MIDTRANS, MERCHANT_QRIS, or CASH
+  if (
+    job.paymentProvider !== "SIMULATION" ||
+    job.paymentMethod !== "QRIS"
+  ) {
     return NextResponse.json(
       {
         error:
-          "Pesanan ini menggunakan Midtrans QRIS. Selesaikan pembayaran lewat QRIS atau Midtrans Simulator.",
+          "Simulasi pembayaran tidak diizinkan untuk metode pembayaran ini. Selesaikan pembayaran QRIS atau konfirmasi di kasir.",
       },
-      { status: 400 }
+      { status: 403 }
     );
   }
 

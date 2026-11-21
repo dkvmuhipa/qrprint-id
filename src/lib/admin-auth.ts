@@ -2,13 +2,18 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 
 const ADMIN_COOKIE = "ngeprint_admin_session";
+const EPHEMERAL_ADMIN_FALLBACK = crypto.randomBytes(32).toString("hex");
 
 function getSecret(): string {
-  const envSecret = process.env.SESSION_SECRET?.trim();
-  if (envSecret && envSecret.length >= 24) {
+  const envSecret = (
+    process.env.SESSION_SECRET ||
+    process.env.AUTH_SECRET ||
+    ""
+  ).trim();
+  if (envSecret.length >= 24) {
     return `${envSecret}:admin`;
   }
-  return "ngeprint-gellona-admin-fallback-secret-2026";
+  return EPHEMERAL_ADMIN_FALLBACK;
 }
 
 function sign(payload: string): string {
@@ -19,12 +24,13 @@ export function verifyAdminCredentials(
   email: string,
   password: string
 ): boolean {
-  const expectedEmail = (process.env.ADMIN_EMAIL || "admin@gellona.id")
-    .trim()
-    .toLowerCase();
-  const expectedPassword = (
-    process.env.ADMIN_PASSWORD || "gellona-admin-2026"
-  ).trim();
+  const expectedEmail = (process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+  const expectedPassword = (process.env.ADMIN_PASSWORD || "").trim();
+
+  // Fail closed if ADMIN_EMAIL or ADMIN_PASSWORD is not configured in environment
+  if (!expectedEmail || !expectedPassword) {
+    return false;
+  }
 
   const inputEmail = email.trim().toLowerCase();
   const inputPass = password.trim();
