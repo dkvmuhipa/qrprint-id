@@ -270,7 +270,7 @@ export async function PATCH(req: Request) {
           return NextResponse.json(
             {
               error:
-                "Format QRIS GoPay Merchant tidak valid. Pastikan yang diunggah adalah gambar/kode QRIS standar Indonesia (diawali 000201).",
+                "Format QRIS Toko tidak valid. Pastikan yang diunggah adalah gambar/kode QRIS standar Indonesia (diawali 000201).",
             },
             { status: 400 }
           );

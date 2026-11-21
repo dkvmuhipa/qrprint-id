@@ -545,7 +545,7 @@ function DashboardContent() {
       } else {
         setSettingsForm((prev) => ({ ...prev, staticQrisString: code.data }));
         setQrisDecodeMsg(
-          "QRIS GoPay Merchant berhasil terbaca. Klik 'Simpan pengaturan' di bawah untuk mengaktifkan."
+          "QRIS Toko berhasil terbaca. Klik 'Simpan pengaturan' di bawah untuk mengaktifkan."
         );
       }
     } catch {
@@ -766,7 +766,7 @@ function DashboardContent() {
       });
       const resJson = await res.json().catch(() => ({}));
       if (res.ok) {
-        setSettingsMsg("Pengaturan toko, GoPay Merchant QRIS & Midtrans telah disimpan");
+        setSettingsMsg("Pengaturan toko, QRIS & printer telah disimpan");
         setSettingsForm((prev) => ({
           ...prev,
           staticQrisString: "",
@@ -1280,7 +1280,7 @@ function DashboardContent() {
                         />
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-[#171717]">
-                            1. Pasang QRIS GoPay Merchant
+                            1. Pasang QRIS Toko Anda
                           </p>
                           <p className="mt-0.5 text-[11px] text-[#737373]">
                             {hasPaymentReady
@@ -2611,19 +2611,19 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* GoPay Merchant / Static-to-Dynamic QRIS Box */}
+              {/* Static-to-Dynamic QRIS Toko Box (All Banks & E-Wallets) */}
               <div className="mt-8 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-sm font-medium text-[#171717]">
-                      QRIS GoPay Merchant / QRIS Toko (Nominal Otomatis)
+                      QRIS Toko — Semua Bank &amp; E-Wallet (Nominal Otomatis)
                     </h3>
                     <p className="mt-0.5 text-xs text-[#737373]">
-                      Unggah gambar QRIS dari aplikasi GoPay Merchant (GoBiz), DANA Bisnis, atau Bank. Nominal harga cetak akan terisi otomatis saat pelanggan scan.
+                      Unggah gambar QRIS statis milik toko dari penyedia mana saja (BCA, BRI, Mandiri, BNI, BSI, GoPay Merchant, DANA Bisnis, OVO, ShopeePay, dll.). Nominal harga cetak terisi otomatis saat pelanggan scan.
                     </p>
                   </div>
                   <span className="font-mono-num rounded-md border border-[#171717]/10 bg-white px-2.5 py-1 text-xs text-[#171717]">
-                    {shop.hasStaticQris ? "QRIS Merchant Aktif" : "Belum dipasang"}
+                    {shop.hasStaticQris ? "QRIS Toko Aktif" : "Belum dipasang"}
                   </span>
                 </div>
 
@@ -2636,7 +2636,7 @@ function DashboardContent() {
                 <div className="mt-4 grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-[#171717]">
-                      Unggah Gambar QRIS GoPay Merchant
+                      Unggah Gambar QRIS Toko (Bank / E-Wallet)
                     </label>
                     <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-[#171717]/25 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]">
                       <input
@@ -2693,7 +2693,7 @@ function DashboardContent() {
                       className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-white px-3.5 text-xs outline-none focus:border-[#171717]"
                     />
                     <p className="mt-1 text-[11px] text-[#737373]">
-                      Uang masuk langsung 100% ke saldo GoPay Merchant Anda dengan kode unik otomatis (Rp 11–99).
+                      Uang masuk langsung 100% ke rekening/saldo QRIS toko Anda dengan kode unik otomatis (Rp 11–99).
                     </p>
                   </div>
                 </div>
@@ -2781,7 +2781,7 @@ function DashboardContent() {
                         <span>Otomatisasi Lunas Tanpa Klik — Aplikasi Ngeprint Listener</span>
                       </div>
                       <p className="text-[11px] leading-relaxed text-[#525252]">
-                        QRIS GoPay Merchant tetap aktif dengan nominal otomatis (konfirmasi 1-klik kasir). Untuk verifikasi <strong>otomatis 100% tanpa klik</strong> lewat aplikasi Android Ngeprint Listener, tersedia gratis di paket <strong>Pro Tahunan (Rp 449rb)</strong> &amp; <strong>Premium (Rp 749rb)</strong>, atau sebagai <strong>Add-On +Rp 25.000/bln</strong> untuk paket Bulanan.
+                        QRIS Toko Anda tetap aktif dengan nominal otomatis (konfirmasi 1-klik kasir). Untuk verifikasi <strong>otomatis 100% tanpa klik</strong> lewat aplikasi Android Ngeprint Listener, tersedia gratis di paket <strong>Pro Tahunan (Rp 449rb)</strong> &amp; <strong>Premium (Rp 749rb)</strong>, atau sebagai <strong>Add-On +Rp 25.000/bln</strong> untuk paket Bulanan.
                       </p>
                     </div>
                     <button
@@ -2806,7 +2806,7 @@ function DashboardContent() {
                       Opsi Lanjutan: Integrasi Midtrans QRIS (khusus toko dengan akun Midtrans)
                     </h3>
                     <p className="mt-0.5 text-[11px] text-[#737373]">
-                      Tidak wajib diisi jika Anda sudah memakai QRIS GoPay Merchant / DANA Bisnis di atas.
+                      Tidak wajib diisi jika Anda sudah memakai QRIS Toko (Bank / E-Wallet) di atas.
                     </p>
                   </div>
                   <span className="font-mono-num rounded-md border border-[#171717]/10 bg-white px-2.5 py-1 text-[11px] text-[#171717]">

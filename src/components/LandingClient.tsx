@@ -94,7 +94,7 @@ const PLANS = [
       "Cetak dokumen tanpa batas kuota",
       "Hingga 2 printer (1 B&W + 1 Warna)",
       "Mode Duplex, F4 & Foto 4×6",
-      "QRIS GoPay Merchant (konfirmasi kasir)",
+      "QRIS Toko semua bank/e-wallet (konfirmasi kasir)",
       "Opsional Add-On Listener +Rp 25.000/bln",
     ],
     cta: "Pilih Bulanan",
@@ -449,7 +449,7 @@ export function LandingClient() {
               {[
                 "Pelanggan cukup memindai QR poster (atau buka URL /s/nama-toko) tanpa perlu chat WhatsApp",
                 "Bebas colok flashdisk sehingga komputer kasir tetap bersih dari virus",
-                "Jumlah halaman PDF dihitung otomatis, nominal QRIS GoPay Merchant terisi tepat & terverifikasi otomatis lewat APK Ngeprint Listener",
+                "Jumlah halaman PDF dihitung otomatis, nominal QRIS toko (semua bank & e-wallet) terisi tepat & terverifikasi otomatis lewat APK Ngeprint Listener",
                 "Grafik omzet 7 hari, ekspor CSV, suara bel kasir, serta penghapusan file otomatis usai cetak atau batal (30 menit)",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
@@ -685,7 +685,7 @@ export function LandingClient() {
               0% potongan · Langsung ke QRIS toko Anda
             </p>
             <h3 className="mt-1 text-base font-medium text-[#1f1b16]">
-              Pakai QRIS GoPay Merchant / DANA Bisnis Anda — nominal otomatis &amp; lunas tanpa klik
+              Pakai QRIS Toko Anda (Semua Bank &amp; E-Wallet) — nominal otomatis &amp; lunas tanpa klik
             </h3>
             <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
               Tidak wajib daftar payment gateway baru. Unggah foto QRIS toko di Dashboard agar nominal harga cetak terisi otomatis saat pelanggan scan, lalu pasang aplikasi Android gratis <strong>Ngeprint Listener</strong> di HP kasir untuk verifikasi otomatis dari GoPay, OVO, DANA, ShopeePay, BCA, Mandiri, dan BRI.

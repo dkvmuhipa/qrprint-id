@@ -56,7 +56,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
       "Cetak dokumen tanpa batas kuota (30 hari)",
       "Hingga 2 printer aktif (1 B&W + 1 Warna)",
       "Mendukung kertas A4, F4 & Foto 4×6 + Duplex",
-      "QRIS GoPay Merchant (konfirmasi kasir)",
+      "QRIS Toko semua bank/e-wallet (konfirmasi kasir)",
       "Opsional Add-On Listener otomatis +Rp 25rb/bln",
     ],
   },

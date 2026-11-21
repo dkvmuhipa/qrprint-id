@@ -528,7 +528,7 @@ function CustomerScanPortalContent({
                               ? "Pembayaran QRIS Midtrans"
                               : "QRIS Midtrans (Sandbox)"
                             : activeJob.paymentProvider === "MERCHANT_QRIS"
-                            ? "QRIS GoPay Merchant / Toko (Nominal Otomatis)"
+                            ? "QRIS Toko (Nominal Otomatis)"
                             : "Pembayaran QRIS (Simulasi)"}
                         </span>
                       </div>
