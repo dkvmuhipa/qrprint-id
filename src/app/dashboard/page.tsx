@@ -2795,28 +2795,31 @@ function DashboardContent() {
                 )}
               </div>
 
-              {/* Midtrans QRIS Integration Box */}
-              <div className="mt-8 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              {/* Midtrans QRIS Integration Box (Collapsible Advanced Option) */}
+              <details
+                open={shop.hasMidtransKey}
+                className="group mt-6 rounded-xl border border-[#171717]/8 bg-[#fafafa]"
+              >
+                <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 p-4 select-none">
                   <div>
-                    <h3 className="text-sm font-medium text-[#171717]">
-                      Integrasi Midtrans QRIS
+                    <h3 className="text-xs font-medium text-[#171717]">
+                      Opsi Lanjutan: Integrasi Midtrans QRIS (khusus toko dengan akun Midtrans)
                     </h3>
-                    <p className="mt-0.5 text-xs text-[#737373]">
-                      Masukkan Server Key Midtrans agar status pembayaran QRIS
-                      terverifikasi otomatis
+                    <p className="mt-0.5 text-[11px] text-[#737373]">
+                      Tidak wajib diisi jika Anda sudah memakai QRIS GoPay Merchant / DANA Bisnis di atas.
                     </p>
                   </div>
-                  <span className="font-mono-num rounded-md border border-[#171717]/10 bg-white px-2.5 py-1 text-xs text-[#171717]">
+                  <span className="font-mono-num rounded-md border border-[#171717]/10 bg-white px-2.5 py-1 text-[11px] text-[#171717]">
                     {shop.hasMidtransKey
                       ? shop.midtransIsProd
                         ? "Midtrans Live"
                         : "Midtrans Sandbox"
-                      : "Mode simulasi"}
+                      : "Opsional · Klik untuk buka"}
                   </span>
-                </div>
+                </summary>
 
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="border-t border-[#171717]/8 p-5 pt-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-xs font-medium text-[#171717]">
                       Midtrans Server Key{" "}
@@ -2909,7 +2912,8 @@ function DashboardContent() {
                     </button>
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
               <button
                 disabled={savingSettings}
