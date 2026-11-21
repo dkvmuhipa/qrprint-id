@@ -327,9 +327,14 @@ export function SettingsTab({
             </label>
             <select
               value={settingsForm.bwPrinter}
-              onChange={(e) =>
-                setSettingsForm({ ...settingsForm, bwPrinter: e.target.value })
-              }
+              onChange={(e) => {
+                const val = e.target.value;
+                setSettingsForm((prev) => ({
+                  ...prev,
+                  bwPrinter: val,
+                  bwPrinters: [val],
+                }));
+              }}
               className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
             >
               <option value="Default Printer">Default Printer</option>
@@ -356,12 +361,14 @@ export function SettingsTab({
                   ? settingsForm.bwPrinter
                   : settingsForm.colorPrinter
               }
-              onChange={(e) =>
-                setSettingsForm({
-                  ...settingsForm,
-                  colorPrinter: e.target.value,
-                })
-              }
+              onChange={(e) => {
+                const val = e.target.value;
+                setSettingsForm((prev) => ({
+                  ...prev,
+                  colorPrinter: val,
+                  colorPrinters: [val],
+                }));
+              }}
               className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="Default Printer">Default Printer</option>
@@ -386,12 +393,14 @@ export function SettingsTab({
                 effectiveMaxPrinters !== null && effectiveMaxPrinters < 3
               }
               value={settingsForm.photoPrinter}
-              onChange={(e) =>
-                setSettingsForm({
-                  ...settingsForm,
-                  photoPrinter: e.target.value,
-                })
-              }
+              onChange={(e) => {
+                const val = e.target.value;
+                setSettingsForm((prev) => ({
+                  ...prev,
+                  photoPrinter: val,
+                  photoPrinters: [val],
+                }));
+              }}
               className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="Default Printer">
