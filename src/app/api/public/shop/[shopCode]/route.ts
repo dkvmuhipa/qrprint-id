@@ -53,6 +53,10 @@ export async function GET(
         colorPrice: shop.colorPrice,
         photoPrice: shop.photoPrice,
         duplexDiscount: shop.duplexDiscount,
+        f4ExtraPrice: shop.f4ExtraPrice,
+        bindingLakbanPrice: shop.bindingLakbanPrice,
+        bindingMikaPrice: shop.bindingMikaPrice,
+        bindingSpiralPrice: shop.bindingSpiralPrice,
         qrisName: shop.qrisName,
         hasQrisPayment: Boolean(
           shop.staticQrisString || shop.midtransServerKey

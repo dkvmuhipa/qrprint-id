@@ -26,6 +26,10 @@ model Shop {
   colorPrice          Int                   @default(1500)
   duplexDiscount      Int                   @default(10)
   photoPrice          Int                   @default(3000)
+  f4ExtraPrice        Int                   @default(100)
+  bindingLakbanPrice  Int                   @default(3000)
+  bindingMikaPrice    Int                   @default(5000)
+  bindingSpiralPrice  Int                   @default(10000)
   agentKey            String                @unique
   agentMachineHash    String?
   agentLastSeen       DateTime?
@@ -68,6 +72,8 @@ model PrintJob {
   paperSize       String    @default("A4")
   duplex          Boolean   @default(false)
   pageRange       String    @default("ALL")
+  bindingType     String    @default("NONE")
+  bindingPrice    Int       @default(0)
   totalPrice      Int
   paymentMethod   String    @default("QRIS")
   paymentProvider String    @default("SIMULATION")

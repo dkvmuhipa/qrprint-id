@@ -3,7 +3,10 @@
 import { useState } from "react";
 import {
   Banknote,
+  BookOpen,
   CheckCircle2,
+  Download,
+  FileSpreadsheet,
   FileText,
   MessageCircle,
   Printer,
@@ -14,7 +17,7 @@ import {
   ShieldCheck,
   XCircle,
 } from "lucide-react";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, getBindingLabel } from "@/lib/utils";
 import type { DashboardStats, PrintJobItem, ShopInfo } from "./types";
 
 interface QueueTabProps {
@@ -44,6 +47,10 @@ export function QueueTab({
   const [jobFilter, setJobFilter] = useState<
     "ALL" | "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED"
   >("ALL");
+  const [exportMonth, setExportMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   const hasPaymentReady = shop.hasStaticQris || shop.hasMidtransKey;
   const hasAgentEverConnected = Boolean(shop.agentLastSeen);
@@ -273,6 +280,53 @@ export function QueueTab({
         </div>
       )}
 
+      {/* Monthly Financial Report Export & Paper Ream Audit */}
+      <div className="no-print flex flex-col justify-between gap-3 rounded-xl border border-[#171717]/8 bg-white p-4 sm:flex-row sm:items-center">
+        <div className="flex items-start gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#16a34a]/10 text-[#15803d]">
+            <FileSpreadsheet className="h-4 w-4" strokeWidth={1.7} />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-[#171717]">
+              Laporan Keuangan Bulanan &amp; Audit Rim Kertas
+            </p>
+            <p className="mt-0.5 text-[11px] text-[#737373]">
+              Total cetak tercatat:{" "}
+              <strong className="font-mono-num text-[#171717]">
+                {(stats.totalPagesPrinted || 0).toLocaleString("id-ID")} lembar
+              </strong>{" "}
+              (≈{" "}
+              <strong className="font-mono-num text-[#171717]">
+                {((stats.totalPagesPrinted || 0) / 500).toFixed(2)} rim
+              </strong>
+              ) · Cocok untuk audit setoran kasir &amp; stok kertas.
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="month"
+            value={exportMonth}
+            onChange={(e) => setExportMonth(e.target.value)}
+            aria-label="Pilih bulan laporan"
+            className="font-mono-num h-9 rounded-lg border border-[#171717]/15 bg-[#fafafa] px-2.5 text-xs font-medium text-[#171717] outline-none focus:border-[#171717] focus:bg-white"
+          />
+          <a
+            href={`/api/shop/export?month=${encodeURIComponent(exportMonth)}&format=csv`}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#171717] px-3 text-xs font-medium text-white transition-colors hover:bg-[#333]"
+          >
+            <Download className="h-3.5 w-3.5" strokeWidth={1.6} />
+            <span>Export Excel/CSV</span>
+          </a>
+          <a
+            href="/api/shop/export?month=all&format=csv"
+            className="inline-flex h-9 items-center rounded-lg border border-[#171717]/15 bg-white px-2.5 text-xs font-medium text-[#525252] transition-colors hover:bg-[#f4f4f5] hover:text-[#171717]"
+          >
+            Semua
+          </a>
+        </div>
+      </div>
+
       {/* Queue List Card with Search & Filter Bar */}
       <div className="rounded-xl border border-[#171717]/8 bg-white">
         {jobs.length > 0 && (
@@ -438,6 +492,12 @@ export function QueueTab({
                       · {job.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} ·{" "}
                       {job.paperSize}
                       {job.duplex ? " · Bolak-balik" : ""}
+                      {job.bindingType && job.bindingType !== "NONE" && (
+                        <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-[#d9381e]/10 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-[#d9381e]">
+                          <BookOpen className="h-2.5 w-2.5" strokeWidth={1.8} />
+                          {getBindingLabel(job.bindingType)}
+                        </span>
+                      )}
                     </p>
                   </div>
 

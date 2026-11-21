@@ -1,7 +1,7 @@
 "use client";
 
 import { Bluetooth, Copy, Printer, Receipt, X } from "lucide-react";
-import { formatRupiah } from "@/lib/utils";
+import { formatRupiah, getBindingLabel } from "@/lib/utils";
 import { getConnectedBluetoothPrinterName } from "@/lib/thermal-58mm";
 import type { PrintJobItem, ShopInfo } from "./types";
 
@@ -94,6 +94,17 @@ export function ReceiptModal({
                 {receiptJob.duplex ? " · Duplex" : ""}
               </span>
             </div>
+            {receiptJob.bindingType && receiptJob.bindingType !== "NONE" && (
+              <div className="flex justify-between gap-2">
+                <span className="text-[#737373]">Finishing</span>
+                <span className="font-mono-num font-medium text-[#d9381e]">
+                  {getBindingLabel(receiptJob.bindingType)}
+                  {receiptJob.bindingPrice
+                    ? ` (+${formatRupiah(receiptJob.bindingPrice)})`
+                    : ""}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

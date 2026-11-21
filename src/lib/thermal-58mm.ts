@@ -16,6 +16,8 @@ export interface ThermalReceiptData {
   colorMode: string;
   paperSize: string;
   duplex: boolean;
+  bindingType?: string;
+  bindingPrice?: number;
   paymentMethod: string;
   totalPrice: number;
 }
@@ -206,8 +208,26 @@ export function buildReceiptEscPos(data: ThermalReceiptData): Uint8Array {
   }
 
   b.line(padRow("Halaman", detailLine))
-    .line(padRow("Jenis", specLine))
-    .divider("-")
+    .line(padRow("Jenis", specLine));
+
+  if (data.bindingType && data.bindingType !== "NONE") {
+    const bindLabel =
+      data.bindingType === "LAKBAN"
+        ? "Jilid Lakban"
+        : data.bindingType === "MIKA"
+        ? "Jilid Mika"
+        : data.bindingType === "SPIRAL"
+        ? "Jilid Spiral"
+        : data.bindingType;
+    b.line(
+      padRow(
+        "Finishing",
+        data.bindingPrice ? `${bindLabel} (+${formatRp(data.bindingPrice)})` : bindLabel
+      )
+    );
+  }
+
+  b.divider("-")
     .line(padRow("Metode", `${data.paymentMethod} (LUNAS)`))
     .bold(true)
     .size("tall")
@@ -539,6 +559,19 @@ export function printReceipt58mmWindow(data: ThermalReceiptData): void {
       <span>Jenis</span>
       <span class="val">${colorLabel} · ${escapeHtml(data.paperSize)}${data.duplex ? " · Duplex" : ""}</span>
     </div>
+    ${
+      data.bindingType && data.bindingType !== "NONE"
+        ? `<div class="row"><span>Finishing</span><span class="val bold">${escapeHtml(
+            data.bindingType === "LAKBAN"
+              ? "Jilid Lakban"
+              : data.bindingType === "MIKA"
+              ? "Jilid Mika"
+              : data.bindingType === "SPIRAL"
+              ? "Jilid Spiral"
+              : data.bindingType
+          )}${data.bindingPrice ? ` (+${escapeHtml(formatRp(data.bindingPrice))})` : ""}</span></div>`
+        : ""
+    }
     <hr class="hr" />
     <div class="row"><span>Bayar</span><span class="val bold">${escapeHtml(data.paymentMethod)} (LUNAS)</span></div>
     <div class="total-row"><span>TOTAL</span><span>${escapeHtml(formatRp(data.totalPrice))}</span></div>

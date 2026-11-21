@@ -3,7 +3,12 @@ import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
 import { detectVerifiedFileType, saveUploadedFile } from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { calculatePrintPrice, generateJobCode } from "@/lib/utils";
+import {
+  calculatePrintPrice,
+  generateJobCode,
+  normalizeBindingType,
+  parsePageRangeIndices,
+} from "@/lib/utils";
 import { evaluateShopEntitlement } from "@/lib/plans";
 import { convertStaticQrisToDynamic, isValidStaticQris } from "@/lib/qris";
 import {
@@ -57,6 +62,9 @@ export async function POST(req: Request) {
         : "A4";
     const duplex = String(formData.get("duplex")) === "true";
     const pageRange = String(formData.get("pageRange") || "ALL").trim() || "ALL";
+    const requestedBindingType = normalizeBindingType(
+      String(formData.get("bindingType") || "NONE")
+    );
     const paymentMethod =
       String(formData.get("paymentMethod") || "QRIS") === "CASH"
         ? "CASH"
@@ -143,20 +151,54 @@ export async function POST(req: Request) {
       );
     }
 
-    let pageCount = 1;
+    let originalPageCount = 1;
+    let finalBuffer: Buffer = buffer;
+
     if (verifiedType.mimeType === "application/pdf") {
       try {
         const pdfDoc = await PDFDocument.load(buffer, {
           ignoreEncryption: true,
         });
-        pageCount = Math.max(1, pdfDoc.getPageCount());
+        originalPageCount = Math.max(1, pdfDoc.getPageCount());
+
+        // Real server-side PDF page-range trimming so printers only print selected pages
+        const selectedIndices = parsePageRangeIndices(originalPageCount, pageRange);
+        if (
+          pageRange.trim().toUpperCase() !== "ALL" &&
+          selectedIndices.length > 0 &&
+          selectedIndices.length < originalPageCount
+        ) {
+          const trimmedPdf = await PDFDocument.create();
+          const copied = await trimmedPdf.copyPages(pdfDoc, selectedIndices);
+          for (const page of copied) {
+            trimmedPdf.addPage(page);
+          }
+          const trimmedBytes = await trimmedPdf.save();
+          finalBuffer = Buffer.from(trimmedBytes);
+        }
       } catch {
-        pageCount = Math.max(1, Number(formData.get("pageCount")) || 1);
+        originalPageCount = Math.max(1, Number(formData.get("pageCount")) || 1);
       }
     }
 
+    let bindingUnitPrice = 0;
+    let effectiveBindingType = requestedBindingType;
+    if (effectivePaperSize === "PHOTO_4X6") {
+      effectiveBindingType = "NONE";
+    } else if (effectiveBindingType === "LAKBAN") {
+      bindingUnitPrice = shop.bindingLakbanPrice;
+    } else if (effectiveBindingType === "MIKA") {
+      bindingUnitPrice = shop.bindingMikaPrice;
+    } else if (effectiveBindingType === "SPIRAL") {
+      bindingUnitPrice = shop.bindingSpiralPrice;
+    }
+    if (bindingUnitPrice <= 0) {
+      effectiveBindingType = "NONE";
+      bindingUnitPrice = 0;
+    }
+
     const pricing = calculatePrintPrice({
-      pageCount,
+      pageCount: originalPageCount,
       pageRange,
       copies,
       colorMode,
@@ -166,9 +208,11 @@ export async function POST(req: Request) {
       colorPrice: shop.colorPrice,
       photoPrice: shop.photoPrice,
       duplexDiscount: shop.duplexDiscount,
+      f4ExtraPrice: shop.f4ExtraPrice,
+      bindingUnitPrice,
     });
 
-    const storedFilePath = await saveUploadedFile(buffer, verifiedType.ext);
+    const storedFilePath = await saveUploadedFile(finalBuffer, verifiedType.ext);
     const safeDisplayName = file.name.replace(/[\r\n<>:"/\\|?*]+/g, "_").slice(0, 120);
     const jobCode = generateJobCode();
 
@@ -253,13 +297,15 @@ export async function POST(req: Request) {
         fileName: safeDisplayName,
         storedFilePath,
         mimeType: verifiedType.mimeType,
-        fileSize: file.size,
-        pageCount,
+        fileSize: finalBuffer.length,
+        pageCount: pricing.effectivePages,
         copies,
         colorMode,
         paperSize: effectivePaperSize,
         duplex: effectiveDuplex,
         pageRange,
+        bindingType: effectiveBindingType,
+        bindingPrice: pricing.bindingTotal,
         totalPrice: finalTotalPrice,
         paymentMethod: effectivePaymentMethod,
         paymentProvider,
@@ -284,6 +330,8 @@ export async function POST(req: Request) {
           paperSize: job.paperSize,
           duplex: job.duplex,
           pageRange: job.pageRange,
+          bindingType: job.bindingType,
+          bindingPrice: job.bindingPrice,
           totalPrice: job.totalPrice,
           paymentMethod: job.paymentMethod,
           paymentProvider: job.paymentProvider,

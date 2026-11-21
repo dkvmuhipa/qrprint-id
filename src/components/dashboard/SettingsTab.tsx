@@ -13,6 +13,10 @@ export interface SettingsFormState {
   colorPrice: number;
   photoPrice: number;
   duplexDiscount: number;
+  f4ExtraPrice: number;
+  bindingLakbanPrice: number;
+  bindingMikaPrice: number;
+  bindingSpiralPrice: number;
   bwPrinter: string;
   colorPrinter: string;
   photoPrinter: string;
@@ -319,6 +323,94 @@ export function SettingsTab({
               }
               className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm font-medium outline-none focus:border-[#171717] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             />
+          </div>
+
+          <div className="sm:col-span-2 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-4">
+            <div className="mb-3">
+              <p className="text-xs font-medium text-[#171717]">
+                Tarif Kertas F4 &amp; Add-on Jilid / Finishing
+              </p>
+              <p className="mt-0.5 text-[11px] text-[#737373]">
+                Upsell otomatis di halaman pelanggan. Isi{" "}
+                <span className="font-mono-num font-medium text-[#171717]">0</span>{" "}
+                jika toko tidak menyediakan jenis jilid tertentu.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Tambahan F4 (Rp/lbr)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  step={50}
+                  value={settingsForm.f4ExtraPrice}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      f4ExtraPrice: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Jilid Lakban (Rp/eks)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={settingsForm.bindingLakbanPrice}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      bindingLakbanPrice: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Jilid Mika (Rp/eks)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={settingsForm.bindingMikaPrice}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      bindingMikaPrice: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Jilid Spiral (Rp/eks)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={500}
+                  value={settingsForm.bindingSpiralPrice}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      bindingSpiralPrice: Math.max(0, Number(e.target.value) || 0),
+                    })
+                  }
+                  className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+            </div>
           </div>
 
           <div>

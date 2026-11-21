@@ -151,6 +151,10 @@ function DashboardContent() {
     colorPrice: 1500,
     photoPrice: 3000,
     duplexDiscount: 10,
+    f4ExtraPrice: 100,
+    bindingLakbanPrice: 3000,
+    bindingMikaPrice: 5000,
+    bindingSpiralPrice: 10000,
     bwPrinter: "Default Printer",
     colorPrinter: "Default Printer",
     photoPrinter: "Default Printer",
@@ -210,6 +214,8 @@ function DashboardContent() {
       colorMode: job.colorMode,
       paperSize: job.paperSize,
       duplex: job.duplex,
+      bindingType: job.bindingType,
+      bindingPrice: job.bindingPrice,
       paymentMethod: job.paymentMethod,
       totalPrice: job.totalPrice,
     };
@@ -528,6 +534,10 @@ function DashboardContent() {
             colorPrice: json.shop.colorPrice,
             photoPrice: json.shop.photoPrice,
             duplexDiscount: json.shop.duplexDiscount,
+            f4ExtraPrice: json.shop.f4ExtraPrice ?? 100,
+            bindingLakbanPrice: json.shop.bindingLakbanPrice ?? 3000,
+            bindingMikaPrice: json.shop.bindingMikaPrice ?? 5000,
+            bindingSpiralPrice: json.shop.bindingSpiralPrice ?? 10000,
             bwPrinter: json.shop.bwPrinter,
             colorPrinter: json.shop.colorPrinter,
             photoPrinter: json.shop.photoPrinter || "Default Printer",
@@ -679,6 +689,10 @@ function DashboardContent() {
       colorPrice: s.colorPrice,
       photoPrice: s.photoPrice,
       duplexDiscount: s.duplexDiscount,
+      f4ExtraPrice: s.f4ExtraPrice ?? 100,
+      bindingLakbanPrice: s.bindingLakbanPrice ?? 3000,
+      bindingMikaPrice: s.bindingMikaPrice ?? 5000,
+      bindingSpiralPrice: s.bindingSpiralPrice ?? 10000,
       bwPrinter: s.bwPrinter,
       colorPrinter: s.colorPrinter,
       photoPrinter: s.photoPrinter || "Default Printer",
@@ -705,6 +719,14 @@ function DashboardContent() {
         Number(settingsForm.colorPrice) !== Number(data.shop.colorPrice) ||
         Number(settingsForm.photoPrice) !== Number(data.shop.photoPrice) ||
         Number(settingsForm.duplexDiscount) !== Number(data.shop.duplexDiscount) ||
+        Number(settingsForm.f4ExtraPrice) !==
+          Number(data.shop.f4ExtraPrice ?? 100) ||
+        Number(settingsForm.bindingLakbanPrice) !==
+          Number(data.shop.bindingLakbanPrice ?? 3000) ||
+        Number(settingsForm.bindingMikaPrice) !==
+          Number(data.shop.bindingMikaPrice ?? 5000) ||
+        Number(settingsForm.bindingSpiralPrice) !==
+          Number(data.shop.bindingSpiralPrice ?? 10000) ||
         settingsForm.bwPrinter !== data.shop.bwPrinter ||
         settingsForm.colorPrinter !== data.shop.colorPrinter ||
         settingsForm.photoPrinter !==
@@ -763,6 +785,10 @@ function DashboardContent() {
         colorPrice: settingsForm.colorPrice,
         photoPrice: settingsForm.photoPrice,
         duplexDiscount: settingsForm.duplexDiscount,
+        f4ExtraPrice: settingsForm.f4ExtraPrice,
+        bindingLakbanPrice: settingsForm.bindingLakbanPrice,
+        bindingMikaPrice: settingsForm.bindingMikaPrice,
+        bindingSpiralPrice: settingsForm.bindingSpiralPrice,
         bwPrinter: settingsForm.bwPrinter,
         colorPrinter: settingsForm.colorPrinter,
         photoPrinter: settingsForm.photoPrinter,
@@ -804,6 +830,10 @@ function DashboardContent() {
             colorPrice: s.colorPrice,
             photoPrice: s.photoPrice,
             duplexDiscount: s.duplexDiscount,
+            f4ExtraPrice: s.f4ExtraPrice ?? 100,
+            bindingLakbanPrice: s.bindingLakbanPrice ?? 3000,
+            bindingMikaPrice: s.bindingMikaPrice ?? 5000,
+            bindingSpiralPrice: s.bindingSpiralPrice ?? 10000,
             bwPrinter: s.bwPrinter,
             colorPrinter: s.colorPrinter,
             photoPrinter: s.photoPrinter || "Default Printer",

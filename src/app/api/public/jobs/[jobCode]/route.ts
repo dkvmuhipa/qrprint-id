@@ -119,6 +119,8 @@ export async function GET(
         paperSize: job.paperSize,
         duplex: job.duplex,
         pageRange: job.pageRange,
+        bindingType: job.bindingType,
+        bindingPrice: job.bindingPrice,
         totalPrice: job.totalPrice,
         paymentMethod: job.paymentMethod,
         paymentProvider: job.paymentProvider,

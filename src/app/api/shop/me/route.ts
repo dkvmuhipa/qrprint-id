@@ -179,6 +179,10 @@ export async function GET() {
       colorPrice: shop.colorPrice,
       duplexDiscount: shop.duplexDiscount,
       photoPrice: shop.photoPrice,
+      f4ExtraPrice: shop.f4ExtraPrice,
+      bindingLakbanPrice: shop.bindingLakbanPrice,
+      bindingMikaPrice: shop.bindingMikaPrice,
+      bindingSpiralPrice: shop.bindingSpiralPrice,
       agentKey: shop.agentKey,
       agentLastSeen: shop.agentLastSeen,
       isAgentOnline,
@@ -428,6 +432,22 @@ export async function PATCH(req: Request) {
           body.duplexDiscount !== undefined
             ? Math.min(50, Math.max(0, Number(body.duplexDiscount) || 0))
             : shop.duplexDiscount,
+        f4ExtraPrice:
+          body.f4ExtraPrice !== undefined
+            ? Math.min(5000, Math.max(0, Number(body.f4ExtraPrice) || 0))
+            : shop.f4ExtraPrice,
+        bindingLakbanPrice:
+          body.bindingLakbanPrice !== undefined
+            ? Math.min(100000, Math.max(0, Number(body.bindingLakbanPrice) || 0))
+            : shop.bindingLakbanPrice,
+        bindingMikaPrice:
+          body.bindingMikaPrice !== undefined
+            ? Math.min(100000, Math.max(0, Number(body.bindingMikaPrice) || 0))
+            : shop.bindingMikaPrice,
+        bindingSpiralPrice:
+          body.bindingSpiralPrice !== undefined
+            ? Math.min(100000, Math.max(0, Number(body.bindingSpiralPrice) || 0))
+            : shop.bindingSpiralPrice,
         bwPrinter: serializePrinterPool(nextBwPool),
         colorPrinter: serializePrinterPool(nextColorPool),
         photoPrinter: serializePrinterPool(nextPhotoPool),

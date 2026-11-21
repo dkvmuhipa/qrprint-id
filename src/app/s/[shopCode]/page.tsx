@@ -24,8 +24,16 @@ import {
   ExternalLink,
   Copy,
   Palette,
+  Eye,
+  X,
+  BookOpen,
 } from "lucide-react";
-import { calculatePrintPrice, formatRupiah } from "@/lib/utils";
+import {
+  calculatePrintPrice,
+  formatRupiah,
+  getBindingLabel,
+  type BindingType,
+} from "@/lib/utils";
 import {
   countSingleFilePages,
   mergeFilesToSinglePdf,
@@ -40,6 +48,10 @@ interface PublicShop {
   colorPrice: number;
   photoPrice: number;
   duplexDiscount: number;
+  f4ExtraPrice?: number;
+  bindingLakbanPrice?: number;
+  bindingMikaPrice?: number;
+  bindingSpiralPrice?: number;
   qrisName: string;
   hasQrisPayment?: boolean;
   isAgentOnline: boolean;
@@ -60,6 +72,8 @@ interface ActiveJob {
   paperSize: string;
   duplex: boolean;
   pageRange: string;
+  bindingType?: string;
+  bindingPrice?: number;
   totalPrice: number;
   paymentMethod: string;
   paymentProvider?: string;
@@ -96,7 +110,14 @@ function CustomerScanPortalContent({
   const [copies, setCopies] = useState(1);
   const [duplex, setDuplex] = useState(false);
   const [pageRange, setPageRange] = useState("ALL");
+  const [bindingType, setBindingType] = useState<BindingType>("NONE");
   const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
+  const [previewModal, setPreviewModal] = useState<{
+    name: string;
+    url: string;
+    isPdf: boolean;
+    pages: number;
+  } | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -285,7 +306,20 @@ function CustomerScanPortalContent({
   }
 
   const priceCalc = useMemo(() => {
-    if (!shop) return { effectivePages: 1, unitPrice: 500, totalPrice: 500 };
+    if (!shop) {
+      return { effectivePages: 1, unitPrice: 500, bindingTotal: 0, totalPrice: 500 };
+    }
+    const bindingUnitPrice =
+      paperSize === "PHOTO_4X6"
+        ? 0
+        : bindingType === "LAKBAN"
+        ? shop.bindingLakbanPrice ?? 3000
+        : bindingType === "MIKA"
+        ? shop.bindingMikaPrice ?? 5000
+        : bindingType === "SPIRAL"
+        ? shop.bindingSpiralPrice ?? 10000
+        : 0;
+
     return calculatePrintPrice({
       pageCount: detectedPages,
       pageRange,
@@ -297,8 +331,30 @@ function CustomerScanPortalContent({
       colorPrice: shop.colorPrice,
       photoPrice: shop.photoPrice,
       duplexDiscount: shop.duplexDiscount,
+      f4ExtraPrice: shop.f4ExtraPrice ?? 100,
+      bindingUnitPrice,
     });
-  }, [shop, detectedPages, pageRange, copies, colorMode, paperSize, duplex]);
+  }, [shop, detectedPages, pageRange, copies, colorMode, paperSize, duplex, bindingType]);
+
+  function openFilePreview(targetFile: File, pages: number) {
+    if (previewModal?.url) {
+      URL.revokeObjectURL(previewModal.url);
+    }
+    const url = URL.createObjectURL(targetFile);
+    setPreviewModal({
+      name: targetFile.name,
+      url,
+      isPdf: targetFile.type === "application/pdf",
+      pages,
+    });
+  }
+
+  function closeFilePreview() {
+    if (previewModal?.url) {
+      URL.revokeObjectURL(previewModal.url);
+    }
+    setPreviewModal(null);
+  }
 
   async function handleUploadAndOrder(e: React.FormEvent) {
     e.preventDefault();
@@ -324,6 +380,7 @@ function CustomerScanPortalContent({
       fd.append("duplex", String(duplex));
       fd.append("pageRange", pageRange || "ALL");
       fd.append("pageCount", String(detectedPages));
+      fd.append("bindingType", paperSize === "PHOTO_4X6" ? "NONE" : bindingType);
       fd.append("paymentMethod", paymentMethod);
 
       const res = await fetch("/api/public/jobs", {
@@ -398,6 +455,8 @@ function CustomerScanPortalContent({
     setDetectedPages(1);
     setCopies(1);
     setPageRange("ALL");
+    setBindingType("NONE");
+    closeFilePreview();
     setSubmitError(null);
   }
 
@@ -563,6 +622,9 @@ function CustomerScanPortalContent({
                     {activeJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} ·{" "}
                     {activeJob.paperSize}
                     {activeJob.duplex ? " · Bolak-balik" : ""}
+                    {activeJob.bindingType && activeJob.bindingType !== "NONE"
+                      ? ` · ${getBindingLabel(activeJob.bindingType)}`
+                      : ""}
                   </p>
                 </div>
               </div>
@@ -818,7 +880,7 @@ function CustomerScanPortalContent({
                           `BUKTI CETAK — ${shop.name}`,
                           `Kode Antrean: ${activeJob.jobCode}`,
                           `File: ${activeJob.fileName}`,
-                          `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}`,
+                          `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}${activeJob.bindingType && activeJob.bindingType !== "NONE" ? ` · ${getBindingLabel(activeJob.bindingType)}` : ""}`,
                           `Bayar: ${activeJob.paymentMethod} (LUNAS)`,
                           `Total: ${formatRupiah(activeJob.totalPrice)}`,
                         ].join("\n");
@@ -845,6 +907,9 @@ function CustomerScanPortalContent({
                         {activeJob.pageCount} hal × {activeJob.copies} ·{" "}
                         {activeJob.colorMode === "COLOR" ? "Warna" : "HP"} ·{" "}
                         {activeJob.paperSize}
+                        {activeJob.bindingType && activeJob.bindingType !== "NONE"
+                          ? ` · ${getBindingLabel(activeJob.bindingType)}`
+                          : ""}
                       </span>
                     </div>
                     <div className="flex justify-between gap-2 pt-1 font-medium text-[#1f1b16]">
@@ -987,14 +1052,25 @@ function CustomerScanPortalContent({
                             </p>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveFile(idx)}
-                          title="Hapus file ini"
-                          className="shrink-0 cursor-pointer rounded-md p-1.5 text-[#7b7266] hover:bg-[#dc2626]/10 hover:text-[#dc2626]"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
-                        </button>
+                        <div className="flex shrink-0 items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openFilePreview(item.file, item.pages)}
+                            title="Pratinjau dokumen"
+                            className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-[#1f1b16]/12 bg-[#f7f4ee] px-2 py-1 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                          >
+                            <Eye className="h-3.5 w-3.5" strokeWidth={1.5} />
+                            <span>Pratinjau</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFile(idx)}
+                            title="Hapus file ini"
+                            className="cursor-pointer rounded-md p-1.5 text-[#7b7266] hover:bg-[#dc2626]/10 hover:text-[#dc2626]"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1147,6 +1223,15 @@ function CustomerScanPortalContent({
                       }`}
                     >
                       <span>{s.label}</span>
+                      {s.id === "F4" && !s.locked && (shop.f4ExtraPrice ?? 100) > 0 && (
+                        <span
+                          className={`font-mono-num text-[10px] font-normal ${
+                            paperSize === s.id ? "text-[#fdfbf7]/75" : "text-[#7b7266]"
+                          }`}
+                        >
+                          +{formatRupiah(shop.f4ExtraPrice ?? 100)}/lbr
+                        </span>
+                      )}
                       {s.locked && (
                         <span className="text-[10px] font-normal text-[#7b7266]">
                           Paket Pro
@@ -1186,7 +1271,7 @@ function CustomerScanPortalContent({
 
                 <div>
                   <label className="mb-1.5 block text-xs text-[#5e554a]">
-                    Rentang halaman (ALL / 1-3)
+                    Rentang halaman (ALL / 1-5, 8)
                   </label>
                   <input
                     value={pageRange}
@@ -1196,6 +1281,37 @@ function CustomerScanPortalContent({
                   />
                 </div>
               </div>
+
+              {/* Quick Page Range Pills when document has multiple pages */}
+              {detectedPages > 1 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f7f4ee] px-3 py-2 text-[11px]">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[#7b7266]">Pilih cepat:</span>
+                    {[
+                      { label: `Semua (1-${detectedPages})`, val: "ALL" },
+                      { label: "Hal. 1", val: "1" },
+                      ...(detectedPages >= 5 ? [{ label: "1-5", val: "1-5" }] : []),
+                      ...(detectedPages >= 10 ? [{ label: "1-10", val: "1-10" }] : []),
+                    ].map((preset) => (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => setPageRange(preset.val)}
+                        className={`cursor-pointer rounded-md px-2 py-0.5 font-mono-num font-medium transition-colors ${
+                          pageRange.trim().toUpperCase() === preset.val
+                            ? "bg-[#1f1b16] text-[#fdfbf7]"
+                            : "border border-[#1f1b16]/12 bg-white text-[#1f1b16] hover:bg-[#efe9df]"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                  <span className="font-mono-num font-medium text-[#1f1b16]">
+                    Dicetak: {priceCalc.effectivePages} / {detectedPages} hal
+                  </span>
+                </div>
+              )}
 
               {/* Duplex toggle */}
               {paperSize !== "PHOTO_4X6" && shop.allowDuplex !== false && (
@@ -1216,6 +1332,73 @@ function CustomerScanPortalContent({
                   />
                 </label>
               )}
+
+              {/* Add-on Binding / Finishing */}
+              {paperSize !== "PHOTO_4X6" &&
+                ((shop.bindingLakbanPrice ?? 3000) > 0 ||
+                  (shop.bindingMikaPrice ?? 5000) > 0 ||
+                  (shop.bindingSpiralPrice ?? 10000) > 0) && (
+                  <div>
+                    <div className="mb-1.5 flex items-center justify-between gap-2">
+                      <label className="inline-flex items-center gap-1.5 text-xs text-[#5e554a]">
+                        <BookOpen className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.5} />
+                        <span>Add-on Jilid / Finishing (opsional)</span>
+                      </label>
+                      {bindingType !== "NONE" && (
+                        <span className="font-mono-num text-[11px] font-medium text-[#d9381e]">
+                          +{formatRupiah(priceCalc.bindingTotal)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          { id: "NONE" as const, label: "Tanpa Jilid", price: 0 },
+                          {
+                            id: "LAKBAN" as const,
+                            label: "Jilid Lakban",
+                            price: shop.bindingLakbanPrice ?? 3000,
+                          },
+                          {
+                            id: "MIKA" as const,
+                            label: "Jilid Mika + Lakban",
+                            price: shop.bindingMikaPrice ?? 5000,
+                          },
+                          {
+                            id: "SPIRAL" as const,
+                            label: "Jilid Spiral",
+                            price: shop.bindingSpiralPrice ?? 10000,
+                          },
+                        ] as const
+                      )
+                        .filter((opt) => opt.id === "NONE" || opt.price > 0)
+                        .map((opt) => {
+                          const active = bindingType === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => setBindingType(opt.id)}
+                              className={`flex cursor-pointer flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors ${
+                                active
+                                  ? "border-2 border-[#1f1b16] bg-white"
+                                  : "border-[#1f1b16]/12 bg-[#f7f4ee]/60 hover:bg-[#efe9df]/60"
+                              }`}
+                            >
+                              <span className="text-xs font-medium text-[#1f1b16]">
+                                {opt.label}
+                              </span>
+                              <span className="font-mono-num mt-0.5 text-[11px] text-[#7b7266]">
+                                {opt.price > 0
+                                  ? `+${formatRupiah(opt.price)}/eks`
+                                  : "Gratis"}
+                              </span>
+                            </button>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
             </div>
 
             {/* Payment Method */}
@@ -1279,7 +1462,8 @@ function CustomerScanPortalContent({
               <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-mono-num text-xs whitespace-nowrap text-[#aaa398]">
-                    Total ({priceCalc.effectivePages} hal × {copies})
+                    Total ({priceCalc.effectivePages} hal × {copies}
+                    {priceCalc.bindingTotal > 0 ? ` + Jilid` : ""})
                   </p>
                   <p className="font-mono-num mt-0.5 text-lg font-medium text-[#efe9de] sm:text-xl">
                     {formatRupiah(priceCalc.totalPrice)}
@@ -1301,6 +1485,75 @@ function CustomerScanPortalContent({
           </form>
         )}
       </main>
+
+      {/* Document Preview Modal (PDF & Images, including converted Word/Excel/PPT) */}
+      {previewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 backdrop-blur-xs">
+          <div className="flex h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-[#1f1b16]/15 bg-[#fdfbf7] shadow-2xl">
+            <div className="flex items-center justify-between gap-2 border-b border-[#1f1b16]/10 bg-white px-4 py-3">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-[#1f1b16]">
+                  {previewModal.name}
+                </p>
+                <p className="font-mono-num text-[11px] text-[#7b7266]">
+                  {previewModal.pages} halaman · Pastikan tata letak rapi sebelum bayar
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <a
+                  href={previewModal.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-8 items-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-[#f7f4ee] px-2.5 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span className="hidden sm:inline">Layar Penuh</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={closeFilePreview}
+                  aria-label="Tutup pratinjau"
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-[#1f1b16] text-white hover:bg-[#333]"
+                >
+                  <X className="h-4 w-4" strokeWidth={1.6} />
+                </button>
+              </div>
+            </div>
+
+            <div className="relative flex-1 overflow-auto bg-[#e9e4db] p-2">
+              {previewModal.isPdf ? (
+                <iframe
+                  src={`${previewModal.url}#toolbar=0&navpanes=0`}
+                  title={`Pratinjau ${previewModal.name}`}
+                  className="h-full w-full rounded-lg border border-[#1f1b16]/10 bg-white"
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center p-4">
+                  <img
+                    src={previewModal.url}
+                    alt={previewModal.name}
+                    className="max-h-full max-w-full rounded-lg bg-white object-contain shadow-md"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 border-t border-[#1f1b16]/10 bg-white px-4 py-2.5 text-[11px] text-[#7b7266]">
+              <span>
+                Jika pratinjau PDF tidak muncul di browser HP, ketuk tombol{" "}
+                <strong className="text-[#1f1b16]">Layar Penuh</strong>.
+              </span>
+              <button
+                type="button"
+                onClick={closeFilePreview}
+                className="shrink-0 cursor-pointer rounded-lg bg-[#1f1b16] px-3 py-1.5 text-xs font-medium text-white"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

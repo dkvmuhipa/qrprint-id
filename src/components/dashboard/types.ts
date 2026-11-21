@@ -18,6 +18,10 @@ export interface ShopInfo {
   colorPrice: number;
   duplexDiscount: number;
   photoPrice: number;
+  f4ExtraPrice?: number;
+  bindingLakbanPrice?: number;
+  bindingMikaPrice?: number;
+  bindingSpiralPrice?: number;
   agentKey: string;
   agentLastSeen: string | null;
   isAgentOnline: boolean;
@@ -94,6 +98,8 @@ export interface PrintJobItem {
   paperSize: string;
   duplex: boolean;
   pageRange: string;
+  bindingType?: string;
+  bindingPrice?: number;
   totalPrice: number;
   paymentMethod: string;
   paymentStatus: string;

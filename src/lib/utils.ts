@@ -92,12 +92,39 @@ export function serializePrinterPool(list: string[]): string {
   return JSON.stringify(cleaned);
 }
 
-export function countSelectedPages(
+export type BindingType = "NONE" | "LAKBAN" | "MIKA" | "SPIRAL";
+
+export function normalizeBindingType(raw?: string | null): BindingType {
+  const up = String(raw || "NONE").trim().toUpperCase();
+  if (up === "LAKBAN" || up === "MIKA" || up === "SPIRAL") return up;
+  return "NONE";
+}
+
+export function getBindingLabel(raw?: string | null): string {
+  switch (normalizeBindingType(raw)) {
+    case "LAKBAN":
+      return "Jilid Lakban";
+    case "MIKA":
+      return "Jilid Mika + Lakban";
+    case "SPIRAL":
+      return "Jilid Spiral";
+    default:
+      return "Tanpa Jilid";
+  }
+}
+
+/**
+ * Returns sorted 0-based page indices for pdf-lib copyPages().
+ */
+export function parsePageRangeIndices(
   totalPages: number,
   pageRange: string
-): number {
+): number[] {
+  const safeTotal = Math.max(1, totalPages);
   const trimmed = (pageRange || "ALL").trim().toUpperCase();
-  if (!trimmed || trimmed === "ALL") return Math.max(1, totalPages);
+  if (!trimmed || trimmed === "ALL") {
+    return Array.from({ length: safeTotal }, (_, i) => i);
+  }
 
   const selected = new Set<number>();
   const parts = trimmed.split(",");
@@ -107,18 +134,29 @@ export function countSelectedPages(
     if (clean.includes("-")) {
       const [startStr, endStr] = clean.split("-");
       const start = Math.max(1, parseInt(startStr, 10) || 1);
-      const end = Math.min(totalPages, parseInt(endStr, 10) || totalPages);
+      const end = Math.min(safeTotal, parseInt(endStr, 10) || safeTotal);
       for (let i = start; i <= end; i++) {
-        selected.add(i);
+        selected.add(i - 1);
       }
     } else {
       const p = parseInt(clean, 10);
-      if (!isNaN(p) && p >= 1 && p <= totalPages) {
-        selected.add(p);
+      if (!isNaN(p) && p >= 1 && p <= safeTotal) {
+        selected.add(p - 1);
       }
     }
   }
-  return selected.size > 0 ? selected.size : Math.max(1, totalPages);
+
+  if (selected.size === 0) {
+    return Array.from({ length: safeTotal }, (_, i) => i);
+  }
+  return Array.from(selected).sort((a, b) => a - b);
+}
+
+export function countSelectedPages(
+  totalPages: number,
+  pageRange: string
+): number {
+  return parsePageRangeIndices(totalPages, pageRange).length;
 }
 
 export function calculatePrintPrice(params: {
@@ -132,7 +170,14 @@ export function calculatePrintPrice(params: {
   colorPrice: number;
   photoPrice: number;
   duplexDiscount: number;
-}): { effectivePages: number; unitPrice: number; totalPrice: number } {
+  f4ExtraPrice?: number;
+  bindingUnitPrice?: number;
+}): {
+  effectivePages: number;
+  unitPrice: number;
+  bindingTotal: number;
+  totalPrice: number;
+} {
   const effectivePages = countSelectedPages(params.pageCount, params.pageRange);
   const copies = Math.max(1, Math.min(50, params.copies || 1));
 
@@ -144,7 +189,11 @@ export function calculatePrintPrice(params: {
       : params.bwPrice;
 
   if (params.paperSize === "F4") {
-    unitPrice += 100;
+    const f4Add =
+      params.f4ExtraPrice !== undefined
+        ? Math.max(0, Number(params.f4ExtraPrice) || 0)
+        : 100;
+    unitPrice += f4Add;
   }
 
   let rawTotal = effectivePages * copies * unitPrice;
@@ -153,9 +202,16 @@ export function calculatePrintPrice(params: {
     rawTotal = Math.round(rawTotal * discountMultiplier);
   }
 
+  const bindingUnit =
+    params.paperSize === "PHOTO_4X6"
+      ? 0
+      : Math.max(0, Number(params.bindingUnitPrice) || 0);
+  const bindingTotal = bindingUnit * copies;
+
   return {
     effectivePages,
     unitPrice,
-    totalPrice: Math.max(100, rawTotal),
+    bindingTotal,
+    totalPrice: Math.max(100, rawTotal + bindingTotal),
   };
 }
