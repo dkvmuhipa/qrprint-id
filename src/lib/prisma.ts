@@ -18,8 +18,8 @@ if (!globalForPrisma.prismaSqliteConfigured) {
   globalForPrisma.prismaSqliteConfigured = true;
   prisma
     .$queryRawUnsafe("PRAGMA journal_mode = WAL;")
-    .then(() => prisma.$executeRawUnsafe("PRAGMA synchronous = NORMAL;"))
-    .then(() => prisma.$executeRawUnsafe("PRAGMA busy_timeout = 5000;"))
+    .then(() => prisma.$queryRawUnsafe("PRAGMA synchronous = NORMAL;"))
+    .then(() => prisma.$queryRawUnsafe("PRAGMA busy_timeout = 5000;"))
     .catch(() => {
       // Ignore if database is not SQLite or unavailable during build-time prerender
     });
