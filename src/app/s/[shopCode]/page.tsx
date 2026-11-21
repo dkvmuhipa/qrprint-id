@@ -198,6 +198,34 @@ function CustomerScanPortalContent({
     return () => clearInterval(timer);
   }, [activeJob?.jobCode, activeJob?.printStatus]);
 
+  function isOfficeDocument(f: File): boolean {
+    return /\.(docx?|xlsx?|pptx?)$/i.test(f.name || "");
+  }
+
+  async function convertOfficeFileToPdf(f: File): Promise<{ file: File; pages: number }> {
+    const fd = new FormData();
+    fd.append("file", f);
+    const res = await fetch("/api/public/convert-office", {
+      method: "POST",
+      body: fd,
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(
+        errData.error || `Gagal mengonversi ${f.name} ke PDF.`
+      );
+    }
+    const blob = await res.blob();
+    const headerPages = Number(res.headers.get("X-Page-Count"));
+    const pdfName = f.name.replace(/\.(docx?|xlsx?|pptx?)$/i, ".pdf");
+    const pdfFile = new File([blob], pdfName, { type: "application/pdf" });
+    const pages =
+      Number.isFinite(headerPages) && headerPages >= 1
+        ? headerPages
+        : await countSingleFilePages(pdfFile);
+    return { file: pdfFile, pages };
+  }
+
   async function handleFilesAdd(fileList: FileList | null) {
     setSubmitError(null);
     if (!fileList || fileList.length === 0) return;
@@ -210,12 +238,18 @@ function CustomerScanPortalContent({
 
     setCountingPages(true);
     try {
-      const counted = await Promise.all(
-        incoming.map(async (f) => ({
-          file: f,
-          pages: await countSingleFilePages(f),
-        }))
-      );
+      const counted: Array<{ file: File; pages: number }> = [];
+      for (const f of incoming) {
+        if (isOfficeDocument(f)) {
+          const converted = await convertOfficeFileToPdf(f);
+          counted.push(converted);
+        } else {
+          counted.push({
+            file: f,
+            pages: await countSingleFilePages(f),
+          });
+        }
+      }
       const next = [...selectedFiles, ...counted].slice(0, 10);
       const totalBytes = next.reduce((acc, item) => acc + item.file.size, 0);
       if (totalBytes > 20 * 1024 * 1024) {
@@ -231,6 +265,12 @@ function CustomerScanPortalContent({
       if (next.length > 1) {
         setPageRange("ALL");
       }
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : "Gagal memproses dokumen yang dipilih."
+      );
     } finally {
       setCountingPages(false);
     }
@@ -878,7 +918,7 @@ function CustomerScanPortalContent({
             <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
               <div className="mb-2.5 flex items-center justify-between gap-2">
                 <label className="block text-xs font-medium text-[#1f1b16]">
-                  1. Pilih dokumen PDF atau foto (bisa lebih dari 1 file)
+                  1. Pilih dokumen PDF, Word/Office, atau foto
                 </label>
                 {selectedFiles.length > 1 && (
                   <span className="font-mono-num rounded bg-[#16a34a]/10 px-2 py-0.5 text-[10px] font-semibold text-[#15803d]">
@@ -892,7 +932,7 @@ function CustomerScanPortalContent({
                   <input
                     type="file"
                     multiple
-                    accept=".pdf,image/jpeg,image/png,image/webp"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/jpeg,image/png,image/webp"
                     onChange={(e) => {
                       handleFilesAdd(e.target.files);
                       e.target.value = "";
@@ -900,14 +940,19 @@ function CustomerScanPortalContent({
                     className="hidden"
                   />
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[#1f1b16]/12 bg-white text-[#1f1b16]">
-                    <UploadCloud className="h-5 w-5" strokeWidth={1.5} />
+                    {countingPages ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-[#d9381e]" strokeWidth={1.5} />
+                    ) : (
+                      <UploadCloud className="h-5 w-5" strokeWidth={1.5} />
+                    )}
                   </div>
                   <p className="mt-3 text-sm font-medium text-[#1f1b16]">
-                    Ketuk untuk memilih 1 atau beberapa file dari HP
+                    {countingPages
+                      ? "Mengonversi & menghitung halaman dokumen..."
+                      : "Ketuk untuk memilih 1 atau beberapa file dari HP"}
                   </p>
                   <p className="mt-1 text-xs text-[#7b7266]">
-                    PDF, JPG, PNG, WEBP · Maks. 10 file (total 20 MB) dalam 1×
-                    bayar QRIS
+                    PDF, Word (.docx), Excel, PPT, JPG, PNG, WEBP · Maks. 10 file dalam 1× bayar
                   </p>
                 </label>
               ) : (
@@ -965,7 +1010,7 @@ function CustomerScanPortalContent({
                         <input
                           type="file"
                           multiple
-                          accept=".pdf,image/jpeg,image/png,image/webp"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/jpeg,image/png,image/webp"
                           onChange={(e) => {
                             handleFilesAdd(e.target.files);
                             e.target.value = "";
