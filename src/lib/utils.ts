@@ -60,6 +60,38 @@ export function generateAgentKey(): string {
   return `AGT_${crypto.randomBytes(16).toString("hex")}`;
 }
 
+/**
+ * Parse printer mapping field that may hold either a single printer name
+ * ("Epson L3210") or a JSON string array ('["Epson #1","Epson #2"]') for Multi-Printer Pooling.
+ */
+export function parsePrinterPool(raw?: string | null): string[] {
+  const str = String(raw || "").trim();
+  if (!str) return ["Default Printer"];
+  if (str.startsWith("[")) {
+    try {
+      const arr = JSON.parse(str);
+      if (Array.isArray(arr)) {
+        const cleaned = arr
+          .map((x) => String(x || "").trim())
+          .filter(Boolean);
+        if (cleaned.length > 0) return Array.from(new Set(cleaned));
+      }
+    } catch {
+      // Fallback to raw string
+    }
+  }
+  return [str];
+}
+
+export function serializePrinterPool(list: string[]): string {
+  const cleaned = Array.from(
+    new Set(list.map((x) => String(x || "").trim()).filter(Boolean))
+  );
+  if (cleaned.length === 0) return "Default Printer";
+  if (cleaned.length === 1) return cleaned[0];
+  return JSON.stringify(cleaned);
+}
+
 export function countSelectedPages(
   totalPages: number,
   pageRange: string

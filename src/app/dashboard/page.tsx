@@ -137,6 +137,9 @@ interface ShopInfo {
   bwPrinter: string;
   colorPrinter: string;
   photoPrinter?: string;
+  bwPrinters?: string[];
+  colorPrinters?: string[];
+  photoPrinters?: string[];
   qrisName: string;
   hasStaticQris?: boolean;
   staticQrisPreview?: string;
@@ -259,6 +262,9 @@ function DashboardContent() {
     bwPrinter: "Default Printer",
     colorPrinter: "Default Printer",
     photoPrinter: "Default Printer",
+    bwPrinters: ["Default Printer"] as string[],
+    colorPrinters: ["Default Printer"] as string[],
+    photoPrinters: ["Default Printer"] as string[],
     staticQrisString: "",
     midtransServerKey: "",
     midtransIsProd: false,
@@ -591,6 +597,9 @@ function DashboardContent() {
             bwPrinter: json.shop.bwPrinter,
             colorPrinter: json.shop.colorPrinter,
             photoPrinter: json.shop.photoPrinter || "Default Printer",
+            bwPrinters: json.shop.bwPrinters || [json.shop.bwPrinter || "Default Printer"],
+            colorPrinters: json.shop.colorPrinters || [json.shop.colorPrinter || "Default Printer"],
+            photoPrinters: json.shop.photoPrinters || [json.shop.photoPrinter || "Default Printer"],
             staticQrisString: "",
             midtransServerKey: "",
             midtransIsProd: Boolean(json.shop.midtransIsProd),
@@ -739,6 +748,9 @@ function DashboardContent() {
         bwPrinter: settingsForm.bwPrinter,
         colorPrinter: settingsForm.colorPrinter,
         photoPrinter: settingsForm.photoPrinter,
+        bwPrinters: settingsForm.bwPrinters,
+        colorPrinters: settingsForm.colorPrinters,
+        photoPrinters: settingsForm.photoPrinters,
         midtransIsProd: settingsForm.midtransIsProd,
       };
       if (settingsForm.staticQrisString.trim() !== "") {
@@ -2495,6 +2507,108 @@ function DashboardContent() {
                     ))}
                   </select>
                 </div>
+
+                {/* Multi-Printer Pool (Load Balancing Round-Robin for Pro & Premium) */}
+                {(entitlement.plan.maxPrinters === null ||
+                  entitlement.plan.maxPrinters >= 3) && (
+                  <div className="sm:col-span-2 rounded-xl border border-[#171717]/10 bg-[#fafafa] p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-medium text-[#171717]">
+                          Multi-Printer Pool (Bagi Antrean Otomatis / Round-Robin)
+                        </p>
+                        <p className="mt-0.5 text-[11px] text-[#737373]">
+                          Punya 2–6 printer sama (misal 3 Hitam Putih &amp; 3 Warna di 1 PC)? Centang beberapa printer di bawah agar antrean dibagi bergiliran secara otomatis.
+                        </p>
+                      </div>
+                      <span className="font-mono-num rounded bg-white px-2 py-0.5 text-[11px] font-medium text-[#171717] border border-[#171717]/10">
+                        {entitlement.plan.maxPrinters === null
+                          ? "Unlimited printer"
+                          : `Maks. ${entitlement.plan.maxPrinters} printer`}
+                      </span>
+                    </div>
+
+                    {shop.printers.length < 2 ? (
+                      <p className="mt-3 text-[11px] text-[#737373]">
+                        Hubungkan 2+ printer USB/LAN ke PC kasir dan jalankan Windows Print Agent agar daftar printer muncul di sini.
+                      </p>
+                    ) : (
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        {(
+                          [
+                            {
+                              key: "bwPrinters" as const,
+                              primaryKey: "bwPrinter" as const,
+                              label: "Grup Printer Hitam Putih",
+                            },
+                            {
+                              key: "colorPrinters" as const,
+                              primaryKey: "colorPrinter" as const,
+                              label: "Grup Printer Warna",
+                            },
+                          ] as const
+                        ).map((grp) => {
+                          const selectedList = settingsForm[grp.key].filter(
+                            (x) => x !== "Default Printer"
+                          );
+                          return (
+                            <div
+                              key={grp.key}
+                              className="rounded-lg border border-[#171717]/8 bg-white p-3"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-[11px] font-medium text-[#171717]">
+                                  {grp.label}
+                                </p>
+                                {selectedList.length >= 2 && (
+                                  <span className="rounded bg-[#16a34a]/10 px-1.5 py-0.5 font-mono-num text-[10px] font-medium text-[#16a34a]">
+                                    Load balance ({selectedList.length})
+                                  </span>
+                                )}
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {shop.printers.map((printerName) => {
+                                  const isChecked =
+                                    selectedList.includes(printerName);
+                                  return (
+                                    <button
+                                      key={printerName}
+                                      type="button"
+                                      onClick={() => {
+                                        const next = isChecked
+                                          ? selectedList.filter(
+                                              (p) => p !== printerName
+                                            )
+                                          : [...selectedList, printerName];
+                                        const normalized =
+                                          next.length > 0
+                                            ? next
+                                            : ["Default Printer"];
+                                        setSettingsForm((prev) => ({
+                                          ...prev,
+                                          [grp.key]: normalized,
+                                          [grp.primaryKey]: normalized[0],
+                                        }));
+                                      }}
+                                      className={`cursor-pointer rounded-md border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                                        isChecked
+                                          ? "border-[#171717] bg-[#171717] text-white"
+                                          : "border-[#171717]/12 bg-[#fafafa] text-[#525252] hover:border-[#171717]/30 hover:text-[#171717]"
+                                      }`}
+                                    >
+                                      {isChecked ? "✓ " : "+ "}
+                                      {printerName}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* GoPay Merchant / Static-to-Dynamic QRIS Box */}

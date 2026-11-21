@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPlanDef } from "@/lib/plans";
+import { parsePrinterPool } from "@/lib/utils";
 
 export async function GET(req: Request) {
   const agentKey = req.headers.get("x-agent-key");
@@ -56,37 +57,57 @@ export async function GET(req: Request) {
     take: 5,
   });
 
-  const bwPrinter = shop.bwPrinter;
-  const colorPrinter = shop.colorPrinter;
-  const photoPrinter = shop.photoPrinter;
+  const bwPool = parsePrinterPool(shop.bwPrinter);
+  const colorPool = parsePrinterPool(shop.colorPrinter);
+  const photoPool = parsePrinterPool(shop.photoPrinter);
 
-  function resolveTargetPrinter(job: {
-    colorMode: string;
-    paperSize: string;
-  }): string {
-    // DEMO plan (1 printer): all jobs route to bwPrinter
-    if (planDef.maxPrinters === 1) {
-      return bwPrinter;
+  function pickFromPool(pool: string[], seedStr: string, offset: number): string {
+    if (pool.length <= 1) return pool[0] || "Default Printer";
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+      hash = (hash * 31 + seedStr.charCodeAt(i)) >>> 0;
     }
-    // PRO / PREMIUM (3+ printers): PHOTO_4X6 routes to dedicated photoPrinter if set
+    return pool[(hash + offset) % pool.length];
+  }
+
+  function resolveTargetPrinter(
+    job: {
+      id: string;
+      jobCode: string;
+      colorMode: string;
+      paperSize: string;
+    },
+    idx: number
+  ): string {
+    // DEMO plan (1 printer): all jobs route to primary bwPrinter
+    if (planDef.maxPrinters === 1) {
+      return bwPool[0] || "Default Printer";
+    }
+    // PRO / PREMIUM (3+ printers): PHOTO_4X6 routes to dedicated photoPrinter pool if set
+    const hasCustomPhoto =
+      photoPool.length > 0 &&
+      !(photoPool.length === 1 && photoPool[0] === "Default Printer");
     if (
       job.paperSize === "PHOTO_4X6" &&
       (planDef.maxPrinters === null || planDef.maxPrinters >= 3) &&
-      photoPrinter &&
-      photoPrinter !== "Default Printer"
+      hasCustomPhoto
     ) {
-      return photoPrinter;
+      return pickFromPool(photoPool, job.jobCode || job.id, idx);
     }
-    return job.colorMode === "COLOR" ? colorPrinter : bwPrinter;
+    const targetPool = job.colorMode === "COLOR" ? colorPool : bwPool;
+    return pickFromPool(targetPool, job.jobCode || job.id, idx);
   }
 
   return NextResponse.json({
     shopCode: shop.shopCode,
     plan: planDef.id,
-    bwPrinter: shop.bwPrinter,
-    colorPrinter: shop.colorPrinter,
-    photoPrinter: shop.photoPrinter,
-    jobs: jobs.map((j) => ({
+    bwPrinter: bwPool[0] || "Default Printer",
+    colorPrinter: colorPool[0] || "Default Printer",
+    photoPrinter: photoPool[0] || "Default Printer",
+    bwPrinters: bwPool,
+    colorPrinters: colorPool,
+    photoPrinters: photoPool,
+    jobs: jobs.map((j, idx) => ({
       id: j.id,
       jobCode: j.jobCode,
       fileName: j.fileName,
@@ -96,7 +117,7 @@ export async function GET(req: Request) {
       paperSize: j.paperSize,
       duplex: j.duplex,
       pageRange: j.pageRange,
-      targetPrinter: resolveTargetPrinter(j),
+      targetPrinter: resolveTargetPrinter(j, idx),
       hasFile: Boolean(j.storedFilePath),
     })),
   });

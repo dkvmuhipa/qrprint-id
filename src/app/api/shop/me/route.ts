@@ -10,7 +10,12 @@ import {
 } from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
-import { isValidShopSlug, sanitizeShopSlug } from "@/lib/utils";
+import {
+  isValidShopSlug,
+  parsePrinterPool,
+  sanitizeShopSlug,
+  serializePrinterPool,
+} from "@/lib/utils";
 
 export async function GET() {
   const shop = await getCurrentShop();
@@ -132,9 +137,12 @@ export async function GET() {
         entitlement.plan.maxPrinters !== null
           ? printers.slice(0, entitlement.plan.maxPrinters)
           : printers,
-      bwPrinter: shop.bwPrinter,
-      colorPrinter: shop.colorPrinter,
-      photoPrinter: shop.photoPrinter,
+      bwPrinter: parsePrinterPool(shop.bwPrinter)[0] || "Default Printer",
+      colorPrinter: parsePrinterPool(shop.colorPrinter)[0] || "Default Printer",
+      photoPrinter: parsePrinterPool(shop.photoPrinter)[0] || "Default Printer",
+      bwPrinters: parsePrinterPool(shop.bwPrinter),
+      colorPrinters: parsePrinterPool(shop.colorPrinter),
+      photoPrinters: parsePrinterPool(shop.photoPrinter),
       qrisName: shop.qrisName,
       hasStaticQris: Boolean(shop.staticQrisString),
       staticQrisPreview: shop.staticQrisString
@@ -293,6 +301,40 @@ export async function PATCH(req: Request) {
       }
     }
 
+    // Resolve multi-printer pools (Pro/Premium) while enforcing plan maxPrinters limit
+    const planDef = SAAS_PLANS[shop.plan as keyof typeof SAAS_PLANS] || SAAS_PLANS.DEMO;
+    const nextBwPool = Array.isArray(body.bwPrinters)
+      ? body.bwPrinters.map(String).filter(Boolean)
+      : body.bwPrinter
+      ? [String(body.bwPrinter)]
+      : parsePrinterPool(shop.bwPrinter);
+    const nextColorPool = Array.isArray(body.colorPrinters)
+      ? body.colorPrinters.map(String).filter(Boolean)
+      : body.colorPrinter
+      ? [String(body.colorPrinter)]
+      : parsePrinterPool(shop.colorPrinter);
+    const nextPhotoPool = Array.isArray(body.photoPrinters)
+      ? body.photoPrinters.map(String).filter(Boolean)
+      : body.photoPrinter
+      ? [String(body.photoPrinter)]
+      : parsePrinterPool(shop.photoPrinter);
+
+    if (planDef.maxPrinters !== null) {
+      const distinctSelected = new Set(
+        [...nextBwPool, ...nextColorPool, ...nextPhotoPool].filter(
+          (p) => p && p !== "Default Printer"
+        )
+      );
+      if (distinctSelected.size > planDef.maxPrinters) {
+        return NextResponse.json(
+          {
+            error: `Paket ${planDef.name} dibatasi maksimal ${planDef.maxPrinters} printer aktif (${distinctSelected.size} dipilih). Upgrade ke paket lebih tinggi untuk menambah printer.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
     const updated = await prisma.shop.update({
       where: { id: shop.id },
       data: {
@@ -321,13 +363,9 @@ export async function PATCH(req: Request) {
           body.duplexDiscount !== undefined
             ? Math.min(50, Math.max(0, Number(body.duplexDiscount) || 0))
             : shop.duplexDiscount,
-        bwPrinter: body.bwPrinter ? String(body.bwPrinter) : shop.bwPrinter,
-        colorPrinter: body.colorPrinter
-          ? String(body.colorPrinter)
-          : shop.colorPrinter,
-        photoPrinter: body.photoPrinter
-          ? String(body.photoPrinter)
-          : shop.photoPrinter,
+        bwPrinter: serializePrinterPool(nextBwPool),
+        colorPrinter: serializePrinterPool(nextColorPool),
+        photoPrinter: serializePrinterPool(nextPhotoPool),
         qrisName: detectedQrisMerchant
           ? detectedQrisMerchant
           : body.qrisName
