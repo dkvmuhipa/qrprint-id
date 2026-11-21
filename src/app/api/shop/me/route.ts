@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import {
   canUseListener,
   evaluateShopEntitlement,
+  getEffectiveMaxPrinters,
   SAAS_PLANS,
 } from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
@@ -121,6 +122,11 @@ export async function GET() {
       planStatus: entitlement.isExpired ? "EXPIRED" : shop.planStatus,
       planExpiresAt: shop.planExpiresAt,
       hasListenerAddon: shop.hasListenerAddon,
+      extraPrinterSlots: shop.extraPrinterSlots,
+      effectiveMaxPrinters: getEffectiveMaxPrinters(
+        shop.plan,
+        shop.extraPrinterSlots
+      ),
       canUseListener: canUseListener({
         planId: shop.plan,
         planExpiresAt: shop.planExpiresAt,
@@ -133,10 +139,13 @@ export async function GET() {
       agentKey: shop.agentKey,
       agentLastSeen: shop.agentLastSeen,
       isAgentOnline,
-      printers:
-        entitlement.plan.maxPrinters !== null
-          ? printers.slice(0, entitlement.plan.maxPrinters)
-          : printers,
+      printers: (() => {
+        const effMax = getEffectiveMaxPrinters(
+          shop.plan,
+          shop.extraPrinterSlots
+        );
+        return effMax !== null ? printers.slice(0, effMax) : printers;
+      })(),
       bwPrinter: parsePrinterPool(shop.bwPrinter)[0] || "Default Printer",
       colorPrinter: parsePrinterPool(shop.colorPrinter)[0] || "Default Printer",
       photoPrinter: parsePrinterPool(shop.photoPrinter)[0] || "Default Printer",
@@ -319,16 +328,20 @@ export async function PATCH(req: Request) {
       ? [String(body.photoPrinter)]
       : parsePrinterPool(shop.photoPrinter);
 
-    if (planDef.maxPrinters !== null) {
+    const effectiveMaxPrinters = getEffectiveMaxPrinters(
+      shop.plan,
+      shop.extraPrinterSlots
+    );
+    if (effectiveMaxPrinters !== null) {
       const distinctSelected = new Set(
         [...nextBwPool, ...nextColorPool, ...nextPhotoPool].filter(
           (p) => p && p !== "Default Printer"
         )
       );
-      if (distinctSelected.size > planDef.maxPrinters) {
+      if (distinctSelected.size > effectiveMaxPrinters) {
         return NextResponse.json(
           {
-            error: `Paket ${planDef.name} dibatasi maksimal ${planDef.maxPrinters} printer aktif (${distinctSelected.size} dipilih). Upgrade ke paket lebih tinggi untuk menambah printer.`,
+            error: `Batas printer aktif Anda saat ini ${effectiveMaxPrinters} unit (${distinctSelected.size} dipilih). Tambah Add-On Slot Printer (+Rp 20.000/bln) atau upgrade paket.`,
           },
           { status: 403 }
         );

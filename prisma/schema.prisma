@@ -21,6 +21,7 @@ model Shop {
   planStatus        String                @default("ACTIVE")
   planExpiresAt     DateTime?
   hasListenerAddon  Boolean               @default(false)
+  extraPrinterSlots Int                   @default(0)
   bwPrice           Int                   @default(500)
   colorPrice        Int                   @default(1500)
   duplexDiscount    Int                   @default(10)

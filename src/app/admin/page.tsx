@@ -45,6 +45,7 @@ interface AdminShopRow {
   planStatus: string;
   planExpiresAt: string | null;
   hasListenerAddon?: boolean;
+  extraPrinterSlots?: number;
   daysLeft: number | null;
   hoursLeft: number | null;
   canAcceptJobs: boolean;
@@ -1751,6 +1752,57 @@ export default function SuperAdminPage() {
                       </button>
                     )}
                 </div>
+
+                {/* Extra Printer Slots Add-On (+Rp 20.000/bln per slot) */}
+                {selectedShop.plan !== "PREMIUM" && (
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">
+                    <div>
+                      <p className="font-medium text-[#171717]">
+                        Add-On Slot Printer (+Rp 20.000/bln)
+                      </p>
+                      <p className="font-mono-num text-[11px] text-[#737373]">
+                        Tambahan aktif: +{selectedShop.extraPrinterSlots || 0} slot printer
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={
+                          busyId === "printer_slots" ||
+                          (selectedShop.extraPrinterSlots || 0) <= 0
+                        }
+                        onClick={() =>
+                          runAdminAction("printer_slots", {
+                            action: "SET_EXTRA_PRINTER_SLOTS",
+                            shopId: selectedShop.id,
+                            extraPrinterSlots: Math.max(
+                              0,
+                              (selectedShop.extraPrinterSlots || 0) - 1
+                            ),
+                          })
+                        }
+                        className="h-7 w-7 cursor-pointer rounded-md border border-[#171717]/15 bg-[#fafafa] font-mono-num text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-40"
+                      >
+                        -1
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyId === "printer_slots"}
+                        onClick={() =>
+                          runAdminAction("printer_slots", {
+                            action: "SET_EXTRA_PRINTER_SLOTS",
+                            shopId: selectedShop.id,
+                            extraPrinterSlots:
+                              (selectedShop.extraPrinterSlots || 0) + 1,
+                          })
+                        }
+                        className="h-7 cursor-pointer rounded-md bg-[#171717] px-2.5 font-mono-num text-xs font-medium text-white hover:bg-[#171717]/90 disabled:opacity-40"
+                      >
+                        +1 slot
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 2. Support Tools: Impersonate & Reset Password */}

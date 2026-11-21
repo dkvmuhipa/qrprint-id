@@ -472,6 +472,30 @@ export async function PATCH(req: Request) {
       });
     }
 
+    // 14. Adjust Extra Printer Slots Add-On (+Rp 20.000/bln per slot)
+    if (action === "SET_EXTRA_PRINTER_SLOTS" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+      const nextSlots = Math.min(
+        20,
+        Math.max(0, Math.floor(Number(body.extraPrinterSlots) || 0))
+      );
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { extraPrinterSlots: nextSlots },
+      });
+      return NextResponse.json({
+        ok: true,
+        extraPrinterSlots: nextSlots,
+        message: `Add-On Slot Printer ${shop.name} diatur menjadi +${nextSlots} slot.`,
+      });
+    }
+
     return NextResponse.json(
       { error: "Aksi admin tidak valid." },
       { status: 400 }

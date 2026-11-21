@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getPlanDef } from "@/lib/plans";
+import { getEffectiveMaxPrinters, getPlanDef } from "@/lib/plans";
 import { parsePrinterPool } from "@/lib/utils";
 
 export async function GET(req: Request) {
@@ -70,6 +70,11 @@ export async function GET(req: Request) {
     return pool[(hash + offset) % pool.length];
   }
 
+  const effectiveMaxPrinters = getEffectiveMaxPrinters(
+    shop.plan,
+    shop.extraPrinterSlots
+  );
+
   function resolveTargetPrinter(
     job: {
       id: string;
@@ -79,17 +84,17 @@ export async function GET(req: Request) {
     },
     idx: number
   ): string {
-    // DEMO plan (1 printer): all jobs route to primary bwPrinter
-    if (planDef.maxPrinters === 1) {
+    // 1 printer limit: all jobs route to primary bwPrinter
+    if (effectiveMaxPrinters === 1) {
       return bwPool[0] || "Default Printer";
     }
-    // PRO / PREMIUM (3+ printers): PHOTO_4X6 routes to dedicated photoPrinter pool if set
+    // 3+ printers (Pro / Premium / Bulanan + Extra Printer Add-On): PHOTO_4X6 routes to photoPrinter pool
     const hasCustomPhoto =
       photoPool.length > 0 &&
       !(photoPool.length === 1 && photoPool[0] === "Default Printer");
     if (
       job.paperSize === "PHOTO_4X6" &&
-      (planDef.maxPrinters === null || planDef.maxPrinters >= 3) &&
+      (effectiveMaxPrinters === null || effectiveMaxPrinters >= 3) &&
       hasCustomPhoto
     ) {
       return pickFromPool(photoPool, job.jobCode || job.id, idx);

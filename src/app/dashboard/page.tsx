@@ -125,6 +125,8 @@ interface ShopInfo {
   planStatus: string;
   planExpiresAt: string | null;
   hasListenerAddon?: boolean;
+  extraPrinterSlots?: number;
+  effectiveMaxPrinters?: number | null;
   canUseListener?: boolean;
   bwPrice: number;
   colorPrice: number;
@@ -1175,8 +1177,18 @@ function DashboardContent() {
                 </span>
               </div>
               <p className="mt-1 text-xs text-[#737373]">
-                {entitlement.plan.maxPrinters !== null
-                  ? `Maks. ${entitlement.plan.maxPrinters} printer aktif`
+                {(shop.effectiveMaxPrinters !== undefined
+                  ? shop.effectiveMaxPrinters
+                  : entitlement.plan.maxPrinters) !== null
+                  ? `Maks. ${
+                      shop.effectiveMaxPrinters !== undefined
+                        ? shop.effectiveMaxPrinters
+                        : entitlement.plan.maxPrinters
+                    } printer aktif${
+                      (shop.extraPrinterSlots || 0) > 0
+                        ? ` (+${shop.extraPrinterSlots} add-on)`
+                        : ""
+                    }`
                   : "Multi-printer tanpa batas"}
               </p>
             </div>
@@ -2133,6 +2145,72 @@ function DashboardContent() {
                       );
                     })}
                 </div>
+                {/* Add-On Opsional (untuk paket Bulanan / kebutuhan khusus) */}
+                <div className="mt-5 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <h4 className="text-sm font-medium text-[#171717]">
+                        Add-On Opsional (Khusus Paket Bulanan)
+                      </h4>
+                      <p className="mt-0.5 text-xs text-[#737373]">
+                        Aktifkan fitur satuan tanpa harus langsung pindah paket — atau hemat jauh lebih besar dengan Pro Tahunan.
+                      </p>
+                    </div>
+                    <a
+                      href={`mailto:admin@gellona.id?subject=${encodeURIComponent(
+                        `Aktivasi Add-On Ngeprint (${shop.shopCode})`
+                      )}`}
+                      className="btn-action inline-flex h-8 shrink-0 items-center rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90"
+                    >
+                      Pesan Add-On via Admin
+                    </a>
+                  </div>
+                  <div className="mt-3 grid gap-2.5 sm:grid-cols-3 text-xs">
+                    <div className="rounded-lg border border-[#171717]/8 bg-white p-3">
+                      <p className="font-medium text-[#171717]">
+                        APK Ngeprint Listener
+                      </p>
+                      <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                        +Rp 25.000 / bulan
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#737373]">
+                        Lunas otomatis tanpa klik kasir.{" "}
+                        {shop.canUseListener ? (
+                          <strong className="text-[#16a34a]">(Sudah aktif)</strong>
+                        ) : (
+                          "Gratis di Pro/Premium."
+                        )}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-[#171717]/8 bg-white p-3">
+                      <p className="font-medium text-[#171717]">
+                        Tambah Slot Printer
+                      </p>
+                      <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                        +Rp 20.000 / slot / bln
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#737373]">
+                        Tambah kuota printer &amp; buka Multi-Printer Pool.{" "}
+                        {(shop.extraPrinterSlots || 0) > 0 && (
+                          <strong className="text-[#16a34a]">
+                            (+{shop.extraPrinterSlots} aktif)
+                          </strong>
+                        )}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-[#171717]/8 bg-white p-3">
+                      <p className="font-medium text-[#171717]">
+                        Ganti URL Portal (/s/...)
+                      </p>
+                      <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                        Rp 37.000 / sekali
+                      </p>
+                      <p className="mt-1 text-[11px] text-[#737373]">
+                        Untuk perubahan URL portal setelah kuota 1× gratis habis.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Billing Invoice History Table */}
@@ -2476,17 +2554,25 @@ function DashboardContent() {
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-[#171717]">
                     3. Printer Khusus Foto 4×6 & Kertas F4{" "}
-                    {entitlement.plan.maxPrinters !== null &&
-                      entitlement.plan.maxPrinters < 3 && (
+                    {(shop.effectiveMaxPrinters !== undefined
+                      ? shop.effectiveMaxPrinters
+                      : entitlement.plan.maxPrinters) !== null &&
+                      (shop.effectiveMaxPrinters !== undefined
+                        ? shop.effectiveMaxPrinters
+                        : entitlement.plan.maxPrinters)! < 3 && (
                         <span className="font-normal text-[#d9381e]">
-                          (Tersedia mulai paket Pro Tahunan — 3+ printer)
+                          (Tersedia mulai 3+ printer — Pro atau Add-On +1 Slot)
                         </span>
                       )}
                   </label>
                   <select
                     disabled={
-                      entitlement.plan.maxPrinters !== null &&
-                      entitlement.plan.maxPrinters < 3
+                      (shop.effectiveMaxPrinters !== undefined
+                        ? shop.effectiveMaxPrinters
+                        : entitlement.plan.maxPrinters) !== null &&
+                      (shop.effectiveMaxPrinters !== undefined
+                        ? shop.effectiveMaxPrinters
+                        : entitlement.plan.maxPrinters)! < 3
                     }
                     value={settingsForm.photoPrinter}
                     onChange={(e) =>
@@ -2508,9 +2594,13 @@ function DashboardContent() {
                   </select>
                 </div>
 
-                {/* Multi-Printer Pool (Load Balancing Round-Robin for Pro & Premium) */}
-                {(entitlement.plan.maxPrinters === null ||
-                  entitlement.plan.maxPrinters >= 3) && (
+                {/* Multi-Printer Pool (Load Balancing Round-Robin for 3+ printers: Pro, Premium, or Bulanan + Add-On) */}
+                {((shop.effectiveMaxPrinters !== undefined
+                  ? shop.effectiveMaxPrinters
+                  : entitlement.plan.maxPrinters) === null ||
+                  (shop.effectiveMaxPrinters !== undefined
+                    ? shop.effectiveMaxPrinters
+                    : entitlement.plan.maxPrinters)! >= 3) && (
                   <div className="sm:col-span-2 rounded-xl border border-[#171717]/10 bg-[#fafafa] p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -2522,9 +2612,15 @@ function DashboardContent() {
                         </p>
                       </div>
                       <span className="font-mono-num rounded bg-white px-2 py-0.5 text-[11px] font-medium text-[#171717] border border-[#171717]/10">
-                        {entitlement.plan.maxPrinters === null
+                        {(shop.effectiveMaxPrinters !== undefined
+                          ? shop.effectiveMaxPrinters
+                          : entitlement.plan.maxPrinters) === null
                           ? "Unlimited printer"
-                          : `Maks. ${entitlement.plan.maxPrinters} printer`}
+                          : `Maks. ${
+                              shop.effectiveMaxPrinters !== undefined
+                                ? shop.effectiveMaxPrinters
+                                : entitlement.plan.maxPrinters
+                            } printer`}
                       </span>
                     </div>
 

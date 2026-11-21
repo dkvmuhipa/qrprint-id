@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getPlanDef } from "@/lib/plans";
+import { getEffectiveMaxPrinters, getPlanDef } from "@/lib/plans";
 
 export async function POST(req: Request) {
   const agentKey = req.headers.get("x-agent-key");
@@ -14,7 +14,11 @@ export async function POST(req: Request) {
   }
 
   const planDef = getPlanDef(shop.plan);
-  const maxAllowedPrinters = planDef.maxPrinters ?? 20;
+  const effectiveMaxPrinters = getEffectiveMaxPrinters(
+    shop.plan,
+    shop.extraPrinterSlots
+  );
+  const maxAllowedPrinters = effectiveMaxPrinters ?? 20;
 
   const body = await req.json().catch(() => ({}));
   const machineHash = String(
@@ -63,11 +67,12 @@ export async function POST(req: Request) {
     shopCode: shop.shopCode,
     shopName: shop.name,
     plan: planDef.id,
-    maxPrinters: planDef.maxPrinters,
+    maxPrinters: effectiveMaxPrinters,
     bwPrinter: shop.bwPrinter,
-    colorPrinter: planDef.maxPrinters === 1 ? shop.bwPrinter : shop.colorPrinter,
+    colorPrinter:
+      effectiveMaxPrinters === 1 ? shop.bwPrinter : shop.colorPrinter,
     photoPrinter:
-      planDef.maxPrinters && planDef.maxPrinters < 3
+      effectiveMaxPrinters !== null && effectiveMaxPrinters < 3
         ? shop.colorPrinter
         : shop.photoPrinter,
   });

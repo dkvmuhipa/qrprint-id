@@ -78,6 +78,7 @@ export async function GET() {
       planStatus: entitlement.isExpired ? "EXPIRED" : s.planStatus,
       planExpiresAt: s.planExpiresAt,
       hasListenerAddon: s.hasListenerAddon,
+      extraPrinterSlots: s.extraPrinterSlots,
       daysLeft: entitlement.daysLeft,
       hoursLeft: entitlement.hoursLeft,
       canAcceptJobs: entitlement.canAcceptJobs,

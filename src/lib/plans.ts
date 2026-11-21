@@ -3,6 +3,7 @@ import crypto from "crypto";
 export type PlanId = "DEMO" | "BULANAN" | "PRO" | "PREMIUM";
 
 export const LISTENER_ADDON_PRICE = 25000;
+export const EXTRA_PRINTER_ADDON_PRICE = 20000;
 
 export interface PlanDefinition {
   id: PlanId;
@@ -113,6 +114,15 @@ export function canUseListener(params: {
     if (expMs <= Date.now()) return false;
   }
   return plan.allowListener || Boolean(params.hasListenerAddon);
+}
+
+export function getEffectiveMaxPrinters(
+  planId: string,
+  extraPrinterSlots?: number | null
+): number | null {
+  const plan = getPlanDef(planId);
+  if (plan.maxPrinters === null) return null;
+  return plan.maxPrinters + Math.max(0, Math.floor(Number(extraPrinterSlots) || 0));
 }
 
 export function getPlanDef(planId?: string | null): PlanDefinition {
