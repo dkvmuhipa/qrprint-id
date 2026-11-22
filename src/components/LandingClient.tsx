@@ -220,11 +220,11 @@ export function LandingClient() {
 
       {/* Quiet Mode Selector Bar with Clear Context */}
       <div className="border-b border-[#1f1b16]/8 bg-[#fdfbf7]">
-        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-2.5 sm:flex-row sm:items-center sm:gap-4">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2.5 sm:flex-row sm:items-center sm:gap-4 sm:px-6">
           <span className="shrink-0 text-xs text-[#7b7266]">
             Pilih modul sistem:
           </span>
-          <div className="no-scrollbar flex items-center gap-2 overflow-x-auto">
+          <div className="no-scrollbar flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5">
             {PRODUCTS.map((item) => {
               const Icon = item.icon;
               const active = item.id === activeTab;
@@ -270,48 +270,48 @@ export function LandingClient() {
       </div>
 
       {/* Hero Section — Asymmetric Split with Calm Copy & Real Product Preview */}
-      <section className="mx-auto max-w-6xl px-6 pt-12 pb-16 lg:pt-20 lg:pb-24">
-        <div className="grid items-center gap-12 lg:grid-cols-12">
-          <div className="lg:col-span-6">
+      <section className="mx-auto max-w-6xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 sm:pb-16 lg:pt-20 lg:pb-24">
+        <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-12">
+          <div className="min-w-0 lg:col-span-6">
             <p className="text-xs font-medium text-[#d9381e]">
               {currentProduct.context}
             </p>
 
-            <h1 className="mt-3 text-4xl leading-[1.08] font-medium tracking-[-0.02em] text-[#1f1b16] sm:text-5xl">
+            <h1 className="mt-2.5 text-[28px] leading-[1.14] font-semibold tracking-[-0.02em] text-[#1f1b16] sm:mt-3 sm:text-5xl sm:leading-[1.08] sm:font-medium">
               {currentProduct.headline}
             </h1>
 
-            <p className="mt-4 text-base font-medium text-[#1f1b16]">
+            <p className="mt-3 text-sm font-medium text-[#1f1b16] sm:mt-4 sm:text-base">
               {currentProduct.subline}
             </p>
 
-            <p className="mt-2 max-w-xl text-base leading-relaxed text-[#5e554a]">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#5e554a] sm:text-base">
               {currentProduct.desc}
             </p>
 
-            <p className="font-mono-num mt-4 inline-block rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] px-3 py-1.5 text-xs text-[#5e554a]">
+            <p className="font-mono-num mt-4 block w-full rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] px-3 py-2 text-[11px] leading-relaxed text-[#5e554a] sm:inline-block sm:w-auto sm:text-xs">
               {currentProduct.requirement}
             </p>
 
-            {/* Primary & Secondary Action (Strictly 2 actions per Unslop Layout Pass) */}
-            <div className="mt-8 flex flex-wrap items-center gap-3">
+            {/* Primary & Secondary Action (Full-width symmetrical stack on mobile) */}
+            <div className="mt-6 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
               <Link
                 href="/register"
-                className="btn-action inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-5 text-sm font-medium text-white hover:bg-[#be2e17]"
+                className="btn-action inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-5 text-sm font-medium text-white hover:bg-[#be2e17] sm:w-auto"
               >
                 <span>Buat QR toko sekarang</span>
                 <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
               </Link>
               <button
                 onClick={() => setDemoOpen(true)}
-                className="btn-action inline-flex h-11 cursor-pointer items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] px-5 text-sm font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                className="btn-action inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] px-5 text-sm font-medium text-[#1f1b16] hover:bg-[#efe9df] sm:w-auto"
               >
                 Uji coba demo 24 jam
               </button>
             </div>
 
             {/* Quiet 4-Step Pipeline List */}
-            <div className="mt-10 grid grid-cols-2 gap-4 border-t border-[#1f1b16]/8 pt-6 sm:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-3.5 border-t border-[#1f1b16]/8 pt-6 sm:mt-10 sm:grid-cols-4 sm:gap-4">
               {[
                 { icon: QrCode, num: "1", title: "Scan QR meja", desc: "Kamera HP pelanggan" },
                 { icon: UploadCloud, num: "2", title: "Unggah dokumen", desc: "Hitung lembar otomatis" },
@@ -335,7 +335,7 @@ export function LandingClient() {
             </div>
           </div>
 
-          <div className="lg:col-span-6">
+          <div className="min-w-0 lg:col-span-6">
             <HeroIllustration />
           </div>
         </div>
@@ -343,7 +343,7 @@ export function LandingClient() {
 
       {/* Capability Strip & Key Numbers */}
       <section className="border-y border-[#1f1b16]/8 bg-[#fdfbf7] py-10">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
@@ -405,7 +405,7 @@ export function LandingClient() {
       </section>
 
       {/* Pain Point vs Solution (#fitur) */}
-      <section id="fitur" className="mx-auto max-w-6xl px-6 py-20">
+      <section id="fitur" className="mx-auto max-w-6xl px-4 sm:px-6 py-20">
         <div className="max-w-2xl">
           <p className="text-xs font-medium text-[#d9381e]">
             Perbandingan alur kerja kasir
@@ -466,7 +466,7 @@ export function LandingClient() {
       </section>
 
       {/* Setup 2 Minutes Guide (#setup) */}
-      <section id="setup" className="mx-auto max-w-6xl px-6 pb-20">
+      <section id="setup" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
         <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#161513] p-8 text-[#efe9de] sm:p-10">
           <div className="flex flex-col justify-between gap-4 border-b border-[#efe9de]/10 pb-6 md:flex-row md:items-end">
             <div>
@@ -541,7 +541,7 @@ export function LandingClient() {
       </section>
 
       {/* Pricing Plans (#harga) */}
-      <section id="harga" className="mx-auto max-w-6xl px-6 pb-20">
+      <section id="harga" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
         <div className="max-w-2xl">
           <p className="text-xs font-medium text-[#d9381e]">
             Biaya berlangganan tetap
@@ -622,7 +622,7 @@ export function LandingClient() {
       </section>
 
       {/* Privacy by Design (#privasi) */}
-      <section id="privasi" className="mx-auto max-w-6xl px-6 pb-20">
+      <section id="privasi" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
         <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-8 sm:p-10">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 text-xs font-medium text-[#16a34a]">
@@ -732,7 +732,7 @@ export function LandingClient() {
       </section>
 
       {/* FAQ Section (#faq) */}
-      <section id="faq" className="mx-auto max-w-6xl px-6 pb-20">
+      <section id="faq" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
         <div className="max-w-2xl">
           <p className="text-xs font-medium text-[#d9381e]">
             Pertanyaan umum
