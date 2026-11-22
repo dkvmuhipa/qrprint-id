@@ -63,14 +63,24 @@ export function AgentTab({
               auto-struk 58mm, serta auto-start saat komputer menyala.
             </p>
           </div>
-          <a
-            href="/api/shop/agent-bundle"
-            download={`ngeprint-agent-${shop.shopCode}.zip`}
-            className="btn-action inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17]"
-          >
-            <Download className="h-4 w-4" strokeWidth={1.5} />
-            <span>Unduh Paket ZIP Siap Pakai</span>
-          </a>
+          <div className="flex shrink-0 flex-col gap-2 sm:items-end">
+            <a
+              href="/api/shop/agent-bundle"
+              download={`ngeprint-agent-${shop.shopCode}.zip`}
+              className="btn-action inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17]"
+            >
+              <Download className="h-4 w-4" strokeWidth={1.5} />
+              <span>Unduh Paket Win 10 / 11 (.zip)</span>
+            </a>
+            <a
+              href="/api/shop/agent-bundle?os=win7"
+              download={`ngeprint-agent-win7-${shop.shopCode}.zip`}
+              className="btn-action inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-[#171717]/20 bg-white px-3.5 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+            >
+              <Download className="h-3.5 w-3.5 text-[#525252]" strokeWidth={1.5} />
+              <span>Khusus Windows 7 / 8 (.exe ringan · tanpa Node.js)</span>
+            </a>
+          </div>
         </div>
         <div className="mt-3.5 grid gap-2 border-t border-[#d9381e]/15 pt-3 text-[11px] text-[#525252] sm:grid-cols-3">
           <p>

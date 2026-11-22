@@ -32,12 +32,12 @@ const PRODUCTS = [
     label: "Windows Print Agent",
     shortDesc: "Cetak otomatis via PC/Laptop",
     status: "Tersedia",
-    requirement: "Perangkat: PC/Laptop Windows 10/11 + Printer USB standar",
+    requirement: "Perangkat: PC/Laptop Windows 7, 8, 10, atau 11 + Printer USB standar",
     icon: Monitor,
     context: "Mode 1 · Untuk toko fotokopi & percetakan dengan komputer kasir",
     headline: "Dari HP pelanggan, langsung keluar di printer meja Anda",
     subline: "Mendukung PDF, Word, Excel, PowerPoint, & Foto — tanpa WA dan tanpa flashdisk",
-    desc: "Jalankan Ngeprint Agent di Windows 10/11. Pelanggan memindai QR di meja kasir, mengunggah PDF, Word (.docx), Excel, PPT, atau foto (bisa gabung banyak file 1× bayar), pilih deteksi warna otomatis & jilid, bayar QRIS, lalu dokumen langsung tercetak.",
+    desc: "Jalankan Ngeprint Agent di Windows 7, 8, 10, atau 11 (tersedia versi .exe ringan tanpa Node.js khusus Windows 7). Pelanggan memindai QR di meja kasir, mengunggah PDF, Word (.docx), Excel, PPT, atau foto (bisa gabung banyak file 1× bayar), pilih deteksi warna otomatis & jilid, bayar QRIS, lalu dokumen langsung tercetak.",
   },
   {
     id: "kasir",
@@ -139,7 +139,7 @@ const PLANS = [
 const FAQ_ITEMS = [
   {
     q: "Apakah toko harus membeli printer Wi-Fi atau mesin baru?",
-    a: "Tidak perlu. Ngeprint bekerja dengan semua printer USB standar (Epson, Canon, HP, Brother, dll.) yang terhubung ke PC atau laptop Windows 10/11 di meja kasir Anda.",
+    a: "Tidak perlu. Ngeprint bekerja dengan semua printer USB standar (Epson, Canon, HP, Brother, dll.) yang terhubung ke PC atau laptop Windows 7, 8, 10, maupun 11 di meja kasir Anda.",
   },
   {
     q: "Uang pembayaran QRIS pelanggan masuk ke mana? Apakah ada potongan?",

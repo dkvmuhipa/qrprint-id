@@ -46,8 +46,8 @@ const STEPS = [
     title: "Pasang Windows Print Agent di PC Kasir (Cukup 2 Klik)",
     desc: "Buka Dashboard → tab Print Agent → klik 'Unduh Paket ZIP Siap Pakai'. Ekstrak folder ZIP di PC kasir Windows Anda, lalu klik ganda file PASANG-DAN-JALANKAN.bat.",
     tips: [
-      "Otomatis mengecek Node.js, mengunduh SumatraPDF (cetak presisi halaman/warna/duplex), dan mengaktifkan auto-start saat PC dinyalakan.",
-      "Biarkan jendela hitam tetap terbuka (boleh di-minimize). Status di Dashboard akan berubah menjadi 'Terhubung'.",
+      "Otomatis mengecek Node.js, mengunduh SumatraPDF (cetak presisi halaman/warna/bolak-balik), dan mengaktifkan auto-start saat PC dinyalakan.",
+      "Masih pakai PC Windows 7 / 8? Pilih tombol 'Khusus Windows 7 / 8 (.exe ringan)' di tab Print Agent — langsung jalan tanpa perlu install Node.js!",
     ],
   },
   {
