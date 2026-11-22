@@ -22,6 +22,9 @@ import {
   FileCheck2,
   Users,
   ChevronDown,
+  Camera,
+  Link2,
+  PlusCircle,
 } from "lucide-react";
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
@@ -618,6 +621,103 @@ export function LandingClient() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Optional Add-On Modules Strip */}
+        <div className="mt-8 rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5 sm:p-6">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-xs font-medium text-[#d9381e]">
+                Modul Add-On opsional
+              </p>
+              <h3 className="mt-1 text-lg font-medium text-[#1f1b16]">
+                Tambah fitur satuan kapan saja dari Dashboard
+              </h3>
+            </div>
+            <p className="text-xs text-[#7b7266]">
+              Bisa diaktifkan terpisah atau otomatis gratis di paket yang lebih tinggi
+            </p>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                icon: Smartphone,
+                name: "APK Ngeprint Listener",
+                price: "Rp 25.000",
+                period: "/ 30 hari",
+                badge: "Gratis di Pro & Premium",
+                comingSoon: false,
+                desc: "Verifikasi pembayaran QRIS toko otomatis 100% dari HP kasir tanpa klik manual.",
+              },
+              {
+                icon: PlusCircle,
+                name: "+1 Slot Printer Aktif",
+                price: "Rp 20.000",
+                period: "/ 30 hari",
+                badge: "Unlimited di Premium",
+                comingSoon: false,
+                desc: "Tambah kapasitas slot printer USB & aktifkan Multi-Printer Pool secara fleksibel.",
+              },
+              {
+                icon: Link2,
+                name: "Ganti URL Portal (/s/...)",
+                price: "Rp 37.000",
+                period: "/ sekali pakai",
+                badge: "Semua paket",
+                comingSoon: false,
+                desc: "Buka kembali kuota 1× perubahan alamat link QR portal pelanggan toko Anda.",
+              },
+              {
+                icon: Camera,
+                name: "Generator Grid Pas Foto",
+                price: "Rp 30.000",
+                period: "/ 30 hari",
+                badge: "Segera Hadir · Gratis Premium",
+                comingSoon: true,
+                desc: "Susun otomatis pas foto 2×3, 3×4, & 4×6 (300 DPI + crop & zoom) siap cetak.",
+              },
+            ].map((addon) => {
+              const Icon = addon.icon;
+              return (
+                <div
+                  key={addon.name}
+                  className="flex flex-col justify-between rounded-xl border border-[#1f1b16]/10 bg-[#f7f4ee]/70 p-4"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] text-[#1f1b16]">
+                        <Icon className="h-4 w-4" strokeWidth={1.5} />
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          addon.comingSoon
+                            ? "border border-[#d9381e]/25 bg-[#d9381e]/10 text-[#d9381e]"
+                            : "border border-[#1f1b16]/10 bg-[#fdfbf7] text-[#5e554a]"
+                        }`}
+                      >
+                        {addon.badge}
+                      </span>
+                    </div>
+                    <h4 className="mt-3 text-sm font-medium text-[#1f1b16]">
+                      {addon.name}
+                    </h4>
+                    <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
+                      {addon.desc}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex items-baseline gap-1 border-t border-[#1f1b16]/8 pt-3">
+                    <span className="font-mono-num text-base font-medium text-[#1f1b16]">
+                      {addon.price}
+                    </span>
+                    <span className="text-[11px] text-[#7b7266]">
+                      {addon.period}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
