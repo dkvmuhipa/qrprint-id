@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { ENABLE_PASFOTO_GRID } from "./feature-flags";
 
 export type PlanId = "DEMO" | "BULANAN" | "PRO" | "PREMIUM";
 
@@ -116,7 +117,7 @@ export function resolveCheckoutCart(codes: string[]): {
       extraPrinterQty = Math.min(10, extraPrinterQty + qty);
     } else if (base === "ADDON_URL_CHANGE") {
       wantUrlChange = true;
-    } else if (base === "ADDON_PASFOTO") {
+    } else if (base === "ADDON_PASFOTO" && ENABLE_PASFOTO_GRID) {
       wantPasFoto = true;
     }
   }
@@ -366,6 +367,7 @@ export function canUsePasFoto(params: {
   isTestShop?: boolean | null;
 }): boolean {
   if (params.isTestShop) return true;
+  if (!ENABLE_PASFOTO_GRID) return false;
   const plan = getPlanDef(params.planId);
   if (params.planExpiresAt) {
     const expMs = new Date(params.planExpiresAt).getTime();

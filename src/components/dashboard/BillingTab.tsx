@@ -4,6 +4,7 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 import { Check, Copy, Gift, RefreshCw, Share2, ShoppingCart, Trash2 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { formatInvoicePlanLabel } from "@/lib/plans";
+import { ENABLE_PASFOTO_GRID } from "@/lib/feature-flags";
 import type {
   EntitlementInfo,
   PlanDefItem,
@@ -559,9 +560,16 @@ export function BillingTab({
 
             <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
               <div>
-                <p className="font-medium text-[#171717]">
-                  Generator Grid Pas Foto
-                </p>
+                <div className="flex items-center justify-between gap-1.5">
+                  <p className="font-medium text-[#171717]">
+                    Generator Grid Pas Foto
+                  </p>
+                  {!ENABLE_PASFOTO_GRID && (
+                    <span className="shrink-0 rounded bg-[#b45309]/12 px-1.5 py-0.5 font-mono-num text-[9px] font-semibold text-[#b45309] uppercase">
+                      Coming Soon
+                    </span>
+                  )}
+                </div>
                 <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
                   +Rp 30.000 / 30 hari
                 </p>
@@ -573,7 +581,9 @@ export function BillingTab({
               <button
                 type="button"
                 disabled={
-                  Boolean(shop.canUsePasFoto) || cart.planId === "PREMIUM"
+                  !ENABLE_PASFOTO_GRID ||
+                  Boolean(shop.canUsePasFoto) ||
+                  cart.planId === "PREMIUM"
                 }
                 onClick={() =>
                   setCart((prev) => ({ ...prev, pasFoto: !prev.pasFoto }))
@@ -584,7 +594,9 @@ export function BillingTab({
                     : "bg-[#171717] text-white hover:bg-[#171717]/90"
                 }`}
               >
-                {shop.canUsePasFoto
+                {!ENABLE_PASFOTO_GRID
+                  ? "Segera Hadir"
+                  : shop.canUsePasFoto
                   ? "Sudah aktif"
                   : cart.planId === "PREMIUM"
                   ? "Gratis di Premium"
