@@ -58,6 +58,7 @@ interface PublicShop {
   bindingMikaPrice?: number;
   bindingSpiralPrice?: number;
   qrisName: string;
+  isTestShop?: boolean;
   hasQrisPayment?: boolean;
   isAgentOnline: boolean;
   plan?: string;
@@ -137,6 +138,7 @@ function CustomerScanPortalContent({
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [qrisDataUrl, setQrisDataUrl] = useState<string>("");
   const [checkingStatus, setCheckingStatus] = useState(false);
+  const [simulatingPay, setSimulatingPay] = useState(false);
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
@@ -518,6 +520,30 @@ function CustomerScanPortalContent({
     }
   }
 
+  async function handleSimulatePaid() {
+    if (!activeJob || simulatingPay) return;
+    setSimulatingPay(true);
+    try {
+      const res = await fetch(`/api/public/jobs/${activeJob.jobCode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "SIMULATE_PAID" }),
+      });
+      if (res.ok) {
+        const refreshed = await fetch(
+          `/api/public/jobs/${activeJob.jobCode}?t=${Date.now()}`,
+          { cache: "no-store" }
+        );
+        if (refreshed.ok) {
+          const data = await refreshed.json();
+          setActiveJob(data.job);
+        }
+      }
+    } finally {
+      setSimulatingPay(false);
+    }
+  }
+
   async function handleCancelOrder() {
     if (!activeJob || cancellingOrder) return;
     const confirmed = window.confirm(
@@ -669,6 +695,16 @@ function CustomerScanPortalContent({
             </div>
           </div>
         </div>
+
+        {/* Internal Test Shop Banner */}
+        {shop.isTestShop && (
+          <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-purple-300 bg-purple-50 px-4 py-2.5 text-xs text-purple-900">
+            <span>
+              <strong>Mode Toko Testing Internal</strong> — Semua fitur (termasuk
+              Pas Foto Grid &amp; Simulasi Bayar QRIS) terbuka di toko ini.
+            </span>
+          </div>
+        )}
 
         {/* Privacy Assurance */}
         <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-[#1f1b16]/10 bg-[#efe9df] px-4 py-2.5 text-xs text-[#1f1b16]">
@@ -883,6 +919,24 @@ function CustomerScanPortalContent({
                         kepada petugas kasir.
                       </p>
                     </>
+                  )}
+
+                  {shop.isTestShop && (
+                    <div className="mt-4 border-t border-dashed border-purple-200 pt-3">
+                      <button
+                        type="button"
+                        disabled={simulatingPay}
+                        onClick={handleSimulatePaid}
+                        className="btn-action inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-medium text-white hover:bg-purple-800 disabled:opacity-60"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" strokeWidth={1.6} />
+                        <span>
+                          {simulatingPay
+                            ? "Memproses simulasi lunas..."
+                            : "Simulasi Bayar Lunas (Khusus Toko Testing)"}
+                        </span>
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1210,8 +1264,8 @@ function CustomerScanPortalContent({
                   </div>
                 </div>
               )}
-              {/* Feature-flagged Pas Foto Grid (LOCKED until NEXT_PUBLIC_ENABLE_PASFOTO_GRID=true) */}
-              {ENABLE_PASFOTO_GRID && (
+              {/* Feature-flagged Pas Foto Grid (LOCKED for public; auto-unlocked on Admin Test Shops) */}
+              {(ENABLE_PASFOTO_GRID || shop.isTestShop) && (
                 <div className="mt-3 border-t border-[#1f1b16]/8 pt-3">
                   <button
                     type="button"
@@ -1220,6 +1274,11 @@ function CustomerScanPortalContent({
                   >
                     <Camera className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
                     <span>Susun Grid Pas Foto Otomatis (2×3, 3×4, 4×6)</span>
+                    {shop.isTestShop && !ENABLE_PASFOTO_GRID && (
+                      <span className="rounded bg-purple-100 px-1.5 py-0.5 font-mono-num text-[9px] font-semibold text-purple-700">
+                        BETA
+                      </span>
+                    )}
                   </button>
                 </div>
               )}
@@ -1670,8 +1729,8 @@ function CustomerScanPortalContent({
         )}
       </main>
 
-      {/* Feature-flagged Pas Foto Modal (LOCKED until enabled) */}
-      {ENABLE_PASFOTO_GRID && showPasFotoModal && (
+      {/* Feature-flagged Pas Foto Modal (LOCKED for public; unlocked on Admin Test Shops) */}
+      {(ENABLE_PASFOTO_GRID || shop.isTestShop) && showPasFotoModal && (
         <PasFotoModal
           allowPhotoPaper={shop.allowExtraPaper !== false}
           onClose={() => setShowPasFotoModal(false)}

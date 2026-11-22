@@ -58,8 +58,9 @@ export async function GET(
         bindingMikaPrice: shop.bindingMikaPrice,
         bindingSpiralPrice: shop.bindingSpiralPrice,
         qrisName: shop.qrisName,
+        isTestShop: Boolean(shop.isTestShop),
         hasQrisPayment: Boolean(
-          shop.staticQrisString || shop.midtransServerKey
+          shop.isTestShop || shop.staticQrisString || shop.midtransServerKey
         ),
         isAgentOnline,
         plan: entitlement.plan.id,

@@ -309,9 +309,15 @@ export async function POST(req: Request) {
         );
       }
 
-      // Production safety: if shop has neither Midtrans nor Static QRIS configured, fall back to CASH (never simulation)
+      // Production safety: if shop has neither Midtrans nor Static QRIS configured,
+      // allow TEST_SANDBOX QRIS only for internal Test Shops; real shops fall back to CASH.
       if (paymentProvider === "CASH") {
-        effectivePaymentMethod = "CASH";
+        if (shop.isTestShop) {
+          paymentProvider = "TEST_SANDBOX";
+          qrisString = `NGEPRINT-TEST-QRIS|${jobCode}|RP${finalTotalPrice}`;
+        } else {
+          effectivePaymentMethod = "CASH";
+        }
       }
     }
 

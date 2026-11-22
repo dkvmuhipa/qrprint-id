@@ -84,6 +84,7 @@ export default function SuperAdminPage() {
     password: "",
     plan: "PRO",
     demoId: "",
+    isTestShop: false,
   });
 
   function openCreateShopModal(prefill?: Partial<typeof createForm>) {
@@ -98,6 +99,7 @@ export default function SuperAdminPage() {
       password: prefill?.password || "ngeprint123",
       plan: prefill?.plan || "PRO",
       demoId: prefill?.demoId || "",
+      isTestShop: Boolean(prefill?.isTestShop),
     });
     setCreateOpen(true);
   }
@@ -718,6 +720,11 @@ export default function SuperAdminPage() {
                             <span className="inline-flex items-center gap-1 text-[#16a34a]">
                               <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
                               <span>Agent Online</span>
+                            </span>
+                          )}
+                          {shop.isTestShop && (
+                            <span className="rounded bg-purple-100 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-purple-700">
+                              TESTING
                             </span>
                           )}
                           {shop.hasMidtransKey && (

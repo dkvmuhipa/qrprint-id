@@ -23,6 +23,7 @@ export interface CreateShopFormState {
   password: string;
   plan: string;
   demoId: string;
+  isTestShop: boolean;
 }
 
 interface ShopDetailDrawerProps {
@@ -459,14 +460,41 @@ export function CreateShopModal({
           <X className="h-4 w-4" strokeWidth={1.5} />
         </button>
 
-        <p className="font-mono-num text-xs text-[#d9381e]">
-          {createForm.demoId
-            ? "Konversi prospek demo → akun toko"
-            : "Onboarding mitra toko baru"}
-        </p>
-        <h2 className="mt-1 text-lg font-medium text-[#171717]">
-          Buat akun toko secara manual
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-2 pr-8">
+          <div>
+            <p className="font-mono-num text-xs text-[#d9381e]">
+              {createForm.demoId
+                ? "Konversi prospek demo → akun toko"
+                : "Onboarding mitra toko baru"}
+            </p>
+            <h2 className="mt-1 text-lg font-medium text-[#171717]">
+              Buat akun toko secara manual
+            </h2>
+          </div>
+          {!createForm.demoId && (
+            <button
+              type="button"
+              onClick={() => {
+                const rand = Math.floor(1000 + Math.random() * 9000);
+                setCreateForm({
+                  name: `Lab Testing Ngeprint #${rand}`,
+                  ownerName: "Admin QA Gellona",
+                  email: `testing-${rand}@gellona.id`,
+                  phone: "085961194621",
+                  address: "Sandbox Internal Gellona Teknologi",
+                  shopCode: `test-lab-${rand}`,
+                  password: `Test#${rand}`,
+                  plan: "PREMIUM",
+                  demoId: "",
+                  isTestShop: true,
+                });
+              }}
+              className="cursor-pointer rounded-lg border border-purple-300 bg-purple-50 px-3 py-1.5 text-[11px] font-medium text-purple-700 hover:bg-purple-100"
+            >
+              ⚡ Isi Otomatis Toko Testing
+            </button>
+          )}
+        </div>
 
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           {createError && (
@@ -570,11 +598,12 @@ export function CreateShopModal({
                 Aktifkan paket langsung
               </label>
               <select
-                value={createForm.plan}
+                disabled={createForm.isTestShop}
+                value={createForm.isTestShop ? "PREMIUM" : createForm.plan}
                 onChange={(e) =>
                   setCreateForm({ ...createForm, plan: e.target.value })
                 }
-                className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white disabled:opacity-60"
               >
                 <option value="DEMO">Demo 24 Jam (Gratis)</option>
                 <option value="BULANAN">Bulanan (Rp 79.000 · 30 hari)</option>
@@ -586,6 +615,31 @@ export function CreateShopModal({
                 </option>
               </select>
             </div>
+
+            <label className="sm:col-span-2 flex cursor-pointer items-start gap-2.5 rounded-xl border border-purple-200 bg-purple-50/70 p-3 text-xs">
+              <input
+                type="checkbox"
+                checked={createForm.isTestShop}
+                onChange={(e) =>
+                  setCreateForm({
+                    ...createForm,
+                    isTestShop: e.target.checked,
+                    plan: e.target.checked ? "PREMIUM" : createForm.plan,
+                  })
+                }
+                className="mt-0.5 h-4 w-4 accent-purple-700"
+              />
+              <div>
+                <p className="font-medium text-purple-900">
+                  Mode Toko Testing / QA Internal (Semua Fitur Terbuka)
+                </p>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-purple-800/80">
+                  Otomatis aktifkan paket Premium + Listener + tombol{" "}
+                  <strong>Simulasi Bayar QRIS Lunas</strong> + fitur terkunci
+                  (termasuk Pas Foto Grid). Tidak masuk omzet SaaS/MRR.
+                </p>
+              </div>
+            </label>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

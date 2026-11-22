@@ -151,6 +151,7 @@ export async function POST(
 
   const job = await prisma.printJob.findUnique({
     where: { jobCode: jobCode.toUpperCase() },
+    include: { shop: { select: { isTestShop: true } } },
   });
 
   if (!job) {
@@ -158,6 +159,30 @@ export async function POST(
       { error: "Pesanan cetak tidak ditemukan." },
       { status: 404 }
     );
+  }
+
+  if (action === "SIMULATE_PAID") {
+    if (!job.shop?.isTestShop) {
+      return NextResponse.json(
+        { error: "Simulasi pembayaran hanya diizinkan pada Toko Testing internal." },
+        { status: 403 }
+      );
+    }
+    if (job.printStatus === "CANCELLED") {
+      return NextResponse.json(
+        { error: "Pesanan sudah dibatalkan." },
+        { status: 400 }
+      );
+    }
+    const updated = await prisma.printJob.update({
+      where: { id: job.id },
+      data: {
+        paymentStatus: "PAID",
+        printStatus:
+          job.printStatus === "WAITING_PAYMENT" ? "QUEUED" : job.printStatus,
+      },
+    });
+    return NextResponse.json({ ok: true, job: updated });
   }
 
   if (action === "CANCEL") {

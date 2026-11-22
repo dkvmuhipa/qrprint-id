@@ -9,6 +9,7 @@ export interface AdminShopRow {
   plan: string;
   planStatus: string;
   planExpiresAt: string | null;
+  isTestShop?: boolean;
   hasListenerAddon?: boolean;
   extraPrinterSlots?: number;
   daysLeft: number | null;

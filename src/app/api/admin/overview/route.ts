@@ -77,6 +77,7 @@ export async function GET() {
       plan: s.plan,
       planStatus: entitlement.isExpired ? "EXPIRED" : s.planStatus,
       planExpiresAt: s.planExpiresAt,
+      isTestShop: Boolean(s.isTestShop),
       hasListenerAddon: s.hasListenerAddon,
       extraPrinterSlots: s.extraPrinterSlots,
       daysLeft: entitlement.daysLeft,
@@ -110,9 +111,9 @@ export async function GET() {
     0
   );
 
-  // Estimate MRR (Monthly Recurring Revenue) from active paid shops
+  // Estimate MRR (Monthly Recurring Revenue) from active paid shops (excluding internal test shops)
   const estimatedMrr = enrichedShops
-    .filter((s) => s.plan !== "DEMO" && s.canAcceptJobs)
+    .filter((s) => !s.isTestShop && s.plan !== "DEMO" && s.canAcceptJobs)
     .reduce((acc, s) => {
       if (s.plan === "BULANAN") return acc + 79000;
       if (s.plan === "PRO") return acc + Math.round(349000 / 12);

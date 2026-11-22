@@ -32,7 +32,8 @@ export async function POST(req: Request) {
     const cleanPhone = String(body.phone || "").replace(/\D/g, "").slice(0, 15);
     const cleanAddress = String(body.address || "").trim().slice(0, 200) || "Indonesia";
     const rawPassword = String(body.password || "").trim();
-    const requestedPlan = getPlanDef(body.plan || "DEMO");
+    const isTestShop = Boolean(body.isTestShop);
+    const requestedPlan = getPlanDef(isTestShop ? "PREMIUM" : body.plan || "DEMO");
     const demoId = body.demoId ? String(body.demoId) : null;
 
     if (!cleanName || !cleanEmail || !cleanPhone || rawPassword.length < 6) {
@@ -86,6 +87,8 @@ export async function POST(req: Request) {
         plan: requestedPlan.id,
         planStatus: "ACTIVE",
         planExpiresAt: expiresAt,
+        isTestShop,
+        hasListenerAddon: isTestShop ? true : false,
         bwPrice: Math.max(100, Number(body.bwPrice) || 500),
         colorPrice: Math.max(100, Number(body.colorPrice) || 1500),
         agentKey,
@@ -93,7 +96,7 @@ export async function POST(req: Request) {
       },
     });
 
-    if (requestedPlan.price > 0) {
+    if (requestedPlan.price > 0 && !isTestShop) {
       await prisma.subscriptionInvoice.create({
         data: {
           invoiceCode: generateInvoiceCode(),

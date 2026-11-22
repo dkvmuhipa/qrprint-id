@@ -20,6 +20,7 @@ model Shop {
   plan                String                @default("DEMO")
   planStatus          String                @default("ACTIVE")
   planExpiresAt       DateTime?
+  isTestShop          Boolean               @default(false)
   hasListenerAddon    Boolean               @default(false)
   extraPrinterSlots   Int                   @default(0)
   bwPrice             Int                   @default(500)
