@@ -53,10 +53,10 @@ const STEPS = [
   {
     num: "04",
     icon: Printer,
-    title: "Atur Tarif & Pilih Printer Fisik",
-    desc: "Di Dashboard → Pengaturan, masukkan tarif Hitam Putih & Warna per lembar, lalu pilih nama printer USB/LAN yang terdeteksi untuk Printer Hitam Putih, Printer Warna, dan (opsional) Printer Thermal 58mm.",
+    title: "Atur Tarif, Add-on Jilid & Pilih Printer Fisik",
+    desc: "Di Dashboard → Pengaturan, atur tarif Hitam Putih, Warna, tambahan kertas F4, serta Add-on Jilid (Lakban/Mika/Spiral). Lalu pilih nama printer USB/LAN untuk Hitam Putih, Warna, dan (opsional) Printer Thermal 58mm.",
     tips: [
-      "Punya 3+ printer sama? Aktifkan Multi-Printer Pool agar antrean dibagi bergiliran otomatis (Round-Robin).",
+      "Pelanggan bisa unggah PDF, Word (.docx), Excel, PowerPoint, atau foto (maks. 10 file dalam 1× bayar) lengkap dengan Pratinjau & Deteksi Warna Otomatis.",
       "Punya printer thermal 58mm Bluetooth/USB? Pilih di bagian Printer Thermal 58mm agar struk bukti bayar ikut tercetak otomatis.",
     ],
   },
@@ -67,7 +67,7 @@ const STEPS = [
     desc: "Buka Dashboard → tab Poster QR. Pilih tema warna (Vermilion, Royal Cobalt, atau Emerald Studio) dan ukuran kertas (A5 Meja / A4 Dinding), lalu klik Unduh Poster Standee Full Color untuk dicetak dan diletakkan di meja pelayanan.",
     tips: [
       "Belum sempat cetak poster A5? Gunakan tombol 'Cetak Mini QR Thermal 58mm' untuk mencetak QR cepat di kertas struk.",
-      "Di akhir hari, klik 'Rekap Hari Ini (58mm)' di tab Antrean untuk mencetak rekap tutup kasir (pisah QRIS vs Tunai).",
+      "Untuk pembukuan, klik 'Rekap Hari Ini (58mm)' saat tutup kasir atau 'Export Excel/CSV' bulanan untuk audit setoran kasir & pemakaian rim kertas.",
     ],
   },
   {

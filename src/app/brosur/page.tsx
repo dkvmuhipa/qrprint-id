@@ -121,10 +121,10 @@ export default function BrosurPage() {
               </p>
               <ul className="mt-2.5 space-y-1.5 text-xs text-[#1f1b16]">
                 {[
-                  "Pelanggan scan QR di meja → upload PDF/foto dari HP sendiri",
-                  "Pilih halaman, warna, & rangkap — harga terhitung otomatis",
-                  "Bayar langsung ke QRIS toko Anda (nominal otomatis terisi)",
-                  "Kertas langsung keluar di printer & file otomatis terhapus!",
+                  "Scan QR → upload PDF, Word, Excel, PPT, atau foto (bisa multi-file 1× bayar)",
+                  "Pratinjau dokumen, pilih rentang halaman, deteksi warna otomatis & add-on jilid",
+                  "Bayar langsung ke QRIS toko Anda (nominal otomatis) + cetak struk 58mm",
+                  "Kertas langsung keluar di printer, file auto-hapus & laporan Excel/audit rim siap!",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <Check

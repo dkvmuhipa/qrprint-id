@@ -870,7 +870,9 @@ export function SettingsTab({
                 </div>
                 <div className="flex items-center justify-between gap-2 rounded border border-[#171717]/8 bg-white px-2.5 py-1.5">
                   <div className="min-w-0">
-                    <p className="text-[10px] text-[#737373]">Agent Key Toko</p>
+                    <p className="text-[10px] text-[#737373]">
+                      Kunci Penghubung Toko (Agent Key)
+                    </p>
                     <code className="font-mono-num block truncate text-[11px] text-[#171717]">
                       {shop.agentKey}
                     </code>
@@ -902,8 +904,8 @@ export function SettingsTab({
                   className="shrink-0 cursor-pointer font-medium text-[#171717] underline-offset-2 hover:underline"
                 >
                   {copiedText === "qris_notif_url"
-                    ? "URL Webhook Tersalin"
-                    : "Salin URL Webhook (opsional)"}
+                    ? "Link Webhook Tersalin"
+                    : "Salin Link Webhook (khusus teknis)"}
                 </button>
               </div>
             </div>

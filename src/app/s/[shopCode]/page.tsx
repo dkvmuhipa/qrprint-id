@@ -1388,7 +1388,7 @@ function CustomerScanPortalContent({
                     <div className="rounded-lg border border-[#16a34a]/25 bg-[#16a34a]/8 px-3 py-2 text-[11px] text-[#1f1b16]">
                       {selectedFiles.length === 0 ? (
                         <span>
-                          Unggah PDF untuk mendeteksi halaman hitam-putih vs warna secara otomatis.
+                          Halaman teks dihitung tarif Hitam Putih, halaman bergambar dihitung tarif Warna — lebih hemat tanpa perlu pisah file.
                         </span>
                       ) : analyzingColor ? (
                         <span className="inline-flex items-center gap-1.5 text-[#15803d]">
@@ -1510,12 +1510,12 @@ function CustomerScanPortalContent({
 
                 <div>
                   <label className="mb-1.5 block text-xs text-[#5e554a]">
-                    Rentang halaman (ALL / 1-5, 8)
+                    Rentang halaman (Semua / mis. 1-5, 8)
                   </label>
                   <input
                     value={pageRange}
                     onChange={(e) => setPageRange(e.target.value)}
-                    placeholder="ALL"
+                    placeholder="ALL (Semua halaman)"
                     className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
                 </div>
