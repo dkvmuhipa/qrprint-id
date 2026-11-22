@@ -159,11 +159,18 @@ export function countSelectedPages(
   return parsePageRangeIndices(totalPages, pageRange).length;
 }
 
+export function getColorModeLabel(raw?: string | null): string {
+  const up = String(raw || "BW").trim().toUpperCase();
+  if (up === "COLOR") return "Warna";
+  if (up === "AUTO") return "Otomatis (HP+Warna)";
+  return "Hitam Putih";
+}
+
 export function calculatePrintPrice(params: {
   pageCount: number;
   pageRange: string;
   copies: number;
-  colorMode: "BW" | "COLOR";
+  colorMode: "BW" | "COLOR" | "AUTO";
   paperSize: "A4" | "F4" | "PHOTO_4X6";
   duplex: boolean;
   bwPrice: number;
@@ -172,6 +179,8 @@ export function calculatePrintPrice(params: {
   duplexDiscount: number;
   f4ExtraPrice?: number;
   bindingUnitPrice?: number;
+  autoColorPages?: number;
+  autoBwPages?: number;
 }): {
   effectivePages: number;
   unitPrice: number;
@@ -180,23 +189,40 @@ export function calculatePrintPrice(params: {
 } {
   const effectivePages = countSelectedPages(params.pageCount, params.pageRange);
   const copies = Math.max(1, Math.min(50, params.copies || 1));
+  const f4Add =
+    params.paperSize === "F4"
+      ? params.f4ExtraPrice !== undefined
+        ? Math.max(0, Number(params.f4ExtraPrice) || 0)
+        : 100
+      : 0;
 
   let unitPrice =
     params.paperSize === "PHOTO_4X6"
       ? params.photoPrice
       : params.colorMode === "COLOR"
-      ? params.colorPrice
-      : params.bwPrice;
-
-  if (params.paperSize === "F4") {
-    const f4Add =
-      params.f4ExtraPrice !== undefined
-        ? Math.max(0, Number(params.f4ExtraPrice) || 0)
-        : 100;
-    unitPrice += f4Add;
-  }
+      ? params.colorPrice + f4Add
+      : params.bwPrice + f4Add;
 
   let rawTotal = effectivePages * copies * unitPrice;
+
+  if (
+    params.colorMode === "AUTO" &&
+    params.paperSize !== "PHOTO_4X6" &&
+    typeof params.autoColorPages === "number" &&
+    typeof params.autoBwPages === "number"
+  ) {
+    const bwCnt = Math.max(0, params.autoBwPages);
+    const colCnt = Math.max(0, params.autoColorPages);
+    const totalAnalyzed = bwCnt + colCnt;
+    if (totalAnalyzed > 0) {
+      rawTotal =
+        (bwCnt * (params.bwPrice + f4Add) +
+          colCnt * (params.colorPrice + f4Add)) *
+        copies;
+      unitPrice = Math.round(rawTotal / Math.max(1, totalAnalyzed * copies));
+    }
+  }
+
   if (params.duplex && effectivePages > 1 && params.paperSize !== "PHOTO_4X6") {
     const discountMultiplier = (100 - (params.duplexDiscount || 0)) / 100;
     rawTotal = Math.round(rawTotal * discountMultiplier);

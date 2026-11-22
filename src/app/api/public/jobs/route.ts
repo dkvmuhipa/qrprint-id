@@ -15,6 +15,7 @@ import {
   createMidtransQrisCharge,
   resolveMidtransConfig,
 } from "@/lib/midtrans";
+import { analyzePdfColorPages } from "@/lib/pdf-color-detect";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ALLOWED_TYPES = [
@@ -53,8 +54,13 @@ export async function POST(req: Request) {
           : `62${rawWa}`
         : null;
     const copies = Math.max(1, Math.min(50, Number(formData.get("copies")) || 1));
-    const colorMode =
-      String(formData.get("colorMode") || "BW") === "COLOR" ? "COLOR" : "BW";
+    const colorModeRaw = String(formData.get("colorMode") || "BW").toUpperCase();
+    let colorMode: "BW" | "COLOR" | "AUTO" =
+      colorModeRaw === "COLOR"
+        ? "COLOR"
+        : colorModeRaw === "AUTO"
+        ? "AUTO"
+        : "BW";
     const paperSizeRaw = String(formData.get("paperSize") || "A4");
     const paperSize =
       paperSizeRaw === "F4" || paperSizeRaw === "PHOTO_4X6"
@@ -197,6 +203,25 @@ export async function POST(req: Request) {
       bindingUnitPrice = 0;
     }
 
+    let autoColorPages: number | undefined;
+    let autoBwPages: number | undefined;
+
+    if (colorMode === "AUTO" && effectivePaperSize !== "PHOTO_4X6") {
+      if (verifiedType.mimeType === "application/pdf") {
+        const analysis = await analyzePdfColorPages(finalBuffer);
+        autoColorPages = analysis.colorCount;
+        autoBwPages = analysis.bwCount;
+        if (analysis.colorCount === 0) {
+          colorMode = "BW";
+        } else if (analysis.bwCount === 0) {
+          colorMode = "COLOR";
+        }
+      } else {
+        // Single image upload -> treat as COLOR
+        colorMode = "COLOR";
+      }
+    }
+
     const pricing = calculatePrintPrice({
       pageCount: originalPageCount,
       pageRange,
@@ -210,6 +235,8 @@ export async function POST(req: Request) {
       duplexDiscount: shop.duplexDiscount,
       f4ExtraPrice: shop.f4ExtraPrice,
       bindingUnitPrice,
+      autoColorPages,
+      autoBwPages,
     });
 
     const storedFilePath = await saveUploadedFile(finalBuffer, verifiedType.ext);

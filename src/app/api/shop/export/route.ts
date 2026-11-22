@@ -168,6 +168,8 @@ export async function GET(req: Request) {
           ? "Foto"
           : j.colorMode === "COLOR"
           ? "Warna"
+          : j.colorMode === "AUTO"
+          ? "Otomatis (HP+Warna)"
           : "Hitam Putih",
         j.paperSize,
         j.duplex ? "Ya" : "Tidak",

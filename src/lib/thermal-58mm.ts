@@ -170,7 +170,12 @@ export function buildReceiptEscPos(data: ThermalReceiptData): Uint8Array {
     minute: "2-digit",
   });
 
-  const colorLabel = data.colorMode === "COLOR" ? "Warna" : "Hitam Putih";
+  const colorLabel =
+    data.colorMode === "COLOR"
+      ? "Warna"
+      : data.colorMode === "AUTO"
+      ? "Otomatis (HP+Warna)"
+      : "Hitam Putih";
   const detailLine = `${data.pageCount} hal (${data.pageRange}) x${data.copies}`;
   const specLine = `${colorLabel} | ${data.paperSize}${data.duplex ? " | Bolak-balik" : ""}`;
 
@@ -532,7 +537,12 @@ export function printReceipt58mmWindow(data: ThermalReceiptData): void {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const colorLabel = data.colorMode === "COLOR" ? "Warna" : "HP";
+  const colorLabel =
+    data.colorMode === "COLOR"
+      ? "Warna"
+      : data.colorMode === "AUTO"
+      ? "Otomatis"
+      : "HP";
   const bodyHtml = `
     <div class="center">
       <div class="shop-name">${escapeHtml(data.shopName)}</div>

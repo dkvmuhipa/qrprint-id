@@ -50,6 +50,7 @@ import { ReceiptModal } from "@/components/dashboard/ReceiptModal";
 import { DailyRecapModal } from "@/components/dashboard/DailyRecapModal";
 import { AgentTab } from "@/components/dashboard/AgentTab";
 import { StickySaveBar } from "@/components/dashboard/StickySaveBar";
+import { PwaInstallButton } from "@/components/PwaInstaller";
 import { QueueTab } from "@/components/dashboard/QueueTab";
 import { QrTab } from "@/components/dashboard/QrTab";
 import { BillingTab } from "@/components/dashboard/BillingTab";
@@ -1019,6 +1020,9 @@ function DashboardContent() {
         </div>
 
         <div className="space-y-1 border-t border-[#171717]/8 pt-3">
+          <div className="px-2.5 pb-1">
+            <PwaInstallButton />
+          </div>
           <Link
             href={`/s/${shop.shopCode}`}
             target="_blank"
@@ -1059,6 +1063,7 @@ function DashboardContent() {
           </div>
 
           <div className="flex items-center gap-2">
+            <PwaInstallButton />
             <Link
               href={`/s/${shop.shopCode}`}
               target="_blank"

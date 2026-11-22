@@ -27,13 +27,18 @@ import {
   Eye,
   X,
   BookOpen,
+  Sparkles,
+  Camera,
 } from "lucide-react";
 import {
   calculatePrintPrice,
   formatRupiah,
   getBindingLabel,
+  parsePageRangeIndices,
   type BindingType,
 } from "@/lib/utils";
+import { ENABLE_PASFOTO_GRID } from "@/lib/feature-flags";
+import { PasFotoModal } from "@/components/PasFotoModal";
 import {
   countSingleFilePages,
   mergeFilesToSinglePdf,
@@ -105,7 +110,14 @@ function CustomerScanPortalContent({
   const [countingPages, setCountingPages] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsapp, setCustomerWhatsapp] = useState("");
-  const [colorMode, setColorMode] = useState<"BW" | "COLOR">("BW");
+  const [colorMode, setColorMode] = useState<"BW" | "COLOR" | "AUTO">("BW");
+  const [colorAnalysis, setColorAnalysis] = useState<{
+    colorPageNumbers: number[];
+    bwPageNumbers: number[];
+    totalPages: number;
+  } | null>(null);
+  const [analyzingColor, setAnalyzingColor] = useState(false);
+  const [showPasFotoModal, setShowPasFotoModal] = useState(false);
   const [paperSize, setPaperSize] = useState<"A4" | "F4" | "PHOTO_4X6">("A4");
   const [copies, setCopies] = useState(1);
   const [duplex, setDuplex] = useState(false);
@@ -305,6 +317,81 @@ function CustomerScanPortalContent({
     setDetectedPages(Math.max(1, totalPgs || 1));
   }
 
+  // Analyze color vs B&W pages automatically when customer selects AUTO mode
+  useEffect(() => {
+    if (colorMode !== "AUTO" || selectedFiles.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    async function runColorAnalysis() {
+      setAnalyzingColor(true);
+      try {
+        const allColorPages: number[] = [];
+        const allBwPages: number[] = [];
+        let pageOffset = 0;
+
+        for (const item of selectedFiles) {
+          if (item.file.type === "application/pdf") {
+            const fd = new FormData();
+            fd.append("file", item.file);
+            const res = await fetch("/api/public/analyze-color", {
+              method: "POST",
+              body: fd,
+            });
+            if (res.ok) {
+              const d = await res.json();
+              for (const p of (d.colorPageNumbers || []) as number[]) {
+                allColorPages.push(pageOffset + p);
+              }
+              for (const p of (d.bwPageNumbers || []) as number[]) {
+                allBwPages.push(pageOffset + p);
+              }
+              pageOffset += Number(d.totalPages) || item.pages;
+            } else {
+              for (let i = 1; i <= item.pages; i++) {
+                allColorPages.push(pageOffset + i);
+              }
+              pageOffset += item.pages;
+            }
+          } else {
+            // Image file -> 1 color page
+            allColorPages.push(pageOffset + 1);
+            pageOffset += 1;
+          }
+        }
+
+        if (!cancelled) {
+          setColorAnalysis({
+            colorPageNumbers: allColorPages,
+            bwPageNumbers: allBwPages,
+            totalPages: Math.max(1, pageOffset),
+          });
+        }
+      } catch {
+        if (!cancelled) setColorAnalysis(null);
+      } finally {
+        if (!cancelled) setAnalyzingColor(false);
+      }
+    }
+    runColorAnalysis();
+    return () => {
+      cancelled = true;
+    };
+  }, [colorMode, selectedFiles]);
+
+  const autoSplitCounts = useMemo(() => {
+    if (colorMode !== "AUTO" || !colorAnalysis) return null;
+    const selectedIndices = parsePageRangeIndices(detectedPages, pageRange);
+    const colorSet = new Set(colorAnalysis.colorPageNumbers);
+    let colorCount = 0;
+    let bwCount = 0;
+    for (const idx0 of selectedIndices) {
+      if (colorSet.has(idx0 + 1)) colorCount += 1;
+      else bwCount += 1;
+    }
+    return { colorCount, bwCount };
+  }, [colorMode, colorAnalysis, detectedPages, pageRange]);
+
   const priceCalc = useMemo(() => {
     if (!shop) {
       return { effectivePages: 1, unitPrice: 500, bindingTotal: 0, totalPrice: 500 };
@@ -333,8 +420,20 @@ function CustomerScanPortalContent({
       duplexDiscount: shop.duplexDiscount,
       f4ExtraPrice: shop.f4ExtraPrice ?? 100,
       bindingUnitPrice,
+      autoColorPages: autoSplitCounts?.colorCount,
+      autoBwPages: autoSplitCounts?.bwCount,
     });
-  }, [shop, detectedPages, pageRange, copies, colorMode, paperSize, duplex, bindingType]);
+  }, [
+    shop,
+    detectedPages,
+    pageRange,
+    copies,
+    colorMode,
+    paperSize,
+    duplex,
+    bindingType,
+    autoSplitCounts,
+  ]);
 
   function openFilePreview(targetFile: File, pages: number) {
     if (previewModal?.url) {
@@ -456,6 +555,7 @@ function CustomerScanPortalContent({
     setCopies(1);
     setPageRange("ALL");
     setBindingType("NONE");
+    setColorAnalysis(null);
     closeFilePreview();
     setSubmitError(null);
   }
@@ -619,7 +719,12 @@ function CustomerScanPortalContent({
                   </p>
                   <p className="font-mono-num mt-1 text-[#7b7266]">
                     {activeJob.pageCount} hal · {activeJob.copies} rangkap ·{" "}
-                    {activeJob.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} ·{" "}
+                    {activeJob.colorMode === "COLOR"
+                      ? "Warna"
+                      : activeJob.colorMode === "AUTO"
+                      ? "Otomatis (HP+Warna)"
+                      : "Hitam Putih"}{" "}
+                    ·{" "}
                     {activeJob.paperSize}
                     {activeJob.duplex ? " · Bolak-balik" : ""}
                     {activeJob.bindingType && activeJob.bindingType !== "NONE"
@@ -880,7 +985,7 @@ function CustomerScanPortalContent({
                           `BUKTI CETAK — ${shop.name}`,
                           `Kode Antrean: ${activeJob.jobCode}`,
                           `File: ${activeJob.fileName}`,
-                          `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}${activeJob.bindingType && activeJob.bindingType !== "NONE" ? ` · ${getBindingLabel(activeJob.bindingType)}` : ""}`,
+                          `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : activeJob.colorMode === "AUTO" ? "Otomatis" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}${activeJob.bindingType && activeJob.bindingType !== "NONE" ? ` · ${getBindingLabel(activeJob.bindingType)}` : ""}`,
                           `Bayar: ${activeJob.paymentMethod} (LUNAS)`,
                           `Total: ${formatRupiah(activeJob.totalPrice)}`,
                         ].join("\n");
@@ -905,7 +1010,12 @@ function CustomerScanPortalContent({
                       <span>Rincian</span>
                       <span className="font-mono-num text-right text-[#1f1b16]">
                         {activeJob.pageCount} hal × {activeJob.copies} ·{" "}
-                        {activeJob.colorMode === "COLOR" ? "Warna" : "HP"} ·{" "}
+                        {activeJob.colorMode === "COLOR"
+                          ? "Warna"
+                          : activeJob.colorMode === "AUTO"
+                          ? "Otomatis"
+                          : "HP"}{" "}
+                        ·{" "}
                         {activeJob.paperSize}
                         {activeJob.bindingType && activeJob.bindingType !== "NONE"
                           ? ` · ${getBindingLabel(activeJob.bindingType)}`
@@ -1100,6 +1210,19 @@ function CustomerScanPortalContent({
                   </div>
                 </div>
               )}
+              {/* Feature-flagged Pas Foto Grid (LOCKED until NEXT_PUBLIC_ENABLE_PASFOTO_GRID=true) */}
+              {ENABLE_PASFOTO_GRID && (
+                <div className="mt-3 border-t border-[#1f1b16]/8 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasFotoModal(true)}
+                    className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#1f1b16]/15 bg-white text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                  >
+                    <Camera className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
+                    <span>Susun Grid Pas Foto Otomatis (2×3, 3×4, 4×6)</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Print Options */}
@@ -1137,51 +1260,112 @@ function CustomerScanPortalContent({
 
               {/* Color Mode — Hidden when PHOTO_4X6 since Photo uses fixed photoPrice */}
               {paperSize !== "PHOTO_4X6" && (
-                <div className="grid grid-cols-2 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setColorMode("BW")}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
-                      colorMode === "BW"
-                        ? "border-2 border-[#1f1b16] bg-white"
-                        : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
-                    }`}
-                  >
-                    <FileText
-                      className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
-                      strokeWidth={1.5}
-                    />
-                    <div>
-                      <p className="text-xs font-medium text-[#1f1b16]">
+                <div className="space-y-2">
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setColorMode("BW")}
+                      className={`flex cursor-pointer flex-col items-start rounded-xl border p-2.5 text-left transition-colors ${
+                        colorMode === "BW"
+                          ? "border-2 border-[#1f1b16] bg-white"
+                          : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
+                      }`}
+                    >
+                      <FileText
+                        className="h-4 w-4 shrink-0 text-[#5e554a]"
+                        strokeWidth={1.5}
+                      />
+                      <p className="mt-1.5 text-xs font-medium text-[#1f1b16]">
                         Hitam Putih
                       </p>
-                      <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
-                        {formatRupiah(shop.bwPrice)}/lembar
+                      <p className="font-mono-num mt-0.5 text-[11px] text-[#7b7266]">
+                        {formatRupiah(shop.bwPrice)}/lbr
                       </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setColorMode("COLOR")}
+                      className={`flex cursor-pointer flex-col items-start rounded-xl border p-2.5 text-left transition-colors ${
+                        colorMode === "COLOR"
+                          ? "border-2 border-[#d9381e] bg-white"
+                          : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
+                      }`}
+                    >
+                      <Palette
+                        className="h-4 w-4 shrink-0 text-[#d9381e]"
+                        strokeWidth={1.5}
+                      />
+                      <p className="mt-1.5 text-xs font-medium text-[#1f1b16]">
+                        Warna Semua
+                      </p>
+                      <p className="font-mono-num mt-0.5 text-[11px] text-[#7b7266]">
+                        {formatRupiah(shop.colorPrice)}/lbr
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setColorMode("AUTO")}
+                      className={`flex cursor-pointer flex-col items-start rounded-xl border p-2.5 text-left transition-colors ${
+                        colorMode === "AUTO"
+                          ? "border-2 border-[#16a34a] bg-white"
+                          : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
+                      }`}
+                    >
+                      <div className="flex w-full items-center justify-between gap-1">
+                        <Sparkles
+                          className="h-4 w-4 shrink-0 text-[#16a34a]"
+                          strokeWidth={1.6}
+                        />
+                        <span className="rounded bg-[#16a34a]/12 px-1.5 py-0.5 font-mono-num text-[9px] font-semibold text-[#15803d]">
+                          HEMAT
+                        </span>
+                      </div>
+                      <p className="mt-1.5 text-xs font-medium text-[#1f1b16]">
+                        Otomatis
+                      </p>
+                      <p className="mt-0.5 text-[10px] leading-tight text-[#7b7266]">
+                        Deteksi HP/Warna
+                      </p>
+                    </button>
+                  </div>
+
+                  {colorMode === "AUTO" && (
+                    <div className="rounded-lg border border-[#16a34a]/25 bg-[#16a34a]/8 px-3 py-2 text-[11px] text-[#1f1b16]">
+                      {selectedFiles.length === 0 ? (
+                        <span>
+                          Unggah PDF untuk mendeteksi halaman hitam-putih vs warna secara otomatis.
+                        </span>
+                      ) : analyzingColor ? (
+                        <span className="inline-flex items-center gap-1.5 text-[#15803d]">
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.6} />
+                          <span>Memindai halaman warna &amp; hitam-putih...</span>
+                        </span>
+                      ) : autoSplitCounts ? (
+                        <div className="flex flex-wrap items-center justify-between gap-1">
+                          <span className="font-mono-num font-medium text-[#15803d]">
+                            Terdeteksi: {autoSplitCounts.bwCount} hal HP +{" "}
+                            {autoSplitCounts.colorCount} hal Warna
+                          </span>
+                          {autoSplitCounts.bwCount > 0 &&
+                            autoSplitCounts.colorCount > 0 &&
+                            shop.colorPrice > shop.bwPrice && (
+                              <span className="font-mono-num rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#15803d]">
+                                Hemat{" "}
+                                {formatRupiah(
+                                  autoSplitCounts.bwCount *
+                                    (shop.colorPrice - shop.bwPrice) *
+                                    copies
+                                )}
+                              </span>
+                            )}
+                        </div>
+                      ) : (
+                        <span>
+                          Tarif otomatis dihitung terpisah per halaman HP &amp; Warna di server.
+                        </span>
+                      )}
                     </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setColorMode("COLOR")}
-                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors ${
-                      colorMode === "COLOR"
-                        ? "border-2 border-[#d9381e] bg-white"
-                        : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
-                    }`}
-                  >
-                    <Palette
-                      className="mt-0.5 h-4 w-4 shrink-0 text-[#d9381e]"
-                      strokeWidth={1.5}
-                    />
-                    <div>
-                      <p className="text-xs font-medium text-[#1f1b16]">
-                        Warna
-                      </p>
-                      <p className="font-mono-num mt-0.5 text-xs text-[#7b7266]">
-                        {formatRupiah(shop.colorPrice)}/lembar
-                      </p>
-                    </div>
-                  </button>
+                  )}
                 </div>
               )}
 
@@ -1485,6 +1669,22 @@ function CustomerScanPortalContent({
           </form>
         )}
       </main>
+
+      {/* Feature-flagged Pas Foto Modal (LOCKED until enabled) */}
+      {ENABLE_PASFOTO_GRID && showPasFotoModal && (
+        <PasFotoModal
+          allowPhotoPaper={shop.allowExtraPaper !== false}
+          onClose={() => setShowPasFotoModal(false)}
+          onAttachPdf={(pdfFile, targetPaper) => {
+            setSelectedFiles([{ file: pdfFile, pages: 1 }]);
+            setFile(pdfFile);
+            setDetectedPages(1);
+            setPageRange("ALL");
+            setPaperSize(targetPaper);
+            if (targetPaper === "A4") setColorMode("COLOR");
+          }}
+        />
+      )}
 
       {/* Document Preview Modal (PDF & Images, including converted Word/Excel/PPT) */}
       {previewModal && (

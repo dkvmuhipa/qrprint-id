@@ -99,7 +99,8 @@ export async function GET(req: Request) {
     ) {
       return pickFromPool(photoPool, job.jobCode || job.id, idx);
     }
-    const targetPool = job.colorMode === "COLOR" ? colorPool : bwPool;
+    const targetPool =
+      job.colorMode === "COLOR" || job.colorMode === "AUTO" ? colorPool : bwPool;
     return pickFromPool(targetPool, job.jobCode || job.id, idx);
   }
 

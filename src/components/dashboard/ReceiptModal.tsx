@@ -89,7 +89,12 @@ export function ReceiptModal({
               <span className="font-mono-num text-right">
                 {receiptJob.pageCount} hal ({receiptJob.pageRange}) ×{" "}
                 {receiptJob.copies} ·{" "}
-                {receiptJob.colorMode === "COLOR" ? "Warna" : "HP"} ·{" "}
+                {receiptJob.colorMode === "COLOR"
+                  ? "Warna"
+                  : receiptJob.colorMode === "AUTO"
+                  ? "Otomatis"
+                  : "HP"}{" "}
+                ·{" "}
                 {receiptJob.paperSize}
                 {receiptJob.duplex ? " · Duplex" : ""}
               </span>

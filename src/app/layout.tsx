@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { PwaRegistrar } from "@/components/PwaInstaller";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -17,8 +18,24 @@ const mono = JetBrains_Mono({
 const appUrl =
   process.env.NEXT_PUBLIC_APP_URL || "https://ngeprint.gellona.web.id";
 
+export const viewport: Viewport = {
+  themeColor: "#1f1b16",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
+  appleWebApp: {
+    capable: true,
+    title: "Ngeprint",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/icons/icon-192.png",
+  },
   title: {
     default: "Ngeprint by Gellona Teknologi — Cetak mandiri via QR untuk toko fotokopi",
     template: "%s · Ngeprint",
@@ -53,6 +70,7 @@ export default function RootLayout({
       className={`${jakarta.variable} ${mono.variable} scroll-smooth`}
     >
       <body className="min-h-screen bg-[#f7f4ee] text-[#1f1b16] font-sans antialiased selection:bg-[#d9381e]/15 selection:text-[#1f1b16]">
+        <PwaRegistrar />
         {children}
       </body>
     </html>

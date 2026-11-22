@@ -489,7 +489,13 @@ export function QueueTab({
                       <span className="font-mono-num">
                         {job.pageCount} hal ({job.pageRange}) × {job.copies}
                       </span>{" "}
-                      · {job.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} ·{" "}
+                      ·{" "}
+                      {job.colorMode === "COLOR"
+                        ? "Warna"
+                        : job.colorMode === "AUTO"
+                        ? "Otomatis (HP+Warna)"
+                        : "Hitam Putih"}{" "}
+                      ·{" "}
                       {job.paperSize}
                       {job.duplex ? " · Bolak-balik" : ""}
                       {job.bindingType && job.bindingType !== "NONE" && (
