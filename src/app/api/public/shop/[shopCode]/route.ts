@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { canUsePasFoto, evaluateShopEntitlement } from "@/lib/plans";
+import { evaluateShopOpenStatus } from "@/lib/shop-hours";
 
 export async function GET(
   _req: Request,
@@ -41,6 +42,12 @@ export async function GET(
   const isAgentOnline = shop.agentLastSeen
     ? Date.now() - new Date(shop.agentLastSeen).getTime() < 20000
     : false;
+  const openStatus = evaluateShopOpenStatus({
+    isOpenManual: shop.isOpenManual,
+    openHour: shop.openHour,
+    closeHour: shop.closeHour,
+    closedMessage: shop.closedMessage,
+  });
 
   return NextResponse.json(
     {
@@ -74,6 +81,9 @@ export async function GET(
         }),
         canAcceptJobs: entitlement.canAcceptJobs,
         blockReason: entitlement.blockReason,
+        isShopOpen: openStatus.isOpen,
+        shopClosedReason: openStatus.reason,
+        scheduleLabel: openStatus.scheduleLabel,
       },
     },
     {

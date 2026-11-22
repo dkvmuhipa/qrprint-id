@@ -25,6 +25,10 @@ export interface SettingsFormState {
   photoPrinters: string[];
   thermalPrinter: string;
   autoPrintReceipt: boolean;
+  isOpenManual: boolean;
+  openHour: string;
+  closeHour: string;
+  closedMessage: string;
   staticQrisString: string;
   midtransServerKey: string;
   midtransIsProd: boolean;
@@ -408,6 +412,90 @@ export function SettingsTab({
                     })
                   }
                   className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="sm:col-span-2 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-medium text-[#171717]">
+                  Jam Operasional Otomatis &amp; Status Buka/Tutup Toko
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#737373]">
+                  Cegah pesanan QRIS masuk saat toko tutup atau istirahat.
+                  Kosongkan jam buka/tutup jika ingin menerima order 24 jam.
+                </p>
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/12 bg-white px-3 py-1.5 text-xs font-medium text-[#171717]">
+                <input
+                  type="checkbox"
+                  checked={settingsForm.isOpenManual}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      isOpenManual: e.target.checked,
+                    })
+                  }
+                  className="h-4 w-4 accent-[#16a34a]"
+                />
+                <span>
+                  {settingsForm.isOpenManual
+                    ? "Toko Sedang Buka"
+                    : "Toko Ditutup Sementara"}
+                </span>
+              </label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Jam Buka (WIB)
+                </label>
+                <input
+                  type="time"
+                  value={settingsForm.openHour}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      openHour: e.target.value,
+                    })
+                  }
+                  className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Jam Tutup (WIB)
+                </label>
+                <input
+                  type="time"
+                  value={settingsForm.closeHour}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      closeHour: e.target.value,
+                    })
+                  }
+                  className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs font-medium outline-none focus:border-[#171717]"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[11px] font-medium text-[#525252]">
+                  Pesan Saat Tutup (opsional)
+                </label>
+                <input
+                  type="text"
+                  maxLength={160}
+                  placeholder="Misal: Sedang istirahat, buka jam 13.00"
+                  value={settingsForm.closedMessage}
+                  onChange={(e) =>
+                    setSettingsForm({
+                      ...settingsForm,
+                      closedMessage: e.target.value,
+                    })
+                  }
+                  className="h-9 w-full rounded-lg border border-[#171717]/12 bg-white px-3 text-xs outline-none focus:border-[#171717]"
                 />
               </div>
             </div>

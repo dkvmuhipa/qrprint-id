@@ -210,6 +210,10 @@ export async function GET() {
       photoPrinters: parsePrinterPool(shop.photoPrinter),
       thermalPrinter: shop.thermalPrinter || "",
       autoPrintReceipt: Boolean(shop.autoPrintReceipt),
+      isOpenManual: shop.isOpenManual !== false,
+      openHour: shop.openHour || "",
+      closeHour: shop.closeHour || "",
+      closedMessage: shop.closedMessage || "",
       qrisName: shop.qrisName,
       hasStaticQris: Boolean(shop.staticQrisString),
       staticQrisPreview: shop.staticQrisString
@@ -464,6 +468,18 @@ export async function PATCH(req: Request) {
           : {}),
         ...(body.autoPrintReceipt !== undefined
           ? { autoPrintReceipt: Boolean(body.autoPrintReceipt) }
+          : {}),
+        ...(body.isOpenManual !== undefined
+          ? { isOpenManual: Boolean(body.isOpenManual) }
+          : {}),
+        ...(body.openHour !== undefined
+          ? { openHour: String(body.openHour || "").trim().slice(0, 5) }
+          : {}),
+        ...(body.closeHour !== undefined
+          ? { closeHour: String(body.closeHour || "").trim().slice(0, 5) }
+          : {}),
+        ...(body.closedMessage !== undefined
+          ? { closedMessage: String(body.closedMessage || "").trim().slice(0, 160) }
           : {}),
         qrisName: detectedQrisMerchant
           ? detectedQrisMerchant

@@ -37,6 +37,10 @@ export interface ShopInfo {
   photoPrinters?: string[];
   thermalPrinter?: string;
   autoPrintReceipt?: boolean;
+  isOpenManual?: boolean;
+  openHour?: string;
+  closeHour?: string;
+  closedMessage?: string;
   qrisName: string;
   hasStaticQris?: boolean;
   staticQrisPreview?: string;

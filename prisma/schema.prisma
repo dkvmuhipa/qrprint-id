@@ -41,6 +41,10 @@ model Shop {
   photoPrinter        String                @default("Default Printer")
   thermalPrinter      String                @default("")
   autoPrintReceipt    Boolean               @default(false)
+  isOpenManual        Boolean               @default(true)
+  openHour            String                @default("")
+  closeHour           String                @default("")
+  closedMessage       String                @default("")
   qrisName            String                @default("QRIS Toko")
   staticQrisString    String?
   staticQrisHash      String?

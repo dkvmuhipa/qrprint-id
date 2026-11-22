@@ -168,6 +168,10 @@ function DashboardContent() {
     photoPrinters: ["Default Printer"] as string[],
     thermalPrinter: "",
     autoPrintReceipt: false,
+    isOpenManual: true,
+    openHour: "",
+    closeHour: "",
+    closedMessage: "",
     staticQrisString: "",
     midtransServerKey: "",
     midtransIsProd: false,
@@ -546,6 +550,10 @@ function DashboardContent() {
             photoPrinters: json.shop.photoPrinters || [json.shop.photoPrinter || "Default Printer"],
             thermalPrinter: json.shop.thermalPrinter || "",
             autoPrintReceipt: Boolean(json.shop.autoPrintReceipt),
+            isOpenManual: json.shop.isOpenManual !== false,
+            openHour: json.shop.openHour || "",
+            closeHour: json.shop.closeHour || "",
+            closedMessage: json.shop.closedMessage || "",
             staticQrisString: "",
             midtransServerKey: "",
             midtransIsProd: Boolean(json.shop.midtransIsProd),
@@ -701,6 +709,10 @@ function DashboardContent() {
       photoPrinters: s.photoPrinters || [s.photoPrinter || "Default Printer"],
       thermalPrinter: s.thermalPrinter || "",
       autoPrintReceipt: Boolean(s.autoPrintReceipt),
+      isOpenManual: s.isOpenManual !== false,
+      openHour: s.openHour || "",
+      closeHour: s.closeHour || "",
+      closedMessage: s.closedMessage || "",
       staticQrisString: "",
       midtransServerKey: "",
       midtransIsProd: Boolean(s.midtransIsProd),
@@ -735,6 +747,14 @@ function DashboardContent() {
           (data.shop.thermalPrinter || "").trim() ||
         Boolean(settingsForm.autoPrintReceipt) !==
           Boolean(data.shop.autoPrintReceipt) ||
+        Boolean(settingsForm.isOpenManual) !==
+          (data.shop.isOpenManual !== false) ||
+        (settingsForm.openHour || "").trim() !==
+          (data.shop.openHour || "").trim() ||
+        (settingsForm.closeHour || "").trim() !==
+          (data.shop.closeHour || "").trim() ||
+        (settingsForm.closedMessage || "").trim() !==
+          (data.shop.closedMessage || "").trim() ||
         Boolean(settingsForm.midtransIsProd) !==
           Boolean(data.shop.midtransIsProd) ||
         settingsForm.staticQrisString.trim() !== "" ||
@@ -797,6 +817,10 @@ function DashboardContent() {
         photoPrinters: settingsForm.photoPrinters,
         thermalPrinter: settingsForm.thermalPrinter,
         autoPrintReceipt: settingsForm.autoPrintReceipt,
+        isOpenManual: settingsForm.isOpenManual,
+        openHour: settingsForm.openHour,
+        closeHour: settingsForm.closeHour,
+        closedMessage: settingsForm.closedMessage,
         midtransIsProd: settingsForm.midtransIsProd,
       };
       if (settingsForm.staticQrisString.trim() !== "") {
@@ -846,6 +870,10 @@ function DashboardContent() {
             ],
             thermalPrinter: s.thermalPrinter || "",
             autoPrintReceipt: Boolean(s.autoPrintReceipt),
+            isOpenManual: s.isOpenManual !== false,
+            openHour: s.openHour || "",
+            closeHour: s.closeHour || "",
+            closedMessage: s.closedMessage || "",
             staticQrisString: "",
             midtransServerKey: "",
             midtransIsProd: Boolean(s.midtransIsProd),
@@ -860,6 +888,27 @@ function DashboardContent() {
       }
     } finally {
       setSavingSettings(false);
+    }
+  }
+
+  const [togglingOpen, setTogglingOpen] = useState(false);
+
+  async function handleQuickToggleOpen() {
+    if (!data?.shop || togglingOpen) return;
+    const nextOpen = data.shop.isOpenManual === false;
+    setTogglingOpen(true);
+    try {
+      const res = await fetch("/api/shop/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOpenManual: nextOpen }),
+      });
+      if (res.ok) {
+        setSettingsForm((prev) => ({ ...prev, isOpenManual: nextOpen }));
+        await fetchDashboard();
+      }
+    } finally {
+      setTogglingOpen(false);
     }
   }
 
@@ -986,6 +1035,25 @@ function DashboardContent() {
                   : "Print Agent offline"}
               </span>
             </div>
+            <button
+              type="button"
+              disabled={togglingOpen}
+              onClick={handleQuickToggleOpen}
+              className={`mt-2.5 flex h-8 w-full cursor-pointer items-center justify-between rounded-lg border px-2.5 text-[11px] font-medium transition-colors disabled:opacity-60 ${
+                shop.isOpenManual !== false
+                  ? "border-[#16a34a]/30 bg-[#16a34a]/10 text-[#15803d] hover:bg-[#16a34a]/15"
+                  : "border-[#dc2626]/30 bg-[#dc2626]/10 text-[#dc2626] hover:bg-[#dc2626]/15"
+              }`}
+            >
+              <span>
+                {shop.isOpenManual !== false
+                  ? "● Toko Buka (Terima Order)"
+                  : "● Toko Tutup Sementara"}
+              </span>
+              <span className="text-[10px] underline">
+                {togglingOpen ? "..." : shop.isOpenManual !== false ? "Tutup" : "Buka"}
+              </span>
+            </button>
           </div>
 
           <p className="mt-6 mb-2 px-2 text-xs text-[#737373]">Menu toko</p>
@@ -1067,6 +1135,18 @@ function DashboardContent() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={togglingOpen}
+              onClick={handleQuickToggleOpen}
+              className={`inline-flex h-8 cursor-pointer items-center rounded-lg border px-2.5 text-[11px] font-medium disabled:opacity-60 ${
+                shop.isOpenManual !== false
+                  ? "border-[#16a34a]/30 bg-[#16a34a]/10 text-[#15803d]"
+                  : "border-[#dc2626]/30 bg-[#dc2626]/10 text-[#dc2626]"
+              }`}
+            >
+              {shop.isOpenManual !== false ? "Buka" : "Tutup"}
+            </button>
             <PwaInstallButton />
             <Link
               href={`/s/${shop.shopCode}`}

@@ -67,6 +67,9 @@ interface PublicShop {
   allowPasFoto?: boolean;
   canAcceptJobs?: boolean;
   blockReason?: string | null;
+  isShopOpen?: boolean;
+  shopClosedReason?: string | null;
+  scheduleLabel?: string | null;
 }
 
 interface ActiveJob {
@@ -144,6 +147,64 @@ function CustomerScanPortalContent({
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const [recentOrders, setRecentOrders] = useState<
+    Array<{
+      jobCode: string;
+      shopCode: string;
+      fileName: string;
+      totalPrice: number;
+      createdAt: number;
+    }>
+  >([]);
+
+  // Load recent customer orders from localStorage (prevents losing receipt if tab is closed)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem("ngeprint_recent_orders_v1");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return;
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const valid = parsed.filter(
+        (x) =>
+          x &&
+          typeof x.jobCode === "string" &&
+          typeof x.createdAt === "number" &&
+          x.createdAt > sevenDaysAgo
+      );
+      setRecentOrders(valid);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  // Persist active order to localStorage automatically
+  useEffect(() => {
+    if (!activeJob || !shop || typeof window === "undefined") return;
+    try {
+      setRecentOrders((prev) => {
+        const filtered = prev.filter((x) => x.jobCode !== activeJob.jobCode);
+        const next = [
+          {
+            jobCode: activeJob.jobCode,
+            shopCode: shop.shopCode,
+            fileName: activeJob.fileName,
+            totalPrice: activeJob.totalPrice,
+            createdAt: Date.now(),
+          },
+          ...filtered,
+        ].slice(0, 10);
+        window.localStorage.setItem(
+          "ngeprint_recent_orders_v1",
+          JSON.stringify(next)
+        );
+        return next;
+      });
+    } catch {
+      // ignore storage errors
+    }
+  }, [activeJob?.jobCode, activeJob?.fileName, activeJob?.totalPrice, shop?.shopCode]);
 
   useEffect(() => {
     if (!file || !file.type.startsWith("image/")) {
@@ -668,7 +729,10 @@ function CustomerScanPortalContent({
               <h1 className="mt-1 text-xl font-medium text-[#1f1b16]">
                 {shop.name}
               </h1>
-              <p className="mt-0.5 text-xs text-[#7b7266]">{shop.address}</p>
+              <p className="mt-0.5 text-xs text-[#7b7266]">
+                {shop.address}
+                {shop.scheduleLabel ? ` · Jam buka: ${shop.scheduleLabel}` : ""}
+              </p>
             </div>
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
               <Printer className="h-4 w-4" strokeWidth={1.5} />
@@ -714,6 +778,56 @@ function CustomerScanPortalContent({
             Dokumen Anda otomatis dihapus dari server dan PC toko segera setelah tercetak
           </span>
         </div>
+
+        {/* Shop Closed Notice */}
+        {shop.isShopOpen === false && (
+          <div className="mt-3 rounded-xl border border-[#b45309]/30 bg-[#b45309]/10 p-4 text-xs text-[#92400e]">
+            <p className="font-semibold">Toko sedang tutup sementara</p>
+            <p className="mt-0.5 text-[#1f1b16]/85">
+              {shop.shopClosedReason ||
+                "Layanan cetak mandiri sedang ditutup sementara oleh kasir toko."}
+            </p>
+          </div>
+        )}
+
+        {/* Recent Orders Saved on This Phone (Anti-Lost Queue Code & Receipt) */}
+        {!activeJob &&
+          recentOrders.filter(
+            (o) => o.shopCode.toLowerCase() === shop.shopCode.toLowerCase()
+          ).length > 0 && (
+            <div className="mt-3 rounded-xl border border-[#1f1b16]/10 bg-white p-3.5 text-xs">
+              <p className="font-medium text-[#1f1b16]">
+                Pesanan terakhir Anda di toko ini
+              </p>
+              <div className="mt-2 space-y-1.5">
+                {recentOrders
+                  .filter(
+                    (o) =>
+                      o.shopCode.toLowerCase() === shop.shopCode.toLowerCase()
+                  )
+                  .slice(0, 3)
+                  .map((o) => (
+                    <Link
+                      key={o.jobCode}
+                      href={`/track/${o.jobCode}`}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-[#1f1b16]/8 bg-[#f7f4ee] px-3 py-2 hover:bg-[#efe9df]"
+                    >
+                      <div className="min-w-0">
+                        <span className="font-mono-num font-semibold text-[#1f1b16]">
+                          {o.jobCode}
+                        </span>
+                        <span className="ml-2 truncate text-[#5e554a]">
+                          {o.fileName}
+                        </span>
+                      </div>
+                      <span className="shrink-0 font-medium text-[#d9381e]">
+                        Lacak / Bukti →
+                      </span>
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          )}
 
         {/* SaaS Plan Quota / Expiry Notice */}
         {shop.canAcceptJobs === false && (
@@ -1084,9 +1198,17 @@ function CustomerScanPortalContent({
                       </span>
                     </div>
                   </div>
-                  <p className="mt-2 text-[10px] text-[#7b7266]">
-                    Tunjukkan kode antrean di atas saat mengambil hasil cetakan di meja kasir.
-                  </p>
+                  <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-[#1f1b16]/12 pt-2 text-[10px] text-[#7b7266]">
+                    <span>
+                      Tunjukkan kode antrean di atas saat mengambil hasil cetakan di meja kasir.
+                    </span>
+                    <Link
+                      href={`/track/${activeJob.jobCode}`}
+                      className="shrink-0 font-medium text-[#d9381e] underline"
+                    >
+                      Link Lacak Permanen →
+                    </Link>
+                  </div>
                 </div>
               )}
 
@@ -1709,11 +1831,18 @@ function CustomerScanPortalContent({
                   </p>
                 </div>
                 <button
-                  disabled={!file || submitting || shop.canAcceptJobs === false}
+                  disabled={
+                    !file ||
+                    submitting ||
+                    shop.canAcceptJobs === false ||
+                    shop.isShopOpen === false
+                  }
                   type="submit"
                   className="btn-action h-11 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17] disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-sm"
                 >
-                  {submitting
+                  {shop.isShopOpen === false
+                    ? "Toko sedang tutup"
+                    : submitting
                     ? "Mengunggah..."
                     : !file
                     ? "Pilih file dulu"

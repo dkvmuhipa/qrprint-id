@@ -16,6 +16,7 @@ import {
   resolveMidtransConfig,
 } from "@/lib/midtrans";
 import { analyzePdfColorPages } from "@/lib/pdf-color-detect";
+import { evaluateShopOpenStatus } from "@/lib/shop-hours";
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 const ALLOWED_TYPES = [
@@ -132,6 +133,23 @@ export async function POST(req: Request) {
           error:
             entitlement.blockReason ||
             "Langganan toko sedang tidak aktif. Hubungi kasir toko.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const openStatus = evaluateShopOpenStatus({
+      isOpenManual: shop.isOpenManual,
+      openHour: shop.openHour,
+      closeHour: shop.closeHour,
+      closedMessage: shop.closedMessage,
+    });
+    if (!openStatus.isOpen) {
+      return NextResponse.json(
+        {
+          error:
+            openStatus.reason ||
+            "Toko sedang tutup. Silakan kirim pesanan saat toko buka.",
         },
         { status: 403 }
       );
