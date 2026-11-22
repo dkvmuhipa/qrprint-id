@@ -7,6 +7,19 @@ Jika Anda menemukan celah keamanan pada layanan **Ngeprint** (`https://ngeprint.
 
 ---
 
+## Audit Log: 2026-11-22 (Super Admin & PWA Access Hardening)
+
+### 🟡 Warnings (Resolved)
+1. **Hardcoded Default Admin Email di Client Bundle (`src/app/admin/page.tsx`):**
+   - *Temuan:* State awal input email pada halaman `/admin` sebelumnya terisi default `"admin@gellona.id"`, sehingga mengekspos email Super Admin di kode klien publik.
+   - *Perbaikan:* Dikosongkan menjadi `""` dengan atribut `autoComplete="username"` dan fallback email di `src/lib/admin-auth.ts` turut dihapus.
+2. **Constant-Time Credential Verification & Rate-Limit Tightening:**
+   - *Perbaikan:* `verifyAdminCredentials` di `src/lib/admin-auth.ts` kini membandingkan hash SHA-256 email & kata sandi menggunakan `crypto.timingSafeEqual` (menghilangkan kebocoran panjang string/timing). Batas login `/api/admin/auth` diperketat dari 10 menjadi **5 percobaan per 15 menit**.
+3. **Search Engine Indexing & PWA Stealth Entry:**
+   - *Perbaikan:* Ditambahkan `src/app/admin/layout.tsx` dengan `robots: { index: false, follow: false, nocache: true }`. Akses `/admin` dari mode PWA standalone menggunakan *stealth 5-tap* pada logo di `/login` (serta `Ctrl+Shift+A` di desktop) tanpa mengekspos tautan `/admin` di UI publik maupun `manifest.webmanifest`.
+
+---
+
 ## Audit Log: 2026-11-21
 
 ### 🔴 Critical

@@ -42,8 +42,8 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(true);
   const [needsLogin, setNeedsLogin] = useState(false);
 
-  // Login form state
-  const [email, setEmail] = useState("admin@gellona.id");
+  // Login form state (never pre-fill admin email in client bundle)
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loginLoading, setLoginLoading] = useState(false);
@@ -222,26 +222,26 @@ export default function SuperAdminPage() {
 
   if (needsLogin || !data) {
     return (
-      <div className="bg-app flex min-h-screen flex-col items-center justify-center p-6">
-        <div className="w-full max-w-md rounded-2xl border border-[#171717]/10 bg-white p-8 shadow-[0_8px_24px_rgba(0,0,0,0.05)]">
+      <div className="bg-ambient flex min-h-screen flex-col items-center justify-center p-4 sm:p-6">
+        <div className="w-full max-w-md rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 shadow-[0_8px_24px_rgba(0,0,0,0.05)] sm:p-8">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#171717] text-white">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#1f1b16] text-[#fdfbf7]">
               <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#171717]">
+              <p className="text-sm font-semibold text-[#1f1b16]">
                 Ngeprint Super Admin
               </p>
-              <p className="font-mono-num text-[11px] text-[#737373]">
+              <p className="font-mono-num text-[11px] text-[#7b7266]">
                 Gellona Teknologi HQ
               </p>
             </div>
           </div>
 
-          <h1 className="mt-6 text-xl font-medium text-[#171717]">
+          <h1 className="mt-6 text-xl font-medium text-[#1f1b16]">
             Masuk ke panel pusat SaaS
           </h1>
-          <p className="mt-1 text-xs text-[#737373]">
+          <p className="mt-1 text-xs text-[#7b7266]">
             Kelola mitra toko, analitik MRR, persetujuan tagihan, dan monitor cetak global
           </p>
 
@@ -253,36 +253,39 @@ export default function SuperAdminPage() {
             )}
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-[#171717]">
+              <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
                 Email Super Admin
               </label>
               <input
                 required
                 type="email"
+                autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+                placeholder="Masukkan email Super Admin"
+                className="h-11 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
               />
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-medium text-[#171717]">
+              <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
                 Kata sandi
               </label>
               <div className="relative">
                 <input
                   required
                   type={showPass ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Masukkan kata sandi admin"
-                  className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 pr-10 text-sm outline-none focus:border-[#171717] focus:bg-white"
+                  className="h-11 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 pr-11 text-sm outline-none focus:border-[#1f1b16]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
                   aria-label="Tampilkan kata sandi"
-                  className="absolute top-1/2 right-3 -translate-y-1/2 cursor-pointer text-[#737373] hover:text-[#171717]"
+                  className="absolute top-1/2 right-2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-[#7b7266] hover:text-[#1f1b16]"
                 >
                   {showPass ? (
                     <EyeOff className="h-4 w-4" strokeWidth={1.5} />
@@ -296,18 +299,24 @@ export default function SuperAdminPage() {
             <button
               disabled={loginLoading}
               type="submit"
-              className="btn-action h-10 w-full cursor-pointer rounded-lg bg-[#171717] text-sm font-medium text-white hover:bg-[#171717]/90 disabled:opacity-60"
+              className="btn-action h-11 w-full cursor-pointer rounded-lg bg-[#1f1b16] text-sm font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90 disabled:opacity-60"
             >
               {loginLoading ? "Memverifikasi..." : "Masuk sebagai Super Admin"}
             </button>
           </form>
 
-          <div className="mt-6 border-t border-[#171717]/8 pt-4 text-center">
+          <div className="mt-6 flex items-center justify-between border-t border-[#1f1b16]/8 pt-4 text-xs">
+            <Link
+              href="/login"
+              className="font-medium text-[#5e554a] hover:text-[#1f1b16]"
+            >
+              ← Login Toko
+            </Link>
             <Link
               href="/"
-              className="text-xs text-[#737373] hover:text-[#171717]"
+              className="text-[#7b7266] hover:text-[#1f1b16]"
             >
-              ← Kembali ke halaman utama Ngeprint
+              Beranda publik
             </Link>
           </div>
         </div>
@@ -465,36 +474,59 @@ export default function SuperAdminPage() {
       </aside>
 
       {/* Mobile Header */}
-      <header className="sticky top-0 z-30 border-b border-[#171717]/8 bg-white lg:hidden">
+      <header className="sticky top-0 z-30 border-b border-[#1f1b16]/8 bg-[#fdfbf7]/95 backdrop-blur-md lg:hidden">
         <div className="flex h-14 items-center justify-between px-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#171717] text-white">
+            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
               <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
             </div>
-            <span className="text-sm font-semibold text-[#171717]">
-              Gellona HQ · Super Admin
+            <span className="text-sm font-semibold text-[#1f1b16]">
+              Gellona HQ · Admin
             </span>
           </div>
-          <button
-            onClick={handleAdminLogout}
-            className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/10 px-2.5 text-xs text-[#525252]"
-          >
-            <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
-            <span>Keluar</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <Link
+              href="/login"
+              className="inline-flex h-9 items-center rounded-lg border border-[#1f1b16]/10 bg-white px-2.5 text-xs font-medium text-[#5e554a]"
+            >
+              Toko
+            </Link>
+            <button
+              onClick={handleAdminLogout}
+              className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/10 bg-white px-2.5 text-xs font-medium text-[#5e554a] hover:text-[#dc2626]"
+            >
+              <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <span>Keluar</span>
+            </button>
+          </div>
         </div>
-        <div className="no-scrollbar flex gap-1 overflow-x-auto border-t border-[#171717]/8 px-4 py-2">
+        <div className="no-scrollbar flex gap-1.5 overflow-x-auto border-t border-[#1f1b16]/8 px-4 py-2">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.id}
               onClick={() => setTab(item.id)}
-              className={`h-8 shrink-0 cursor-pointer rounded-lg px-3 text-xs font-medium ${
+              className={`inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-3 text-xs font-medium transition-colors ${
                 tab === item.id
-                  ? "bg-[#171717] text-white"
-                  : "text-[#525252] hover:bg-[#f4f4f5]"
+                  ? "bg-[#1f1b16] text-[#fdfbf7]"
+                  : "text-[#5e554a] hover:bg-[#f0ece3]"
               }`}
             >
-              {item.label}
+              <span>{item.label}</span>
+              {item.count !== undefined && item.count > 0 && (
+                <span
+                  className={`font-mono-num rounded-full px-1.5 py-0.5 text-[10px] leading-none ${
+                    tab === item.id
+                      ? item.highlight
+                        ? "bg-[#d9381e] text-white"
+                        : "bg-white/20 text-white"
+                      : item.highlight
+                      ? "bg-[#d9381e]/15 text-[#d9381e]"
+                      : "bg-[#1f1b16]/8 text-[#5e554a]"
+                  }`}
+                >
+                  {item.count}
+                </span>
+              )}
             </button>
           ))}
         </div>

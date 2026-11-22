@@ -20,6 +20,10 @@ function sign(payload: string): string {
   return crypto.createHmac("sha256", getSecret()).update(payload).digest("hex");
 }
 
+function sha256Buffer(value: string): Buffer {
+  return crypto.createHash("sha256").update(value, "utf8").digest();
+}
+
 export function verifyAdminCredentials(
   email: string,
   password: string
@@ -35,13 +39,16 @@ export function verifyAdminCredentials(
   const inputEmail = email.trim().toLowerCase();
   const inputPass = password.trim();
 
-  if (inputEmail !== expectedEmail) return false;
-  if (inputPass.length !== expectedPassword.length) return false;
-
-  return crypto.timingSafeEqual(
-    Buffer.from(inputPass),
-    Buffer.from(expectedPassword)
+  const emailMatch = crypto.timingSafeEqual(
+    sha256Buffer(inputEmail),
+    sha256Buffer(expectedEmail)
   );
+  const passMatch = crypto.timingSafeEqual(
+    sha256Buffer(inputPass),
+    sha256Buffer(expectedPassword)
+  );
+
+  return emailMatch && passMatch;
 }
 
 export function createAdminSessionToken(email: string): string {
@@ -74,7 +81,7 @@ export function verifyAdminSessionToken(
       return null;
     }
     if (Date.now() > decoded.exp) return null;
-    return { email: String(decoded.email || "admin@gellona.id") };
+    return { email: String(decoded.email || "") };
   } catch {
     return null;
   }

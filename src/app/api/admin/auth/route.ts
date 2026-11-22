@@ -7,7 +7,7 @@ import {
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
-  const rl = checkRateLimit("admin_login", req, 10, 15 * 60 * 1000);
+  const rl = checkRateLimit("admin_login", req, 5, 15 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       {

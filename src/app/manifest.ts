@@ -14,6 +14,22 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#1f1b16",
     lang: "id",
     categories: ["business", "productivity", "utilities"],
+    shortcuts: [
+      {
+        name: "Dashboard Kasir",
+        short_name: "Kasir",
+        description: "Buka panel antrean cetak & pengaturan toko",
+        url: "/dashboard",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
+      },
+      {
+        name: "Masuk Akun Toko",
+        short_name: "Masuk",
+        description: "Masuk ke akun toko fotokopi Anda",
+        url: "/login",
+        icons: [{ src: "/icons/icon-192.png", sizes: "192x192" }],
+      },
+    ],
     icons: [
       {
         src: "/icons/icon-192.png",
