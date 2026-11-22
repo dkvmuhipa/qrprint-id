@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { evaluateShopEntitlement } from "@/lib/plans";
+import { canUsePasFoto, evaluateShopEntitlement } from "@/lib/plans";
 
 export async function GET(
   _req: Request,
@@ -66,6 +66,12 @@ export async function GET(
         plan: entitlement.plan.id,
         allowExtraPaper: entitlement.plan.allowExtraPaper,
         allowDuplex: entitlement.plan.allowDuplex,
+        allowPasFoto: canUsePasFoto({
+          planId: shop.plan,
+          planExpiresAt: shop.planExpiresAt,
+          hasPasFotoAddon: shop.hasPasFotoAddon,
+          isTestShop: shop.isTestShop,
+        }),
         canAcceptJobs: entitlement.canAcceptJobs,
         blockReason: entitlement.blockReason,
       },

@@ -11,9 +11,11 @@ export interface ShopInfo {
   planStatus: string;
   planExpiresAt: string | null;
   hasListenerAddon?: boolean;
+  hasPasFotoAddon?: boolean;
   extraPrinterSlots?: number;
   effectiveMaxPrinters?: number | null;
   canUseListener?: boolean;
+  canUsePasFoto?: boolean;
   bwPrice: number;
   colorPrice: number;
   duplexDiscount: number;

@@ -22,6 +22,7 @@ model Shop {
   planExpiresAt       DateTime?
   isTestShop          Boolean               @default(false)
   hasListenerAddon    Boolean               @default(false)
+  hasPasFotoAddon     Boolean               @default(false)
   extraPrinterSlots   Int                   @default(0)
   bwPrice             Int                   @default(500)
   colorPrice          Int                   @default(1500)

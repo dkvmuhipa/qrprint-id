@@ -16,6 +16,7 @@ export interface BillingCartState {
   listener: boolean;
   extraPrinters: number;
   urlChange: boolean;
+  pasFoto: boolean;
 }
 
 interface BillingTabProps {
@@ -82,6 +83,12 @@ export function BillingTab({
     cartRows.push({
       label: "Buka Kunci Ganti URL Portal (1×)",
       price: 37000,
+    });
+  }
+  if (cart.pasFoto) {
+    cartRows.push({
+      label: "Add-On Generator Grid Pas Foto (30 hari)",
+      price: 30000,
     });
   }
   const cartTotal = cartRows.reduce((acc, r) => acc + r.price, 0);
@@ -374,6 +381,8 @@ export function BillingTab({
                               : prev.listener,
                           extraPrinters:
                             nextPlan === "PREMIUM" ? 0 : prev.extraPrinters,
+                          pasFoto:
+                            nextPlan === "PREMIUM" ? false : prev.pasFoto,
                         };
                       });
                     }}
@@ -407,7 +416,7 @@ export function BillingTab({
               sekaligus dalam 1 invoice QRIS.
             </p>
           </div>
-          <div className="mt-3 grid gap-3 text-xs sm:grid-cols-3">
+          <div className="mt-3 grid gap-3 text-xs sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
               <div>
                 <p className="font-medium text-[#171717]">
@@ -547,6 +556,43 @@ export function BillingTab({
                   : "+ Tambah ke keranjang"}
               </button>
             </div>
+
+            <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
+              <div>
+                <p className="font-medium text-[#171717]">
+                  Generator Grid Pas Foto
+                </p>
+                <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
+                  +Rp 30.000 / 30 hari
+                </p>
+                <p className="mt-1 text-[11px] text-[#737373]">
+                  Susun otomatis pas foto 2×3, 3×4, 4×6 (crop, zoom &amp; garis
+                  potong 300 DPI). Gratis di paket Premium.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={
+                  Boolean(shop.canUsePasFoto) || cart.planId === "PREMIUM"
+                }
+                onClick={() =>
+                  setCart((prev) => ({ ...prev, pasFoto: !prev.pasFoto }))
+                }
+                className={`btn-action mt-3 h-8 w-full cursor-pointer rounded-lg text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
+                  cart.pasFoto
+                    ? "border border-[#16a34a] bg-[#16a34a]/10 text-[#16a34a]"
+                    : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                }`}
+              >
+                {shop.canUsePasFoto
+                  ? "Sudah aktif"
+                  : cart.planId === "PREMIUM"
+                  ? "Gratis di Premium"
+                  : cart.pasFoto
+                  ? "✓ Di keranjang (hapus)"
+                  : "+ Tambah ke keranjang"}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -571,6 +617,7 @@ export function BillingTab({
                     listener: false,
                     extraPrinters: 0,
                     urlChange: false,
+                    pasFoto: false,
                   })
                 }
                 className="inline-flex cursor-pointer items-center gap-1 text-xs text-[#737373] hover:text-[#dc2626]"

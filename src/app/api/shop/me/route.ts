@@ -5,6 +5,7 @@ import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   canUseListener,
+  canUsePasFoto,
   evaluateShopEntitlement,
   getEffectiveMaxPrinters,
   SAAS_PLANS,
@@ -165,6 +166,7 @@ export async function GET() {
       planStatus: entitlement.isExpired ? "EXPIRED" : shop.planStatus,
       planExpiresAt: shop.planExpiresAt,
       hasListenerAddon: shop.hasListenerAddon,
+      hasPasFotoAddon: shop.hasPasFotoAddon,
       extraPrinterSlots: shop.extraPrinterSlots,
       effectiveMaxPrinters: getEffectiveMaxPrinters(
         shop.plan,
@@ -174,6 +176,12 @@ export async function GET() {
         planId: shop.plan,
         planExpiresAt: shop.planExpiresAt,
         hasListenerAddon: shop.hasListenerAddon,
+      }),
+      canUsePasFoto: canUsePasFoto({
+        planId: shop.plan,
+        planExpiresAt: shop.planExpiresAt,
+        hasPasFotoAddon: shop.hasPasFotoAddon,
+        isTestShop: shop.isTestShop,
       }),
       bwPrice: shop.bwPrice,
       colorPrice: shop.colorPrice,

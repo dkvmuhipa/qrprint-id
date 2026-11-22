@@ -64,6 +64,7 @@ interface PublicShop {
   plan?: string;
   allowExtraPaper?: boolean;
   allowDuplex?: boolean;
+  allowPasFoto?: boolean;
   canAcceptJobs?: boolean;
   blockReason?: string | null;
 }
@@ -1264,8 +1265,8 @@ function CustomerScanPortalContent({
                   </div>
                 </div>
               )}
-              {/* Feature-flagged Pas Foto Grid (LOCKED for public; auto-unlocked on Admin Test Shops) */}
-              {(ENABLE_PASFOTO_GRID || shop.isTestShop) && (
+              {/* Add-On Generator Grid Pas Foto (Aktif di paket PREMIUM, Add-On Pas Foto, atau Toko Testing) */}
+              {(ENABLE_PASFOTO_GRID || shop.allowPasFoto || shop.isTestShop) && (
                 <div className="mt-3 border-t border-[#1f1b16]/8 pt-3">
                   <button
                     type="button"
@@ -1274,11 +1275,6 @@ function CustomerScanPortalContent({
                   >
                     <Camera className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
                     <span>Susun Grid Pas Foto Otomatis (2×3, 3×4, 4×6)</span>
-                    {shop.isTestShop && !ENABLE_PASFOTO_GRID && (
-                      <span className="rounded bg-purple-100 px-1.5 py-0.5 font-mono-num text-[9px] font-semibold text-purple-700">
-                        BETA
-                      </span>
-                    )}
                   </button>
                 </div>
               )}
@@ -1729,8 +1725,8 @@ function CustomerScanPortalContent({
         )}
       </main>
 
-      {/* Feature-flagged Pas Foto Modal (LOCKED for public; unlocked on Admin Test Shops) */}
-      {(ENABLE_PASFOTO_GRID || shop.isTestShop) && showPasFotoModal && (
+      {/* Add-On Pas Foto Modal */}
+      {(ENABLE_PASFOTO_GRID || shop.allowPasFoto || shop.isTestShop) && showPasFotoModal && (
         <PasFotoModal
           allowPhotoPaper={shop.allowExtraPaper !== false}
           onClose={() => setShowPasFotoModal(false)}

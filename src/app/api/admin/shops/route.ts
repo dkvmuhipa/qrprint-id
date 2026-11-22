@@ -89,6 +89,7 @@ export async function POST(req: Request) {
         planExpiresAt: expiresAt,
         isTestShop,
         hasListenerAddon: isTestShop ? true : false,
+        hasPasFotoAddon: isTestShop ? true : false,
         bwPrice: Math.max(100, Number(body.bwPrice) || 500),
         colorPrice: Math.max(100, Number(body.colorPrice) || 1500),
         agentKey,
