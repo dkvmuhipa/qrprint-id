@@ -1116,30 +1116,32 @@ function DashboardContent() {
         </div>
       </aside>
 
-      {/* Mobile Header + Horizontal Nav */}
+      {/* Compact Mobile Header (Tabs moved to thumb-friendly Bottom Nav) */}
       <header className="no-print sticky top-0 z-30 border-b border-[#171717]/8 bg-white lg:hidden">
-        <div className="flex h-14 items-center justify-between px-4">
-          <div className="flex items-center gap-2.5">
+        <div className="flex h-14 items-center justify-between gap-2 px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2">
             <Link
               href="/"
-              className="flex h-7 w-7 items-center justify-center rounded-md bg-[#171717] text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#171717] text-white"
             >
               <Printer className="h-4 w-4" strokeWidth={1.5} />
             </Link>
-            <div>
-              <p className="text-sm font-medium text-[#171717]">{shop.name}</p>
-              <p className="font-mono-num text-[11px] text-[#737373]">
-                {shop.shopCode} · Paket {entitlement.plan.name}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-[#171717]">
+                {shop.name}
+              </p>
+              <p className="font-mono-num truncate text-[11px] text-[#737373]">
+                {shop.shopCode} · {entitlement.plan.name}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5">
             <button
               type="button"
               disabled={togglingOpen}
               onClick={handleQuickToggleOpen}
-              className={`inline-flex h-8 cursor-pointer items-center rounded-lg border px-2.5 text-[11px] font-medium disabled:opacity-60 ${
+              className={`inline-flex h-9 cursor-pointer items-center rounded-lg border px-2.5 text-[11px] font-medium disabled:opacity-60 ${
                 shop.isOpenManual !== false
                   ? "border-[#16a34a]/30 bg-[#16a34a]/10 text-[#15803d]"
                   : "border-[#dc2626]/30 bg-[#dc2626]/10 text-[#dc2626]"
@@ -1151,9 +1153,10 @@ function DashboardContent() {
             <Link
               href={`/s/${shop.shopCode}`}
               target="_blank"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-3 text-xs font-medium text-[#171717]"
+              aria-label="Buka portal pelanggan"
+              className="inline-flex h-9 items-center gap-1 rounded-lg border border-[#171717]/10 bg-[#fafafa] px-2.5 text-xs font-medium text-[#171717]"
             >
-              <span>Portal</span>
+              <span className="hidden min-[380px]:inline">Portal</span>
               <ExternalLink
                 className="h-3.5 w-3.5 text-[#737373]"
                 strokeWidth={1.5}
@@ -1162,42 +1165,59 @@ function DashboardContent() {
             <button
               onClick={handleLogout}
               aria-label="Keluar"
-              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-[#171717]/10 text-[#525252]"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[#171717]/10 text-[#525252]"
             >
-              <LogOut className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <LogOut className="h-4 w-4" strokeWidth={1.5} />
             </button>
           </div>
         </div>
+      </header>
 
-        <div className="no-scrollbar flex gap-1 overflow-x-auto border-t border-[#171717]/8 px-4 py-2">
+      {/* Native-App Style Fixed Bottom Navigation for Mobile Kasir */}
+      <nav
+        aria-label="Navigasi Dashboard"
+        className="no-print fixed right-0 bottom-0 left-0 z-40 border-t border-[#171717]/10 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden"
+      >
+        <div className="grid grid-cols-5">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = tab === item.id;
+            const shortLabel =
+              item.id === "queue"
+                ? "Antrean"
+                : item.id === "qr"
+                ? "QR"
+                : item.id === "billing"
+                ? "Paket"
+                : item.id === "settings"
+                ? "Atur"
+                : "Agent";
             return (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => setTab(item.id)}
-                className={`inline-flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-lg px-3 text-xs font-medium ${
-                  active
-                    ? "bg-[#171717] text-white"
-                    : "text-[#525252] hover:bg-[#f4f4f5]"
+                className={`relative flex min-h-[56px] cursor-pointer flex-col items-center justify-center gap-1 px-1 py-1.5 text-[10px] font-medium transition-colors ${
+                  active ? "text-[#d9381e]" : "text-[#737373]"
                 }`}
               >
-                <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>{item.label}</span>
-                {item.count !== undefined && item.count > 0 && (
-                  <span className="font-mono-num text-[11px] opacity-80">
-                    ({item.count})
-                  </span>
-                )}
+                <div className="relative">
+                  <Icon className="h-4 w-4" strokeWidth={active ? 2 : 1.5} />
+                  {item.count !== undefined && item.count > 0 && (
+                    <span className="font-mono-num absolute -top-1.5 -right-2.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#d9381e] px-1 text-[9px] font-bold text-white">
+                      {item.count > 9 ? "9+" : item.count}
+                    </span>
+                  )}
+                </div>
+                <span className="truncate">{shortLabel}</span>
               </button>
             );
           })}
         </div>
-      </header>
+      </nav>
 
-      {/* Main Content Fluid Area */}
-      <main className="flex-1 px-4 py-6 sm:px-8 lg:py-8">
+      {/* Main Content Fluid Area (reserves bottom nav height on mobile) */}
+      <main className="flex-1 px-3.5 pt-5 pb-24 sm:px-8 lg:py-8">
         <div className="mx-auto max-w-5xl">
           {/* SaaS Subscription Alert Banner if Expired, Quota Exceeded, or Pending Invoice */}
           {(!entitlement.canAcceptJobs || activePendingInvoice) &&

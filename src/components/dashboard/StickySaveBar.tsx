@@ -16,7 +16,7 @@ export function StickySaveBar({
   onSave,
 }: StickySaveBarProps) {
   return (
-    <div className="no-print fixed right-4 bottom-4 left-4 z-40 mx-auto max-w-3xl">
+    <div className="no-print fixed right-3 bottom-[72px] left-3 z-50 mx-auto max-w-3xl lg:right-4 lg:bottom-4 lg:left-4">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#171717]/15 bg-[#1f1b16] px-4 py-3 text-white shadow-2xl">
         <div className="flex min-w-0 flex-1 items-center gap-2.5 text-xs">
           <span className="h-2 w-2 shrink-0 rounded-full bg-[#d9381e]" />

@@ -693,7 +693,7 @@ function CustomerScanPortalContent({
   }
 
   return (
-    <div className="bg-ambient min-h-screen pb-28">
+    <div className="bg-ambient min-h-screen pb-32">
       {/* Compact Top Bar */}
       <header className="sticky top-0 z-30 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
         <div className="mx-auto flex h-13 max-w-xl items-center justify-between px-4">
@@ -1438,7 +1438,7 @@ function CustomerScanPortalContent({
               {/* Color Mode — Hidden when PHOTO_4X6 since Photo uses fixed photoPrice */}
               {paperSize !== "PHOTO_4X6" && (
                 <div className="space-y-2">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-3">
                     <button
                       type="button"
                       onClick={() => setColorMode("BW")}
@@ -1604,18 +1604,18 @@ function CustomerScanPortalContent({
               </div>
 
               {/* Copies & Page Range */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
                 <div>
                   <label className="mb-1.5 block text-xs text-[#5e554a]">
                     Jumlah rangkap
                   </label>
-                  <div className="flex h-10 items-center justify-between rounded-lg border border-[#1f1b16]/12 bg-white px-2">
+                  <div className="flex h-11 items-center justify-between rounded-lg border border-[#1f1b16]/12 bg-white px-2">
                     <button
                       type="button"
                       onClick={() => setCopies((c) => Math.max(1, c - 1))}
-                      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-[#f7f4ee] text-[#1f1b16] hover:bg-[#efe9df]"
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md bg-[#f7f4ee] text-[#1f1b16] hover:bg-[#efe9df]"
                     >
-                      <Minus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <Minus className="h-4 w-4" strokeWidth={1.5} />
                     </button>
                     <span className="font-mono-num text-sm font-medium">
                       {copies}×
@@ -1623,9 +1623,9 @@ function CustomerScanPortalContent({
                     <button
                       type="button"
                       onClick={() => setCopies((c) => Math.min(50, c + 1))}
-                      className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-[#f7f4ee] text-[#1f1b16] hover:bg-[#efe9df]"
+                      className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-md bg-[#f7f4ee] text-[#1f1b16] hover:bg-[#efe9df]"
                     >
-                      <Plus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      <Plus className="h-4 w-4" strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>
@@ -1638,7 +1638,7 @@ function CustomerScanPortalContent({
                     value={pageRange}
                     onChange={(e) => setPageRange(e.target.value)}
                     placeholder="ALL (Semua halaman)"
-                    className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
+                    className="font-mono-num h-11 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm font-medium outline-none focus:border-[#1f1b16]"
                   />
                 </div>
               </div>
@@ -1711,7 +1711,7 @@ function CustomerScanPortalContent({
                         </span>
                       )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
                       {(
                         [
                           { id: "NONE" as const, label: "Tanpa Jilid", price: 0 },
@@ -1767,7 +1767,7 @@ function CustomerScanPortalContent({
               <p className="mb-3 text-xs font-medium text-[#1f1b16]">
                 3. Metode pembayaran
               </p>
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 gap-2.5 min-[380px]:grid-cols-2">
                 <button
                   type="button"
                   disabled={shop.hasQrisPayment === false}
@@ -1818,8 +1818,8 @@ function CustomerScanPortalContent({
               </div>
             </div>
 
-            {/* Sticky Price Summary & Submit — Fixed cleanly at bottom so it never covers form options */}
-            <div className="fixed right-0 bottom-0 left-0 z-30 border-t border-[#1f1b16]/15 bg-[#161513]/98 px-4 py-3 text-[#efe9de] backdrop-blur-sm">
+            {/* Sticky Price Summary & Submit — Fixed cleanly at bottom with safe-area inset */}
+            <div className="fixed right-0 bottom-0 left-0 z-30 border-t border-[#1f1b16]/15 bg-[#161513]/98 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] text-[#efe9de] backdrop-blur-sm">
               <div className="mx-auto flex max-w-xl items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="font-mono-num text-xs whitespace-nowrap text-[#aaa398]">

@@ -20,20 +20,20 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
         <Link
           href="/"
           onClick={handleLogoClick}
-          className="flex items-center gap-2.5"
+          className="flex min-w-0 items-center gap-2"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
             <Printer className="h-4 w-4" strokeWidth={1.5} />
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-base font-semibold tracking-tight text-[#1f1b16]">
+          <div className="flex min-w-0 items-baseline gap-1.5">
+            <span className="truncate text-base font-semibold tracking-tight text-[#1f1b16]">
               Ngeprint
             </span>
-            <span className="font-mono-num text-xs text-[#7b7266]">
+            <span className="font-mono-num hidden text-xs text-[#7b7266] min-[380px]:inline">
               by Gellona
             </span>
           </div>
@@ -72,7 +72,7 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <Link
             href="/login"
             className="hidden text-sm font-medium text-[#5e554a] transition-colors duration-150 hover:text-[#1f1b16] sm:inline-block"
@@ -82,7 +82,7 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
 
           <Link
             href="/register"
-            className="btn-action inline-flex h-9 items-center justify-center rounded-lg bg-[#1f1b16] px-4 text-sm font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
+            className="btn-action inline-flex h-10 items-center justify-center rounded-lg bg-[#1f1b16] px-3.5 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90 sm:h-9 sm:px-4 sm:text-sm"
           >
             Daftar toko
           </Link>
@@ -90,53 +90,61 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           <button
             onClick={() => setOpen(!open)}
             aria-label="Buka menu navigasi"
-            className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] text-[#1f1b16] md:hidden"
+            className="inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#1f1b16]/12 bg-[#fdfbf7] px-2.5 text-xs font-medium text-[#1f1b16] md:hidden"
           >
             {open ? (
               <X className="h-4 w-4" strokeWidth={1.5} />
             ) : (
               <Menu className="h-4 w-4" strokeWidth={1.5} />
             )}
+            <span>{open ? "Tutup" : "Menu"}</span>
           </button>
         </div>
       </div>
 
       {open && (
-        <div className="border-t border-[#1f1b16]/8 bg-[#f7f4ee] px-6 py-4 md:hidden">
+        <div className="border-t border-[#1f1b16]/8 bg-[#f7f4ee] px-4 py-4 sm:px-6 md:hidden">
           <div className="flex flex-col gap-1 text-sm text-[#1f1b16]">
             <a
               href="#fitur"
               onClick={() => setOpen(false)}
-              className="rounded-md py-2 text-[#5e554a] hover:text-[#1f1b16]"
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Perbandingan
             </a>
             <a
               href="#setup"
               onClick={() => setOpen(false)}
-              className="rounded-md py-2 text-[#5e554a] hover:text-[#1f1b16]"
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Cara kerja
             </a>
             <a
               href="#harga"
               onClick={() => setOpen(false)}
-              className="rounded-md py-2 text-[#5e554a] hover:text-[#1f1b16]"
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Harga
             </a>
             <a
               href="#privasi"
               onClick={() => setOpen(false)}
-              className="rounded-md py-2 text-[#5e554a] hover:text-[#1f1b16]"
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Privasi dokumen
             </a>
+            <Link
+              href="/panduan"
+              onClick={() => setOpen(false)}
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
+            >
+              Panduan pemasangan
+            </Link>
             <div className="my-2 border-t border-[#1f1b16]/8" />
             <Link
               href="/login"
               onClick={() => setOpen(false)}
-              className="rounded-md py-2 font-medium text-[#1f1b16]"
+              className="flex min-h-[44px] items-center rounded-md px-2 font-medium text-[#1f1b16] hover:bg-[#efe9df]/60"
             >
               Masuk dashboard toko
             </Link>
@@ -146,7 +154,7 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
                   setOpen(false);
                   onOpenDemo();
                 }}
-                className="mt-2 h-9 cursor-pointer rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] px-4 text-left text-sm font-medium text-[#1f1b16]"
+                className="mt-2 h-11 cursor-pointer rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] px-4 text-left text-sm font-medium text-[#1f1b16]"
               >
                 Uji coba demo 24 jam
               </button>
