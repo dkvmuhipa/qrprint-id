@@ -82,6 +82,7 @@ export interface OverviewData {
     appUrl: string;
     hasPlatformMidtrans: boolean;
     hasPlatformStaticQris: boolean;
+    hasTelegramAlert?: boolean;
     platformListenerKey?: string;
     dbEngine: string;
     pendingStaleCount: number;

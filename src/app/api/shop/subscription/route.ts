@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
+  escapeTelegramHtml,
+  sendFounderAlert,
+} from "@/lib/founder-alert";
+import {
   buildShopUpdateForPaidInvoice,
   generateInvoiceCode,
   resolveCheckoutCart,
@@ -115,6 +119,16 @@ export async function POST(req: Request) {
         status: "PENDING",
       },
     });
+
+    void sendFounderAlert(
+      [
+        "<b>🧾 Tagihan Langganan Baru — Ngeprint</b>",
+        `Invoice: <code>${escapeTelegramHtml(invoice.invoiceCode)}</code>`,
+        `Toko: <b>${escapeTelegramHtml(shop.name)}</b> (<code>${escapeTelegramHtml(shop.shopCode)}</code>)`,
+        `Item: ${escapeTelegramHtml(cartCheckout.label)}`,
+        `Nominal: <b>Rp ${finalAmount.toLocaleString("id-ID")}</b> (${escapeTelegramHtml(paymentProvider)})`,
+      ].join("\n")
+    );
 
     return NextResponse.json({ invoice }, { status: 201 });
   } catch (err) {

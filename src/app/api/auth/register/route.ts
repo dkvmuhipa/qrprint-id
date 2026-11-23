@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import {
+  escapeTelegramHtml,
+  sendFounderAlert,
+} from "@/lib/founder-alert";
 import { setShopSession } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -241,6 +245,16 @@ export async function POST(req: Request) {
     }
 
     await setShopSession(shop.id);
+
+    void sendFounderAlert(
+      [
+        "<b>🏪 Toko Baru Mendaftar — Ngeprint</b>",
+        `Toko: <b>${escapeTelegramHtml(shop.name)}</b> (<code>/s/${escapeTelegramHtml(shop.shopCode)}</code>)`,
+        `Pemilik: ${escapeTelegramHtml(shop.ownerName || "-")} · WA: ${escapeTelegramHtml(shop.phone || "-")}`,
+        `Email: ${escapeTelegramHtml(shop.email)}`,
+        `Paket diminta: <b>${escapeTelegramHtml(requestedPlan.name)}</b>${pendingInvoiceCode ? ` (Invoice <code>${escapeTelegramHtml(pendingInvoiceCode)}</code>)` : ""}`,
+      ].join("\n")
+    );
 
     return NextResponse.json(
       {

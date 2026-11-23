@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
+import {
+  escapeTelegramHtml,
+  sendFounderAlert,
+} from "@/lib/founder-alert";
 
 export async function POST(req: Request) {
   try {
@@ -31,6 +35,17 @@ export async function POST(req: Request) {
         email: String(email || "").trim(),
       },
     });
+
+    void sendFounderAlert(
+      [
+        "<b>📩 Prospek Demo Baru — Ngeprint</b>",
+        `Toko: <b>${escapeTelegramHtml(demo.shopName)}</b>`,
+        `Nama: ${escapeTelegramHtml(demo.name)} · WA: ${escapeTelegramHtml(demo.whatsapp)}`,
+        demo.address ? `Alamat: ${escapeTelegramHtml(demo.address)}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+    );
 
     return NextResponse.json(
       {

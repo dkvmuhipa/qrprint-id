@@ -26,12 +26,21 @@ export async function GET(
     );
   }
 
-  const totalJobsCount = await prisma.printJob.count({
-    where: {
-      shopId: shop.id,
-      printStatus: { not: "CANCELLED" },
-    },
-  });
+  const [totalJobsCount, activeQueueCount] = await Promise.all([
+    prisma.printJob.count({
+      where: {
+        shopId: shop.id,
+        printStatus: { not: "CANCELLED" },
+      },
+    }),
+    prisma.printJob.count({
+      where: {
+        shopId: shop.id,
+        paymentStatus: "PAID",
+        printStatus: { in: ["QUEUED", "PRINTING"] },
+      },
+    }),
+  ]);
 
   const entitlement = evaluateShopEntitlement({
     planId: shop.plan,
@@ -84,6 +93,7 @@ export async function GET(
         isShopOpen: openStatus.isOpen,
         shopClosedReason: openStatus.reason,
         scheduleLabel: openStatus.scheduleLabel,
+        activeQueueCount,
       },
     },
     {

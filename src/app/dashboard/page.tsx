@@ -82,6 +82,17 @@ function DashboardContent() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const knownPaidJobIdsRef = useRef<Set<string> | null>(null);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const saved = window.localStorage.getItem("ngeprint_cashier_bell_v1");
+      if (saved === "0") setSoundEnabled(false);
+      else if (saved === "1") setSoundEnabled(true);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
   // Billing & Cart state
   const [creatingPlanId, setCreatingPlanId] = useState<string | null>(null);
   const [payingInvoiceId, setPayingInvoiceId] = useState<string | null>(null);
@@ -1370,6 +1381,14 @@ function DashboardContent() {
                   onClick={() => {
                     const next = !soundEnabled;
                     setSoundEnabled(next);
+                    try {
+                      window.localStorage.setItem(
+                        "ngeprint_cashier_bell_v1",
+                        next ? "1" : "0"
+                      );
+                    } catch {
+                      // ignore storage errors
+                    }
                     if (next) playCashierBell();
                   }}
                   title="Bunyikan notifikasi suara saat ada pesanan lunas masuk"

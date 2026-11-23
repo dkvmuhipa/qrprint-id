@@ -5,6 +5,7 @@ import {
   Ban,
   CalendarPlus,
   KeyRound,
+  MessageCircle,
   RotateCw,
   Trash2,
   UserCheck,
@@ -173,6 +174,47 @@ export function ShopDetailDrawer({
                 </button>
               ))}
             </div>
+
+            {/* 1-Click WhatsApp Renewal Reminder */}
+            {selectedShop.phone && (
+              <div className="mt-3 border-t border-[#171717]/8 pt-3">
+                {(() => {
+                  const digits = selectedShop.phone.replace(/\D/g, "");
+                  const waPhone = digits.startsWith("0")
+                    ? `62${digits.slice(1)}`
+                    : digits.startsWith("62")
+                    ? digits
+                    : `62${digits}`;
+                  const expDateStr = selectedShop.planExpiresAt
+                    ? new Date(selectedShop.planExpiresAt).toLocaleDateString(
+                        "id-ID",
+                        { day: "numeric", month: "long", year: "numeric" }
+                      )
+                    : "-";
+                  const statusMsg = !selectedShop.canAcceptJobs
+                    ? `masa aktif paket *${selectedShop.plan}* untuk *${selectedShop.name}* telah berakhir (${expDateStr})`
+                    : `masa aktif paket *${selectedShop.plan}* untuk *${selectedShop.name}* akan berakhir pada *${expDateStr}*`;
+                  const waText = [
+                    `Halo ${selectedShop.ownerName || "Kak"},`,
+                    `Kami dari tim *Ngeprint (Gellona Teknologi)* ingin menginformasikan bahwa ${statusMsg}.`,
+                    `Silakan perpanjang langganan langsung dari Dashboard agar layanan cetak mandiri QR di meja kasir tetap berjalan lancar:`,
+                    `https://ngeprint.gellona.web.id/dashboard?tab=billing`,
+                    `Jika butuh bantuan teknis, balas pesan ini ya. Terima kasih!`,
+                  ].join("\n\n");
+                  return (
+                    <a
+                      href={`https://wa.me/${waPhone}?text=${encodeURIComponent(waText)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-action inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-[#16a34a]/30 bg-[#16a34a]/10 px-3 text-xs font-medium text-[#15803d] hover:bg-[#16a34a]/15"
+                    >
+                      <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.6} />
+                      <span>Kirim Reminder Perpanjangan via WhatsApp</span>
+                    </a>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Listener Add-On Toggle */}
             <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">

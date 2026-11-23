@@ -71,6 +71,7 @@ interface PublicShop {
   isShopOpen?: boolean;
   shopClosedReason?: string | null;
   scheduleLabel?: string | null;
+  activeQueueCount?: number;
 }
 
 interface ActiveJob {
@@ -801,6 +802,39 @@ function CustomerScanPortalContent({
               </p>
             </div>
           </div>
+
+          {/* Live Queue Indicator */}
+          {typeof shop.activeQueueCount === "number" && (
+            <div className="mt-3 flex items-center justify-between gap-2 rounded-lg border border-[#1f1b16]/8 bg-[#f7f4ee]/70 px-3 py-2 text-xs">
+              <div className="flex items-center gap-2 text-[#1f1b16]">
+                <span
+                  className={`h-2 w-2 shrink-0 rounded-full ${
+                    shop.activeQueueCount === 0
+                      ? "bg-[#16a34a]"
+                      : "bg-[#d97706] animate-pulse"
+                  }`}
+                />
+                <span>
+                  {shop.activeQueueCount === 0 ? (
+                    <>
+                      <strong>Antrean kosong</strong> · Dokumen langsung diproses
+                    </>
+                  ) : (
+                    <>
+                      Sedang ada{" "}
+                      <strong className="font-mono-num">
+                        {shop.activeQueueCount} antrean cetak
+                      </strong>{" "}
+                      di depan Anda
+                    </>
+                  )}
+                </span>
+              </div>
+              <span className="font-mono-num shrink-0 text-[10px] text-[#7b7266]">
+                Live
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Internal Test Shop Banner */}

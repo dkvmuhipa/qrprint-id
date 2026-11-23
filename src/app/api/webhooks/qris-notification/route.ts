@@ -10,6 +10,10 @@ import {
   formatInvoicePlanLabel,
 } from "@/lib/plans";
 import { rewardReferrerIfEligible } from "@/lib/referral";
+import {
+  escapeTelegramHtml,
+  sendFounderAlert,
+} from "@/lib/founder-alert";
 
 /**
  * Ekstrak nominal Rupiah dari teks notifikasi Android (GoPay Merchant, GoBiz, DANA Bisnis, OVO, BRI, BCA, dll).
@@ -154,6 +158,16 @@ export async function POST(req: Request) {
         matchingInvoice.shopId,
         matchingInvoice.plan
       ).catch(() => null);
+
+      void sendFounderAlert(
+        [
+          "<b>💰 Pembayaran SaaS LUNAS Otomatis — Ngeprint</b>",
+          `Invoice: <code>${escapeTelegramHtml(matchingInvoice.invoiceCode)}</code>`,
+          `Toko: <b>${escapeTelegramHtml(matchingInvoice.shop.name)}</b> (<code>${escapeTelegramHtml(matchingInvoice.shop.shopCode)}</code>)`,
+          `Paket: <b>${escapeTelegramHtml(formatInvoicePlanLabel(matchingInvoice.plan))}</b>`,
+          `Nominal: <b>Rp ${detectedAmount.toLocaleString("id-ID")}</b>`,
+        ].join("\n")
+      );
 
       return NextResponse.json({
         ok: true,
