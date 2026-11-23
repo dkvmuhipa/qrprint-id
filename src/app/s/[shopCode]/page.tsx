@@ -40,8 +40,9 @@ import {
 import { ENABLE_PASFOTO_GRID } from "@/lib/feature-flags";
 import { PasFotoModal } from "@/components/PasFotoModal";
 import {
-  countSingleFilePages,
+  inspectSingleFile,
   mergeFilesToSinglePdf,
+  type DetectedPaperInfo,
 } from "@/lib/merge-files-pdf";
 
 interface PublicShop {
@@ -109,8 +110,10 @@ function CustomerScanPortalContent({
 
   const [file, setFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<
-    Array<{ file: File; pages: number }>
+    Array<{ file: File; pages: number; paperInfo?: DetectedPaperInfo | null }>
   >([]);
+  const [detectedPaperInfo, setDetectedPaperInfo] =
+    useState<DetectedPaperInfo | null>(null);
   const [detectedPages, setDetectedPages] = useState<number>(1);
   const [countingPages, setCountingPages] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -299,7 +302,11 @@ function CustomerScanPortalContent({
     return /\.(docx?|xlsx?|pptx?)$/i.test(f.name || "");
   }
 
-  async function convertOfficeFileToPdf(f: File): Promise<{ file: File; pages: number }> {
+  async function convertOfficeFileToPdf(f: File): Promise<{
+    file: File;
+    pages: number;
+    paperInfo: DetectedPaperInfo | null;
+  }> {
     const fd = new FormData();
     fd.append("file", f);
     const res = await fetch("/api/public/convert-office", {
@@ -316,11 +323,29 @@ function CustomerScanPortalContent({
     const headerPages = Number(res.headers.get("X-Page-Count"));
     const pdfName = f.name.replace(/\.(docx?|xlsx?|pptx?)$/i, ".pdf");
     const pdfFile = new File([blob], pdfName, { type: "application/pdf" });
+    const inspected = await inspectSingleFile(pdfFile);
     const pages =
       Number.isFinite(headerPages) && headerPages >= 1
         ? headerPages
-        : await countSingleFilePages(pdfFile);
-    return { file: pdfFile, pages };
+        : inspected.pages;
+    return { file: pdfFile, pages, paperInfo: inspected.paperInfo };
+  }
+
+  function applyDetectedPaperFromFiles(
+    items: Array<{ file: File; pages: number; paperInfo?: DetectedPaperInfo | null }>,
+    autoSelect: boolean
+  ) {
+    const primary = items.find((item) => item.paperInfo)?.paperInfo || null;
+    setDetectedPaperInfo(primary);
+    if (!autoSelect || !primary) return;
+    const canUseExtra = shop?.allowExtraPaper !== false;
+    if (primary.recommendedPaper === "A4") {
+      setPaperSize("A4");
+    } else if (canUseExtra) {
+      setPaperSize(primary.recommendedPaper);
+    } else {
+      setPaperSize("A4");
+    }
   }
 
   async function handleFilesAdd(fileList: FileList | null) {
@@ -335,15 +360,21 @@ function CustomerScanPortalContent({
 
     setCountingPages(true);
     try {
-      const counted: Array<{ file: File; pages: number }> = [];
+      const counted: Array<{
+        file: File;
+        pages: number;
+        paperInfo?: DetectedPaperInfo | null;
+      }> = [];
       for (const f of incoming) {
         if (isOfficeDocument(f)) {
           const converted = await convertOfficeFileToPdf(f);
           counted.push(converted);
         } else {
+          const inspected = await inspectSingleFile(f);
           counted.push({
             file: f,
-            pages: await countSingleFilePages(f),
+            pages: inspected.pages,
+            paperInfo: inspected.paperInfo,
           });
         }
       }
@@ -355,10 +386,12 @@ function CustomerScanPortalContent({
         );
         return;
       }
+      const wasEmpty = selectedFiles.length === 0;
       setSelectedFiles(next);
       setFile(next[0]?.file || null);
       const totalPgs = next.reduce((acc, item) => acc + item.pages, 0);
       setDetectedPages(Math.max(1, totalPgs));
+      applyDetectedPaperFromFiles(next, wasEmpty || !detectedPaperInfo);
       if (next.length > 1) {
         setPageRange("ALL");
       }
@@ -379,6 +412,10 @@ function CustomerScanPortalContent({
     setFile(next[0]?.file || null);
     const totalPgs = next.reduce((acc, item) => acc + item.pages, 0);
     setDetectedPages(Math.max(1, totalPgs || 1));
+    applyDetectedPaperFromFiles(next, next.length === 0);
+    if (next.length === 0) {
+      setPaperSize("A4");
+    }
   }
 
   // Analyze color vs B&W pages automatically when customer selects AUTO mode
@@ -643,6 +680,8 @@ function CustomerScanPortalContent({
     setFile(null);
     setSelectedFiles([]);
     setDetectedPages(1);
+    setDetectedPaperInfo(null);
+    setPaperSize("A4");
     setCopies(1);
     setPageRange("ALL");
     setBindingType("NONE");
@@ -1551,15 +1590,25 @@ function CustomerScanPortalContent({
 
               {/* Paper Size */}
               <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
+                <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
                   <label className="block text-xs text-[#5e554a]">
                     Ukuran kertas
                   </label>
-                  {shop.allowExtraPaper === false && (
+                  {detectedPaperInfo ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-[#16a34a]/25 bg-[#16a34a]/10 px-2 py-0.5 font-mono-num text-[10px] font-medium text-[#15803d]">
+                      <Sparkles className="h-3 w-3 shrink-0" strokeWidth={1.6} />
+                      <span>
+                        Terdeteksi: {detectedPaperInfo.detectedLabel} (
+                        {detectedPaperInfo.widthMm}×{detectedPaperInfo.heightMm}{" "}
+                        mm · {detectedPaperInfo.orientation}
+                        {detectedPaperInfo.isMixed ? " · Campuran" : ""})
+                      </span>
+                    </span>
+                  ) : shop.allowExtraPaper === false ? (
                     <span className="text-[11px] text-[#7b7266]">
                       F4 &amp; Foto 4×6 tersedia mulai paket berbayar
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="grid grid-cols-3 gap-2">
                   {[
@@ -1604,6 +1653,35 @@ function CustomerScanPortalContent({
                     </button>
                   ))}
                 </div>
+                {detectedPaperInfo &&
+                  detectedPaperInfo.recommendedPaper !== paperSize && (
+                    <p className="mt-2 rounded-lg border border-[#d97706]/25 bg-[#d97706]/8 px-3 py-1.5 text-[11px] text-[#92400e]">
+                      {shop.allowExtraPaper === false &&
+                      detectedPaperInfo.recommendedPaper !== "A4" ? (
+                        <>
+                          Dokumen asli berukuran{" "}
+                          <strong>{detectedPaperInfo.detectedLabel}</strong> (
+                          {detectedPaperInfo.widthMm}×{detectedPaperInfo.heightMm}{" "}
+                          mm). Toko ini hanya mengaktifkan kertas A4, sehingga hasil cetak akan disesuaikan skalanya ke A4.
+                        </>
+                      ) : (
+                        <>
+                          Dokumen asli terdeteksi{" "}
+                          <strong>{detectedPaperInfo.detectedLabel}</strong> (
+                          {detectedPaperInfo.widthMm}×{detectedPaperInfo.heightMm}{" "}
+                          mm). Printer akan menyesuaikan skala ke{" "}
+                          <strong>
+                            {paperSize === "F4"
+                              ? "F4 / Folio"
+                              : paperSize === "PHOTO_4X6"
+                              ? "Foto 4×6"
+                              : "A4"}
+                          </strong>
+                          .
+                        </>
+                      )}
+                    </p>
+                  )}
               </div>
 
               {/* Copies & Page Range */}
