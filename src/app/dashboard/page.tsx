@@ -70,6 +70,8 @@ function DashboardContent() {
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
+  const fetchingDashboardRef = useRef(false);
   const [tab, setTab] = useState<
     "queue" | "qr" | "billing" | "settings" | "agent"
   >(initialTabParam === "billing" ? "billing" : "queue");
@@ -142,6 +144,8 @@ function DashboardContent() {
       } else {
         setBillingMsg(json.error || "Gagal membuat tagihan keranjang.");
       }
+    } catch {
+      setBillingMsg("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
     } finally {
       setCheckingOutCart(false);
     }
@@ -500,6 +504,13 @@ function DashboardContent() {
   }
 
   const fetchDashboard = useCallback(async () => {
+    if (fetchingDashboardRef.current) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setConnectionError(true);
+      setLoading(false);
+      return;
+    }
+    fetchingDashboardRef.current = true;
     try {
       const res = await fetch("/api/shop/me", { cache: "no-store" });
       if (res.status === 401) {
@@ -508,6 +519,7 @@ function DashboardContent() {
       }
       if (res.ok) {
         const json: DashboardData = await res.json();
+        setConnectionError(false);
         const currentPaidIds = new Set(
           json.jobs
             .filter((j) => j.paymentStatus === "PAID")
@@ -561,7 +573,11 @@ function DashboardContent() {
           setSettingsInitialized(true);
         }
       }
+    } catch {
+      // Gracefully handle transient network errors / server restarts during polling
+      setConnectionError(true);
     } finally {
+      fetchingDashboardRef.current = false;
       setLoading(false);
     }
   }, [router, settingsInitialized, soundEnabled]);
@@ -577,10 +593,15 @@ function DashboardContent() {
         fetchDashboard();
       }
     };
+    const onOnline = () => {
+      fetchDashboard();
+    };
     document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", onOnline);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online", onOnline);
     };
   }, [fetchDashboard]);
 
@@ -638,6 +659,8 @@ function DashboardContent() {
       if (res.ok) {
         await fetchDashboard();
       }
+    } catch {
+      setBillingMsg("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
     } finally {
       setCreatingPlanId(null);
     }
@@ -666,6 +689,8 @@ function DashboardContent() {
         );
       }
       await fetchDashboard();
+    } catch {
+      setBillingMsg("Tidak dapat terhubung ke server. Periksa koneksi Anda.");
     } finally {
       setPayingInvoiceId(null);
     }
@@ -680,6 +705,8 @@ function DashboardContent() {
         body: JSON.stringify({ action }),
       });
       await fetchDashboard();
+    } catch {
+      setConnectionError(true);
     } finally {
       setBusyJobId(null);
     }
@@ -886,6 +913,10 @@ function DashboardContent() {
         setSettingsMsg(errMsg);
         setSettingsErr(errMsg);
       }
+    } catch {
+      const errMsg = "Tidak dapat terhubung ke server. Periksa koneksi Anda.";
+      setSettingsMsg(errMsg);
+      setSettingsErr(errMsg);
     } finally {
       setSavingSettings(false);
     }
@@ -907,13 +938,19 @@ function DashboardContent() {
         setSettingsForm((prev) => ({ ...prev, isOpenManual: nextOpen }));
         await fetchDashboard();
       }
+    } catch {
+      setConnectionError(true);
     } finally {
       setTogglingOpen(false);
     }
   }
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Proceed to login screen even if server is unreachable
+    }
     router.push("/login");
     router.refresh();
   }
@@ -926,13 +963,36 @@ function DashboardContent() {
 
   if (loading || !data) {
     return (
-      <div className="bg-app flex min-h-screen items-center justify-center">
-        <div className="flex items-center gap-2.5 rounded-xl border border-[#171717]/8 bg-white px-5 py-3.5 text-sm text-[#171717]">
-          <Loader2
-            className="h-4 w-4 animate-spin text-[#737373]"
-            strokeWidth={1.5}
-          />
-          <span>Memuat dashboard toko...</span>
+      <div className="bg-app flex min-h-screen items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-[#171717]/8 bg-white px-6 py-4 text-center text-sm text-[#171717]">
+          {connectionError && !loading ? (
+            <>
+              <span className="font-medium text-[#dc2626]">
+                Tidak dapat terhubung ke server
+              </span>
+              <span className="text-xs text-[#737373]">
+                Pastikan server berjalan dan koneksi internet stabil.
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setLoading(true);
+                  fetchDashboard();
+                }}
+                className="cursor-pointer rounded-lg bg-[#171717] px-3.5 py-1.5 text-xs font-medium text-white hover:bg-[#2e2e2e]"
+              >
+                Coba lagi
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2.5">
+              <Loader2
+                className="h-4 w-4 animate-spin text-[#737373]"
+                strokeWidth={1.5}
+              />
+              <span>Memuat dashboard toko...</span>
+            </div>
+          )}
         </div>
       </div>
     );

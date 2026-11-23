@@ -395,7 +395,10 @@ function CustomerScanPortalContent({
         let pageOffset = 0;
 
         for (const item of selectedFiles) {
-          if (item.file.type === "application/pdf") {
+          const isPdf =
+            item.file.type === "application/pdf" ||
+            item.file.name.toLowerCase().endsWith(".pdf");
+          if (isPdf) {
             const fd = new FormData();
             fd.append("file", item.file);
             const res = await fetch("/api/public/analyze-color", {

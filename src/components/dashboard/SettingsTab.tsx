@@ -877,12 +877,16 @@ export function SettingsTab({
                   <button
                     type="button"
                     onClick={async () => {
-                      await fetch("/api/shop/me", {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ staticQrisString: "" }),
-                      });
-                      await onRefreshDashboard();
+                      try {
+                        await fetch("/api/shop/me", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ staticQrisString: "" }),
+                        });
+                        await onRefreshDashboard();
+                      } catch {
+                        // ignore transient network errors
+                      }
                     }}
                     className="ml-2 shrink-0 cursor-pointer text-[#dc2626] hover:underline"
                   >
@@ -1081,12 +1085,16 @@ export function SettingsTab({
                     <button
                       type="button"
                       onClick={async () => {
-                        await fetch("/api/shop/me", {
-                          method: "PATCH",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ midtransServerKey: "" }),
-                        });
-                        await onRefreshDashboard();
+                        try {
+                          await fetch("/api/shop/me", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ midtransServerKey: "" }),
+                          });
+                          await onRefreshDashboard();
+                        } catch {
+                          // ignore transient network errors
+                        }
                       }}
                       className="ml-2 shrink-0 cursor-pointer font-medium text-[#dc2626] hover:underline"
                     >
