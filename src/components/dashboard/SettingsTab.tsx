@@ -481,7 +481,8 @@ export function SettingsTab({
                 </p>
                 <p className="mt-0.5 text-[10px] leading-snug text-[#737373]">
                   Otomatis tampil di bagian &ldquo;Jaringan Mitra Resmi&rdquo;
-                  selama berlangganan paket Bulanan / Pro / Premium.
+                  selama berlangganan paket Bulanan / Pro / Premium (atau Toko
+                  Demo/Testing resmi).
                 </p>
               </div>
             </label>

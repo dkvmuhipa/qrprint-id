@@ -306,6 +306,109 @@ export function ShopDetailDrawer({
             )}
           </div>
 
+          {/* 1.5 Public Showcase & Testing Mode Controls */}
+          <div className="space-y-3 rounded-xl border border-[#171717]/8 p-4">
+            <p className="text-xs font-medium text-[#171717]">
+              Etalase beranda publik &amp; mode testing
+            </p>
+
+            {/* Visibility in Public Directory */}
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <div>
+                <p className="font-medium text-[#171717]">
+                  Visibilitas Direktori Publik (#mitra)
+                </p>
+                <p className="text-[11px] text-[#737373]">
+                  {selectedShop.showInDirectory !== false
+                    ? "Diizinkan tampil di daftar mitra halaman beranda"
+                    : "Disembunyikan dari halaman beranda publik"}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busyId === "toggle_dir"}
+                onClick={() =>
+                  onRunAdminAction("toggle_dir", {
+                    action: "TOGGLE_DIRECTORY_VISIBILITY",
+                    shopId: selectedShop.id,
+                  })
+                }
+                className={`h-8 shrink-0 cursor-pointer rounded-lg px-3 text-xs font-medium disabled:opacity-50 ${
+                  selectedShop.showInDirectory !== false
+                    ? "border border-[#171717]/15 bg-white text-[#171717] hover:bg-[#f4f4f5]"
+                    : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                }`}
+              >
+                {selectedShop.showInDirectory !== false
+                  ? "Sembunyikan"
+                  : "Tampilkan"}
+              </button>
+            </div>
+
+            {/* Pin / Feature on Homepage */}
+            <div className="flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">
+              <div>
+                <p className="font-medium text-[#171717]">
+                  Pin / Tampilkan Paksa di Beranda (Unggulan)
+                </p>
+                <p className="text-[11px] text-[#737373]">
+                  {selectedShop.isFeaturedPartner
+                    ? "Dipin di urutan teratas #mitra (toko Demo ikut tampil)"
+                    : "Mengizinkan toko Demo tampil & diprioritaskan di beranda"}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busyId === "toggle_featured"}
+                onClick={() =>
+                  onRunAdminAction("toggle_featured", {
+                    action: "TOGGLE_FEATURED_PARTNER",
+                    shopId: selectedShop.id,
+                  })
+                }
+                className={`h-8 shrink-0 cursor-pointer rounded-lg px-3 text-xs font-medium disabled:opacity-50 ${
+                  selectedShop.isFeaturedPartner
+                    ? "border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                }`}
+              >
+                {selectedShop.isFeaturedPartner
+                  ? "Lepas Pin"
+                  : "Pin ke Beranda"}
+              </button>
+            </div>
+
+            {/* Testing / Simulation Mode */}
+            <div className="flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">
+              <div>
+                <p className="font-medium text-[#171717]">
+                  Mode Toko Testing / Simulasi
+                </p>
+                <p className="text-[11px] text-[#737373]">
+                  Membuka semua fitur + simulasi QRIS lunas &amp; tampil sebagai
+                  &ldquo;Toko Demo &amp; Simulasi&rdquo; di #mitra (kecuali disembunyikan di atas)
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busyId === "toggle_test"}
+                onClick={() =>
+                  onRunAdminAction("toggle_test", {
+                    action: "TOGGLE_TEST_SHOP",
+                    shopId: selectedShop.id,
+                  })
+                }
+                className={`h-8 shrink-0 cursor-pointer rounded-lg px-3 text-xs font-medium disabled:opacity-50 ${
+                  selectedShop.isTestShop
+                    ? "border border-purple-300 bg-purple-50 text-purple-800 hover:bg-purple-100"
+                    : "bg-[#171717] text-white hover:bg-[#171717]/90"
+                }`}
+              >
+                {selectedShop.isTestShop ? "Nonaktifkan" : "Aktifkan"}
+              </button>
+            </div>
+          </div>
+
           {/* 2. Support Tools */}
           <div className="space-y-3 rounded-xl border border-[#171717]/8 p-4">
             <p className="text-xs font-medium text-[#171717]">

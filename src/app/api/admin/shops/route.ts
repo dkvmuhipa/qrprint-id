@@ -529,6 +529,78 @@ export async function PATCH(req: Request) {
       });
     }
 
+    // 15. Toggle visibility in Public Partner Directory (#mitra)
+    if (action === "TOGGLE_DIRECTORY_VISIBILITY" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+      const nextVal = !shop.showInDirectory;
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { showInDirectory: nextVal },
+      });
+      return NextResponse.json({
+        ok: true,
+        showInDirectory: nextVal,
+        message: nextVal
+          ? `${shop.name} diizinkan tampil di direktori mitra beranda.`
+          : `${shop.name} disembunyikan dari direktori mitra beranda.`,
+      });
+    }
+
+    // 16. Pin / Feature a shop on Public Homepage (also allows approved DEMO showcase shops)
+    if (action === "TOGGLE_FEATURED_PARTNER" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+      const nextVal = !shop.isFeaturedPartner;
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: {
+          isFeaturedPartner: nextVal,
+          ...(nextVal ? { showInDirectory: true } : {}),
+        },
+      });
+      return NextResponse.json({
+        ok: true,
+        isFeaturedPartner: nextVal,
+        message: nextVal
+          ? `${shop.name} dipin sebagai Unggulan Beranda (#mitra).`
+          : `Pin Unggulan Beranda untuk ${shop.name} dilepas.`,
+      });
+    }
+
+    // 17. Toggle Test/Simulation mode on an existing shop
+    if (action === "TOGGLE_TEST_SHOP" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+      const nextVal = !shop.isTestShop;
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { isTestShop: nextVal },
+      });
+      return NextResponse.json({
+        ok: true,
+        isTestShop: nextVal,
+        message: nextVal
+          ? `Mode Toko Testing / Simulasi diaktifkan untuk ${shop.name}.`
+          : `Mode Toko Testing dinonaktifkan untuk ${shop.name}.`,
+      });
+    }
+
     return NextResponse.json(
       { error: "Aksi admin tidak valid." },
       { status: 400 }

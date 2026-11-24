@@ -12,10 +12,13 @@ export async function GET() {
   try {
     const shops = await prisma.shop.findMany({
       where: {
-        isTestShop: false,
         showInDirectory: true,
-        plan: { in: ["BULANAN", "PRO", "PREMIUM"] },
         planStatus: "ACTIVE",
+        OR: [
+          { plan: { in: ["BULANAN", "PRO", "PREMIUM"] } },
+          { isTestShop: true },
+          { isFeaturedPartner: true },
+        ],
       },
       select: {
         shopCode: true,
@@ -28,6 +31,8 @@ export async function GET() {
         logoDataUrl: true,
         plan: true,
         planExpiresAt: true,
+        isTestShop: true,
+        isFeaturedPartner: true,
         bwPrice: true,
         colorPrice: true,
         agentLastSeen: true,
@@ -65,6 +70,8 @@ export async function GET() {
           instagramHandle: s.instagramHandle || "",
           logoDataUrl: s.logoDataUrl || null,
           plan: s.plan,
+          isTestShop: Boolean(s.isTestShop),
+          isFeaturedPartner: Boolean(s.isFeaturedPartner),
           bwPrice: s.bwPrice,
           colorPrice: s.colorPrice,
           isAgentOnline,
@@ -75,9 +82,15 @@ export async function GET() {
         };
       })
       .sort((a, b) => {
+        const aFeat = a.isFeaturedPartner ? 1 : 0;
+        const bFeat = b.isFeaturedPartner ? 1 : 0;
+        if (bFeat !== aFeat) return bFeat - aFeat;
         const aReady = a.isShopOpen && a.isAgentOnline ? 1 : 0;
         const bReady = b.isShopOpen && b.isAgentOnline ? 1 : 0;
         if (bReady !== aReady) return bReady - aReady;
+        const aRealPaid = !a.isTestShop ? 1 : 0;
+        const bRealPaid = !b.isTestShop ? 1 : 0;
+        if (bRealPaid !== aRealPaid) return bRealPaid - aRealPaid;
         if (b._rank !== a._rank) return b._rank - a._rank;
         const aHasLogo = a.logoDataUrl ? 1 : 0;
         const bHasLogo = b.logoDataUrl ? 1 : 0;

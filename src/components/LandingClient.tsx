@@ -43,6 +43,8 @@ interface PublicPartnerItem {
   instagramHandle: string;
   logoDataUrl: string | null;
   plan: string;
+  isTestShop?: boolean;
+  isFeaturedPartner?: boolean;
   bwPrice: number;
   colorPrice: number;
   isAgentOnline: boolean;
@@ -927,12 +929,16 @@ export function LandingClient() {
         ) : filteredPartners.length > 0 ? (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPartners.map((p) => {
-              const planBadge =
-                p.plan === "PREMIUM"
-                  ? "Mitra Premium"
-                  : p.plan === "PRO"
-                  ? "Mitra Pro"
-                  : "Mitra Resmi";
+              const isDemoShowcase = Boolean(p.isTestShop || p.plan === "DEMO");
+              const planBadge = p.isTestShop
+                ? "Toko Demo & Simulasi"
+                : p.plan === "DEMO"
+                ? "Mitra Showcase"
+                : p.plan === "PREMIUM"
+                ? "Mitra Premium"
+                : p.plan === "PRO"
+                ? "Mitra Pro"
+                : "Mitra Resmi";
               const initials = p.name
                 .split(/\s+/)
                 .slice(0, 2)
@@ -959,7 +965,13 @@ export function LandingClient() {
                           </div>
                         )}
                         <div className="min-w-0">
-                          <span className="inline-block rounded bg-[#d9381e]/10 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-[#d9381e]">
+                          <span
+                            className={`inline-block rounded px-1.5 py-0.5 font-mono-num text-[10px] font-semibold ${
+                              p.isTestShop
+                                ? "bg-purple-500/12 text-purple-800"
+                                : "bg-[#d9381e]/10 text-[#d9381e]"
+                            }`}
+                          >
                             {planBadge}
                           </span>
                           <h3 className="mt-1 truncate text-base font-medium text-[#1f1b16]">
@@ -1018,7 +1030,11 @@ export function LandingClient() {
                         href={`/s/${p.shopCode}`}
                         className="btn-action inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f1b16] px-3 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
                       >
-                        <span>Cetak di Toko Ini</span>
+                        <span>
+                          {isDemoShowcase
+                            ? "Coba Simulasi Cetak"
+                            : "Cetak di Toko Ini"}
+                        </span>
                         <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </Link>
                       {p.mapsUrl && (

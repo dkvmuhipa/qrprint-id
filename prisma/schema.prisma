@@ -59,6 +59,7 @@ model Shop {
   mapsUrl             String                @default("")
   instagramHandle     String                @default("")
   showInDirectory     Boolean               @default(true)
+  isFeaturedPartner   Boolean               @default(false)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   jobs                PrintJob[]

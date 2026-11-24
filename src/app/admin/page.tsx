@@ -759,6 +759,24 @@ export default function SuperAdminPage() {
                               TESTING
                             </span>
                           )}
+                          {shop.isFeaturedPartner && (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-amber-800">
+                              UNGGULAN BERANDA
+                            </span>
+                          )}
+                          {shop.showInDirectory === false ? (
+                            <span className="rounded bg-[#f4f4f5] px-1.5 py-0.5 font-mono-num text-[10px] text-[#737373]">
+                              Disembunyikan
+                            </span>
+                          ) : (
+                            !shop.isFeaturedPartner &&
+                            shop.canAcceptJobs &&
+                            (shop.plan !== "DEMO" || Boolean(shop.isTestShop)) && (
+                              <span className="rounded bg-emerald-50 px-1.5 py-0.5 font-mono-num text-[10px] font-medium text-emerald-700">
+                                Tampil di Beranda
+                              </span>
+                            )
+                          )}
                           {shop.hasMidtransKey && (
                             <span className="rounded bg-[#f4f4f5] px-1.5 py-0.5 font-mono-num text-[10px] text-[#525252]">
                               Midtrans {shop.midtransIsProd ? "Live" : "Sandbox"}
