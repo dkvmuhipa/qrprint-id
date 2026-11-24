@@ -36,11 +36,13 @@ export interface PdfColorAnalysis {
 
 // Minimum per-pixel RGB spread (max(R,G,B) - min(R,G,B)) to count a pixel as chromatic.
 // Ignores pure black/white, RGB gray, CMYK rich-black ICC conversion, and slight warm/cool paper tint.
-const CHROMA_THRESHOLD = 28;
-// Minimum fraction of chromatic pixels on a page (0.025% ≈ 60 px on A4 at 50 DPI)
-// to catch colored logos, stamps, hyperlinks, and charts while ignoring stray JPEG noise.
-const MIN_COLOR_PIXEL_RATIO = 0.00025;
-const MIN_COLOR_PIXELS_FLOOR = 40;
+const CHROMA_THRESHOLD = 32;
+// Minimum fraction of chromatic pixels on a page (0.6% ≈ 1,450 px on A4 at 50 DPI,
+// roughly a ~2 x 2 cm solid color block or ~2.5 x 2.5 cm logo).
+// Pages with only minor non-dominant color (e.g. 1-3 blue URL links or tiny marks in a thesis)
+// remain classified as B&W, while pages with real logos, charts, diagrams, or photos count as COLOR.
+const MIN_COLOR_PIXEL_RATIO = 0.006;
+const MIN_COLOR_PIXELS_FLOOR = 600;
 
 interface PagePixelResult {
   coloredPixels: number;
