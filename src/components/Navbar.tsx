@@ -64,6 +64,12 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           >
             Privasi
           </a>
+          <a
+            href="#mitra"
+            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          >
+            Mitra toko
+          </a>
           <Link
             href="/panduan"
             className="transition-colors duration-150 hover:text-[#1f1b16]"
@@ -132,6 +138,13 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
               className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Privasi dokumen
+            </a>
+            <a
+              href="#mitra"
+              onClick={() => setOpen(false)}
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
+            >
+              Mitra toko resmi
             </a>
             <Link
               href="/panduan"

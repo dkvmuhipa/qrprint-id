@@ -25,9 +25,30 @@ import {
   Camera,
   Link2,
   PlusCircle,
+  MapPin,
+  Search,
+  Store,
 } from "lucide-react";
+import { formatRupiah } from "@/lib/utils";
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
+
+interface PublicPartnerItem {
+  shopCode: string;
+  name: string;
+  address: string;
+  city: string;
+  tagline: string;
+  mapsUrl: string;
+  instagramHandle: string;
+  logoDataUrl: string | null;
+  plan: string;
+  bwPrice: number;
+  colorPrice: number;
+  isAgentOnline: boolean;
+  isShopOpen: boolean;
+  scheduleLabel: string | null;
+}
 
 const PRODUCTS = [
   {
@@ -190,6 +211,36 @@ export function LandingClient() {
   const [demoLoading, setDemoLoading] = useState(false);
   const [demoSuccess, setDemoSuccess] = useState<string | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
+
+  const [partners, setPartners] = useState<PublicPartnerItem[]>([]);
+  const [loadingPartners, setLoadingPartners] = useState(true);
+  const [partnerQuery, setPartnerQuery] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/public/partners", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : { partners: [] }))
+      .then((data) => {
+        if (active && Array.isArray(data.partners)) {
+          setPartners(data.partners);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoadingPartners(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filteredPartners = partners.filter((p) => {
+    const q = partnerQuery.trim().toLowerCase();
+    if (!q) return true;
+    return `${p.name} ${p.city} ${p.address} ${p.tagline}`
+      .toLowerCase()
+      .includes(q);
+  });
 
   const currentProduct =
     PRODUCTS.find((p) => p.id === activeTab) || PRODUCTS[0];
@@ -829,6 +880,201 @@ export function LandingClient() {
             Daftar mitra toko
           </Link>
         </div>
+      </section>
+
+      {/* Subscribed Partner Directory (#mitra) */}
+      <section id="mitra" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="max-w-2xl">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#d9381e]">
+              <Store className="h-4 w-4" strokeWidth={1.5} />
+              <span>Jaringan mitra resmi</span>
+            </div>
+            <h2 className="mt-2 text-2xl font-medium tracking-[-0.01em] text-[#1f1b16] sm:text-3xl">
+              Toko fotokopi &amp; percetakan yang sudah berlangganan Ngeprint
+            </h2>
+            <p className="mt-1.5 text-xs text-[#5e554a]">
+              Pilih toko mitra aktif di sekitar Anda untuk langsung unggah
+              dokumen dan cetak mandiri dari HP.
+            </p>
+          </div>
+          {partners.length > 3 && (
+            <div className="relative w-full sm:w-64">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[#7b7266]"
+                strokeWidth={1.6}
+              />
+              <input
+                type="search"
+                value={partnerQuery}
+                onChange={(e) => setPartnerQuery(e.target.value)}
+                placeholder="Cari nama toko atau kota..."
+                className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-[#fdfbf7] pr-3 pl-9 text-xs text-[#1f1b16] outline-none focus:border-[#1f1b16]"
+              />
+            </div>
+          )}
+        </div>
+
+        {loadingPartners ? (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((idx) => (
+              <div
+                key={idx}
+                className="h-48 animate-pulse rounded-2xl border border-[#1f1b16]/8 bg-[#fdfbf7]/80"
+              />
+            ))}
+          </div>
+        ) : filteredPartners.length > 0 ? (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPartners.map((p) => {
+              const planBadge =
+                p.plan === "PREMIUM"
+                  ? "Mitra Premium"
+                  : p.plan === "PRO"
+                  ? "Mitra Pro"
+                  : "Mitra Resmi";
+              const initials = p.name
+                .split(/\s+/)
+                .slice(0, 2)
+                .map((w) => w[0]?.toUpperCase() || "")
+                .join("");
+
+              return (
+                <div
+                  key={p.shopCode}
+                  className="flex flex-col justify-between rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5 transition-colors hover:border-[#1f1b16]/25"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        {p.logoDataUrl ? (
+                          <img
+                            src={p.logoDataUrl}
+                            alt={p.name}
+                            className="h-12 w-12 shrink-0 rounded-xl border border-[#1f1b16]/10 bg-white object-cover"
+                          />
+                        ) : (
+                          <div className="font-mono-num flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#1f1b16] text-sm font-semibold text-[#fdfbf7]">
+                            {initials || "NP"}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <span className="inline-block rounded bg-[#d9381e]/10 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-[#d9381e]">
+                            {planBadge}
+                          </span>
+                          <h3 className="mt-1 truncate text-base font-medium text-[#1f1b16]">
+                            {p.name}
+                          </h3>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                          !p.isShopOpen
+                            ? "bg-[#1f1b16]/8 text-[#7b7266]"
+                            : p.isAgentOnline
+                            ? "bg-[#16a34a]/12 text-[#15803d]"
+                            : "bg-[#b45309]/12 text-[#b45309]"
+                        }`}
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 rounded-full ${
+                            !p.isShopOpen
+                              ? "bg-[#7b7266]"
+                              : p.isAgentOnline
+                              ? "bg-[#16a34a]"
+                              : "bg-[#b45309]"
+                          }`}
+                        />
+                        <span>
+                          {!p.isShopOpen
+                            ? "Tutup"
+                            : p.isAgentOnline
+                            ? "Siap Cetak"
+                            : "Buka"}
+                        </span>
+                      </span>
+                    </div>
+
+                    {p.tagline && (
+                      <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-[#5e554a]">
+                        {p.tagline}
+                      </p>
+                    )}
+
+                    <p className="mt-2.5 text-xs text-[#7b7266]">
+                      {p.city ? `${p.city} · ` : ""}
+                      {p.address}
+                    </p>
+                  </div>
+
+                  <div className="mt-4 border-t border-[#1f1b16]/8 pt-3.5">
+                    <div className="flex items-center justify-between gap-2 font-mono-num text-[11px] text-[#5e554a]">
+                      <span>HP {formatRupiah(p.bwPrice)}/lbr</span>
+                      <span>Warna {formatRupiah(p.colorPrice)}/lbr</span>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <Link
+                        href={`/s/${p.shopCode}`}
+                        className="btn-action inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f1b16] px-3 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
+                      >
+                        <span>Cetak di Toko Ini</span>
+                        <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                      </Link>
+                      {p.mapsUrl && (
+                        <a
+                          href={p.mapsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Buka lokasi di Google Maps"
+                          className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                        >
+                          <MapPin
+                            className="h-3.5 w-3.5 text-[#d9381e]"
+                            strokeWidth={1.6}
+                          />
+                          <span>Maps</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 sm:flex-row sm:items-center">
+            <div className="max-w-2xl">
+              <p className="text-sm font-medium text-[#1f1b16]">
+                {partners.length > 0
+                  ? `Tidak ada mitra yang cocok dengan pencarian "${partnerQuery}".`
+                  : "Toko fotokopi Anda bisa tampil otomatis di sini"}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
+                Setiap mitra yang berlangganan paket{" "}
+                <strong>Bulanan, Pro, atau Premium</strong> otomatis
+                ditampilkan di halaman utama Ngeprint lengkap dengan logo toko,
+                tarif cetak, link Google Maps, dan akses cetak mandiri pelanggan.
+              </p>
+            </div>
+            {partners.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setPartnerQuery("")}
+                className="btn-action inline-flex h-9 shrink-0 cursor-pointer items-center rounded-lg border border-[#1f1b16]/15 bg-white px-4 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+              >
+                Tampilkan Semua ({partners.length})
+              </button>
+            ) : (
+              <Link
+                href="/register"
+                className="btn-action inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17]"
+              >
+                Daftarkan Toko Anda →
+              </Link>
+            )}
+          </div>
+        )}
       </section>
 
       {/* FAQ Section (#faq) */}

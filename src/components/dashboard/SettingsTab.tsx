@@ -1,13 +1,21 @@
 "use client";
 
-import type { Dispatch, FormEvent, SetStateAction } from "react";
-import { Bluetooth, Download, Lock, Printer } from "lucide-react";
+import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { Bluetooth, Download, ImagePlus, Lock, Printer, Trash2 } from "lucide-react";
 import type { EntitlementInfo, PrintJobItem, ShopInfo } from "./types";
 
 export interface SettingsFormState {
   shopCode: string;
   name: string;
+  ownerName: string;
+  phone: string;
   address: string;
+  city: string;
+  tagline: string;
+  mapsUrl: string;
+  instagramHandle: string;
+  logoDataUrl: string;
+  showInDirectory: boolean;
   qrisName: string;
   bwPrice: number;
   colorPrice: number;
@@ -101,6 +109,59 @@ export function SettingsTab({
   onTestPrintBluetooth,
   buildSampleTestJob,
 }: SettingsTabProps) {
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [processingLogo, setProcessingLogo] = useState(false);
+
+  async function handleLogoFileSelect(file: File | null) {
+    if (!file) return;
+    setLogoError(null);
+    setProcessingLogo(true);
+    try {
+      const objUrl = URL.createObjectURL(file);
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Gagal membaca file gambar."));
+        img.src = objUrl;
+      });
+      URL.revokeObjectURL(objUrl);
+
+      const size = 192;
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Browser tidak mendukung pemrosesan gambar.");
+
+      ctx.clearRect(0, 0, size, size);
+      const scale = Math.min(size / img.width, size / img.height);
+      const drawW = Math.round(img.width * scale);
+      const drawH = Math.round(img.height * scale);
+      const dx = Math.round((size - drawW) / 2);
+      const dy = Math.round((size - drawH) / 2);
+      ctx.drawImage(img, dx, dy, drawW, drawH);
+
+      let dataUrl = canvas.toDataURL("image/webp", 0.85);
+      if (!dataUrl.startsWith("data:image/webp")) {
+        dataUrl = canvas.toDataURL("image/png");
+      }
+      if (dataUrl.length > 115_000) {
+        dataUrl = canvas.toDataURL("image/jpeg", 0.78);
+      }
+      if (dataUrl.length > 115_000) {
+        throw new Error("Ukuran logo terlalu besar. Gunakan gambar lain yang lebih ringan.");
+      }
+
+      setSettingsForm((prev) => ({ ...prev, logoDataUrl: dataUrl }));
+    } catch (err) {
+      setLogoError(
+        err instanceof Error ? err.message : "Gagal memproses logo toko."
+      );
+    } finally {
+      setProcessingLogo(false);
+    }
+  }
+
   const effectiveMaxPrinters =
     shop.effectiveMaxPrinters !== undefined
       ? shop.effectiveMaxPrinters
@@ -126,6 +187,76 @@ export function SettingsTab({
         )}
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
+          {/* Shop Logo Uploader */}
+          <div className="rounded-xl border border-[#171717]/8 bg-[#fafafa] p-4 sm:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                {settingsForm.logoDataUrl ? (
+                  <img
+                    src={settingsForm.logoDataUrl}
+                    alt={settingsForm.name || "Logo toko"}
+                    className="h-16 w-16 shrink-0 rounded-xl border border-[#171717]/12 bg-white object-cover"
+                  />
+                ) : (
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-[#171717]/20 bg-white text-[#737373]">
+                    <Printer className="h-6 w-6" strokeWidth={1.5} />
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-medium text-[#171717]">
+                    Logo Mitra Toko
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-[#737373]">
+                    Tampil di halaman scan QR pelanggan, direktori mitra publik,
+                    dan sidebar dashboard. Otomatis dikompres ke ukuran 192×192
+                    px.
+                  </p>
+                  {logoError && (
+                    <p className="mt-1 text-[11px] font-medium text-[#dc2626]">
+                      {logoError}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="btn-action inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]">
+                  <ImagePlus className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  <span>
+                    {processingLogo
+                      ? "Memproses..."
+                      : settingsForm.logoDataUrl
+                      ? "Ganti Logo"
+                      : "Unggah Logo"}
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={processingLogo}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0] || null;
+                      handleLogoFileSelect(f);
+                      e.target.value = "";
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                {settingsForm.logoDataUrl && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLogoError(null);
+                      setSettingsForm((prev) => ({ ...prev, logoDataUrl: "" }));
+                    }}
+                    className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-lg border border-[#dc2626]/25 bg-white px-2.5 text-xs font-medium text-[#dc2626] hover:bg-[#fef2f2]"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    <span>Hapus</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="sm:col-span-2">
             <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
               <label className="block text-xs font-medium text-[#171717]">
@@ -221,6 +352,106 @@ export function SettingsTab({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-[#171717]">
+              Nama pemilik / penanggung jawab (PIC)
+            </label>
+            <input
+              value={settingsForm.ownerName}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, ownerName: e.target.value })
+              }
+              placeholder="Contoh: Budi Santoso"
+              className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[#171717]">
+              No. WhatsApp toko
+            </label>
+            <input
+              value={settingsForm.phone}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, phone: e.target.value })
+              }
+              placeholder="08xxxxxxxxxx"
+              className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[#171717]">
+              Kota / Kecamatan
+            </label>
+            <input
+              value={settingsForm.city}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, city: e.target.value })
+              }
+              placeholder="Contoh: Sleman, Yogyakarta"
+              className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs font-medium text-[#171717]">
+              Alamat lengkap toko
+            </label>
+            <input
+              value={settingsForm.address}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, address: e.target.value })
+              }
+              className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div className="sm:col-span-2">
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="block text-xs font-medium text-[#171717]">
+                Deskripsi singkat / layanan unggulan toko
+              </label>
+              <span className="font-mono-num text-[10px] text-[#737373]">
+                {settingsForm.tagline.length}/160
+              </span>
+            </div>
+            <input
+              maxLength={160}
+              value={settingsForm.tagline}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, tagline: e.target.value })
+              }
+              placeholder="Contoh: Cetak skripsi cepat, jilid hard cover, pas foto kilat depan gerbang kampus"
+              className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[#171717]">
+              Link Google Maps toko (opsional)
+            </label>
+            <input
+              type="url"
+              value={settingsForm.mapsUrl}
+              onChange={(e) =>
+                setSettingsForm({ ...settingsForm, mapsUrl: e.target.value })
+              }
+              placeholder="https://maps.app.goo.gl/..."
+              className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[#171717]">
+              Instagram toko (opsional)
+            </label>
+            <input
+              value={settingsForm.instagramHandle}
+              onChange={(e) =>
+                setSettingsForm({
+                  ...settingsForm,
+                  instagramHandle: e.target.value,
+                })
+              }
+              placeholder="@fotokopijaya"
+              className="font-mono-num h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-[#171717]">
               Nama merchant QRIS
             </label>
             <input
@@ -231,17 +462,29 @@ export function SettingsTab({
               className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
             />
           </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-xs font-medium text-[#171717]">
-              Alamat toko
+          <div className="flex items-end">
+            <label className="flex w-full cursor-pointer items-start gap-2.5 rounded-lg border border-[#171717]/10 bg-[#fafafa] p-2.5 text-xs">
+              <input
+                type="checkbox"
+                checked={settingsForm.showInDirectory}
+                onChange={(e) =>
+                  setSettingsForm({
+                    ...settingsForm,
+                    showInDirectory: e.target.checked,
+                  })
+                }
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#171717]/30 accent-[#d9381e]"
+              />
+              <div>
+                <p className="font-medium text-[#171717]">
+                  Tampilkan toko di halaman publik Ngeprint
+                </p>
+                <p className="mt-0.5 text-[10px] leading-snug text-[#737373]">
+                  Otomatis tampil di bagian &ldquo;Jaringan Mitra Resmi&rdquo;
+                  selama berlangganan paket Bulanan / Pro / Premium.
+                </p>
+              </div>
             </label>
-            <input
-              value={settingsForm.address}
-              onChange={(e) =>
-                setSettingsForm({ ...settingsForm, address: e.target.value })
-              }
-              className="h-10 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3.5 text-sm outline-none focus:border-[#171717] focus:bg-white"
-            />
           </div>
 
           <div>

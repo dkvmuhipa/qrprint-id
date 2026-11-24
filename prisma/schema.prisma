@@ -53,6 +53,12 @@ model Shop {
   referredByShopId    String?
   referralRewarded    Boolean               @default(false)
   referralCount       Int                   @default(0)
+  logoDataUrl         String?
+  city                String                @default("")
+  tagline             String                @default("")
+  mapsUrl             String                @default("")
+  instagramHandle     String                @default("")
+  showInDirectory     Boolean               @default(true)
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   jobs                PrintJob[]

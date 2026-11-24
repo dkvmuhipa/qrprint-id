@@ -228,6 +228,12 @@ export async function GET() {
         : "",
       midtransIsProd: shop.midtransIsProd,
       referralCount: shop.referralCount,
+      logoDataUrl: shop.logoDataUrl || "",
+      city: shop.city || "",
+      tagline: shop.tagline || "",
+      mapsUrl: shop.mapsUrl || "",
+      instagramHandle: shop.instagramHandle || "",
+      showInDirectory: shop.showInDirectory !== false,
     },
     entitlement,
     plans: Object.values(SAAS_PLANS),
@@ -419,6 +425,40 @@ export async function PATCH(req: Request) {
       }
     }
 
+    let nextLogoDataUrl: string | null | undefined = undefined;
+    if (body.logoDataUrl !== undefined) {
+      const rawLogo = String(body.logoDataUrl || "").trim();
+      if (rawLogo === "") {
+        nextLogoDataUrl = null;
+      } else {
+        const validLogo = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(
+          rawLogo
+        );
+        if (!validLogo || rawLogo.length > 120_000) {
+          return NextResponse.json(
+            {
+              error:
+                "Ukuran logo terlalu besar atau format tidak didukung (gunakan PNG/JPG/WEBP).",
+            },
+            { status: 400 }
+          );
+        }
+        nextLogoDataUrl = rawLogo;
+      }
+    }
+
+    let nextMapsUrl: string | undefined = undefined;
+    if (body.mapsUrl !== undefined) {
+      const rawMaps = String(body.mapsUrl || "").trim().slice(0, 300);
+      if (rawMaps !== "" && !/^https?:\/\//i.test(rawMaps)) {
+        return NextResponse.json(
+          { error: "Link Google Maps harus diawali https://" },
+          { status: 400 }
+        );
+      }
+      nextMapsUrl = rawMaps;
+    }
+
     const updated = await prisma.shop.update({
       where: { id: shop.id },
       data: {
@@ -428,9 +468,36 @@ export async function PATCH(req: Request) {
               shopCodeChangeCount: { increment: 1 },
             }
           : {}),
-        name: body.name ? String(body.name).trim() : shop.name,
-        address: body.address ? String(body.address).trim() : shop.address,
-        phone: body.phone ? String(body.phone).trim() : shop.phone,
+        name: body.name ? String(body.name).trim().slice(0, 80) : shop.name,
+        ownerName: body.ownerName
+          ? String(body.ownerName).trim().slice(0, 80)
+          : shop.ownerName,
+        address: body.address
+          ? String(body.address).trim().slice(0, 200)
+          : shop.address,
+        phone: body.phone ? String(body.phone).trim().slice(0, 24) : shop.phone,
+        ...(body.city !== undefined
+          ? { city: String(body.city || "").trim().slice(0, 80) }
+          : {}),
+        ...(body.tagline !== undefined
+          ? { tagline: String(body.tagline || "").trim().slice(0, 160) }
+          : {}),
+        ...(nextMapsUrl !== undefined ? { mapsUrl: nextMapsUrl } : {}),
+        ...(body.instagramHandle !== undefined
+          ? {
+              instagramHandle: (() => {
+                const ig = String(body.instagramHandle || "").trim();
+                if (!ig) return "";
+                return `@${ig.replace(/^@+/, "")}`.slice(0, 60);
+              })(),
+            }
+          : {}),
+        ...(body.showInDirectory !== undefined
+          ? { showInDirectory: Boolean(body.showInDirectory) }
+          : {}),
+        ...(nextLogoDataUrl !== undefined
+          ? { logoDataUrl: nextLogoDataUrl }
+          : {}),
         bwPrice:
           body.bwPrice !== undefined
             ? Math.max(100, Number(body.bwPrice) || 500)

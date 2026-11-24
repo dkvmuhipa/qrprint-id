@@ -48,6 +48,12 @@ export interface ShopInfo {
   midtransServerKeyMasked?: string;
   midtransIsProd?: boolean;
   referralCount?: number;
+  logoDataUrl?: string;
+  city?: string;
+  tagline?: string;
+  mapsUrl?: string;
+  instagramHandle?: string;
+  showInDirectory?: boolean;
 }
 
 export interface PlanDefItem {

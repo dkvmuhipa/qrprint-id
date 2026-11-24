@@ -168,7 +168,15 @@ function DashboardContent() {
   const [settingsForm, setSettingsForm] = useState({
     shopCode: "",
     name: "",
+    ownerName: "",
+    phone: "",
     address: "",
+    city: "",
+    tagline: "",
+    mapsUrl: "",
+    instagramHandle: "",
+    logoDataUrl: "",
+    showInDirectory: true,
     qrisName: "",
     bwPrice: 500,
     colorPrice: 1500,
@@ -614,7 +622,15 @@ function DashboardContent() {
           setSettingsForm({
             shopCode: json.shop.shopCode,
             name: json.shop.name,
+            ownerName: json.shop.ownerName || "",
+            phone: json.shop.phone || "",
             address: json.shop.address,
+            city: json.shop.city || "",
+            tagline: json.shop.tagline || "",
+            mapsUrl: json.shop.mapsUrl || "",
+            instagramHandle: json.shop.instagramHandle || "",
+            logoDataUrl: json.shop.logoDataUrl || "",
+            showInDirectory: json.shop.showInDirectory !== false,
             qrisName: json.shop.qrisName,
             bwPrice: json.shop.bwPrice,
             colorPrice: json.shop.colorPrice,
@@ -788,7 +804,15 @@ function DashboardContent() {
     setSettingsForm({
       shopCode: s.shopCode,
       name: s.name,
+      ownerName: s.ownerName || "",
+      phone: s.phone || "",
       address: s.address,
+      city: s.city || "",
+      tagline: s.tagline || "",
+      mapsUrl: s.mapsUrl || "",
+      instagramHandle: s.instagramHandle || "",
+      logoDataUrl: s.logoDataUrl || "",
+      showInDirectory: s.showInDirectory !== false,
       qrisName: s.qrisName,
       bwPrice: s.bwPrice,
       colorPrice: s.colorPrice,
@@ -822,7 +846,17 @@ function DashboardContent() {
       data?.shop &&
       (settingsForm.shopCode.trim() !== (data.shop.shopCode || "").trim() ||
         settingsForm.name.trim() !== (data.shop.name || "").trim() ||
+        settingsForm.ownerName.trim() !== (data.shop.ownerName || "").trim() ||
+        settingsForm.phone.trim() !== (data.shop.phone || "").trim() ||
         settingsForm.address.trim() !== (data.shop.address || "").trim() ||
+        settingsForm.city.trim() !== (data.shop.city || "").trim() ||
+        settingsForm.tagline.trim() !== (data.shop.tagline || "").trim() ||
+        settingsForm.mapsUrl.trim() !== (data.shop.mapsUrl || "").trim() ||
+        settingsForm.instagramHandle.trim() !==
+          (data.shop.instagramHandle || "").trim() ||
+        (settingsForm.logoDataUrl || "") !== (data.shop.logoDataUrl || "") ||
+        Boolean(settingsForm.showInDirectory) !==
+          (data.shop.showInDirectory !== false) ||
         settingsForm.qrisName.trim() !== (data.shop.qrisName || "").trim() ||
         Number(settingsForm.bwPrice) !== Number(data.shop.bwPrice) ||
         Number(settingsForm.colorPrice) !== Number(data.shop.colorPrice) ||
@@ -896,7 +930,15 @@ function DashboardContent() {
       const payload: Record<string, unknown> = {
         ...(isChangingSlug ? { shopCode: settingsForm.shopCode } : {}),
         name: settingsForm.name,
+        ownerName: settingsForm.ownerName,
+        phone: settingsForm.phone,
         address: settingsForm.address,
+        city: settingsForm.city,
+        tagline: settingsForm.tagline,
+        mapsUrl: settingsForm.mapsUrl,
+        instagramHandle: settingsForm.instagramHandle,
+        logoDataUrl: settingsForm.logoDataUrl,
+        showInDirectory: settingsForm.showInDirectory,
         qrisName: settingsForm.qrisName,
         bwPrice: settingsForm.bwPrice,
         colorPrice: settingsForm.colorPrice,
@@ -945,7 +987,15 @@ function DashboardContent() {
           setSettingsForm({
             shopCode: s.shopCode,
             name: s.name,
+            ownerName: s.ownerName || "",
+            phone: s.phone || "",
             address: s.address,
+            city: s.city || "",
+            tagline: s.tagline || "",
+            mapsUrl: s.mapsUrl || "",
+            instagramHandle: s.instagramHandle || "",
+            logoDataUrl: s.logoDataUrl || "",
+            showInDirectory: s.showInDirectory !== false,
             qrisName: s.qrisName,
             bwPrice: s.bwPrice,
             colorPrice: s.colorPrice,
@@ -1134,9 +1184,18 @@ function DashboardContent() {
 
           <div className="mt-4 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-3">
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm font-medium text-[#171717]">
-                {shop.name}
-              </p>
+              <div className="flex min-w-0 items-center gap-2">
+                {shop.logoDataUrl && (
+                  <img
+                    src={shop.logoDataUrl}
+                    alt={shop.name}
+                    className="h-7 w-7 shrink-0 rounded-md border border-[#171717]/10 bg-white object-cover"
+                  />
+                )}
+                <p className="truncate text-sm font-medium text-[#171717]">
+                  {shop.name}
+                </p>
+              </div>
               <span
                 className={`shrink-0 rounded px-1.5 py-0.5 font-mono-num text-[11px] font-medium ${
                   entitlement.canAcceptJobs
@@ -1255,9 +1314,17 @@ function DashboardContent() {
           <div className="flex min-w-0 items-center gap-2">
             <Link
               href="/"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#171717] text-white"
+              className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#171717] text-white"
             >
-              <Printer className="h-4 w-4" strokeWidth={1.5} />
+              {shop.logoDataUrl ? (
+                <img
+                  src={shop.logoDataUrl}
+                  alt={shop.name}
+                  className="h-full w-full bg-white object-cover"
+                />
+              ) : (
+                <Printer className="h-4 w-4" strokeWidth={1.5} />
+              )}
             </Link>
             <div className="min-w-0">
               <p className="truncate text-sm font-medium text-[#171717]">

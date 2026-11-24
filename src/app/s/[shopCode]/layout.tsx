@@ -37,6 +37,8 @@ async function getShopMetadataInfo(rawShopCode: string) {
         shopCode: true,
         name: true,
         address: true,
+        city: true,
+        tagline: true,
         bwPrice: true,
       },
     });
@@ -63,8 +65,11 @@ export async function generateMetadata({
 
   const priceLabel = shop.bwPrice.toLocaleString("id-ID");
   const title = `Cetak Mandiri di ${shop.name} — Mulai Rp ${priceLabel}/lbr`;
-  const description = `Unggah PDF atau foto langsung dari HP ke printer ${shop.name}${
-    shop.address ? ` (${shop.address})` : ""
+  const locationText = shop.city
+    ? `${shop.city}${shop.address ? ` · ${shop.address}` : ""}`
+    : shop.address;
+  const description = `${shop.tagline ? `${shop.tagline}. ` : ""}Unggah PDF atau foto langsung dari HP ke printer ${shop.name}${
+    locationText ? ` (${locationText})` : ""
   }. Bayar QRIS instan, langsung tercetak & file otomatis terhapus.`;
 
   return {
