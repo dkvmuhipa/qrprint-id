@@ -30,6 +30,7 @@ import {
   MapPin,
   Search,
   Store,
+  Play,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import {
@@ -46,6 +47,7 @@ import { RevealOnScroll } from "./RevealOnScroll";
 import { TiltCard3D } from "./TiltCard3D";
 import { Standee3DShowcase } from "./Standee3DShowcase";
 import { PrivacyIso3D } from "./PrivacyIso3D";
+import { VideoDemoModal } from "./VideoDemoModal";
 
 interface PublicPartnerItem {
   shopCode: string;
@@ -219,6 +221,7 @@ export function LandingClient() {
     window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
   }, []);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
   const [demoForm, setDemoForm] = useState({
     name: "",
     whatsapp: "",
@@ -475,6 +478,19 @@ export function LandingClient() {
                 className="btn-action inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-[#fdfbf7] px-5 text-sm font-medium text-[#1f1b16] hover:bg-[#efe9df] sm:w-auto"
               >
                 Uji coba demo 24 jam
+              </button>
+              <button
+                type="button"
+                onClick={() => setVideoOpen(true)}
+                className="inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent px-3.5 text-sm font-medium text-[#1f1b16] transition-colors hover:bg-[#efe9df]/80 sm:w-auto"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#d9381e]/12 text-[#d9381e]">
+                  <Play
+                    className="ml-0.5 h-3 w-3 fill-current"
+                    strokeWidth={1.75}
+                  />
+                </span>
+                <span>Tonton video demo</span>
               </button>
             </div>
 
@@ -1650,6 +1666,15 @@ export function LandingClient() {
           </div>
         </div>
       )}
+
+      <VideoDemoModal
+        open={videoOpen}
+        onClose={() => setVideoOpen(false)}
+        onOpenDemo={() => {
+          setVideoOpen(false);
+          setDemoOpen(true);
+        }}
+      />
     </div>
   );
 }
