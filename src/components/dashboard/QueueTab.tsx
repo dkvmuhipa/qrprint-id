@@ -505,6 +505,11 @@ export function QueueTab({
                         </span>
                       )}
                     </p>
+                    {job.customerNotes && (
+                      <p className="mt-1.5 inline-block rounded-md border border-[#b45309]/25 bg-[#b45309]/8 px-2 py-1 text-[11px] font-medium text-[#92400e]">
+                        Catatan kasir: &ldquo;{job.customerNotes}&rdquo;
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:justify-end">

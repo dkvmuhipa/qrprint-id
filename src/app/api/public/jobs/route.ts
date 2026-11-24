@@ -43,6 +43,11 @@ export async function POST(req: Request) {
     const file = formData.get("file") as File | null;
     const customerName =
       String(formData.get("customerName") || "").trim() || "Pelanggan";
+    const rawNotes = String(formData.get("customerNotes") || "")
+      .replace(/[\r\n]+/g, " ")
+      .trim()
+      .slice(0, 120);
+    const customerNotes = rawNotes || null;
     const rawWa = String(formData.get("customerWhatsapp") || "")
       .replace(/\D/g, "")
       .slice(0, 16);
@@ -345,6 +350,7 @@ export async function POST(req: Request) {
         shopId: shop.id,
         customerName: customerName.slice(0, 60),
         customerWhatsapp,
+        customerNotes,
         fileName: safeDisplayName,
         storedFilePath,
         mimeType: verifiedType.mimeType,
@@ -373,6 +379,7 @@ export async function POST(req: Request) {
         job: {
           jobCode: job.jobCode,
           customerName: job.customerName,
+          customerNotes: job.customerNotes,
           fileName: job.fileName,
           pageCount: job.pageCount,
           effectivePages: pricing.effectivePages,

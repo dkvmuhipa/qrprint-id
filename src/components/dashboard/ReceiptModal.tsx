@@ -110,6 +110,14 @@ export function ReceiptModal({
                 </span>
               </div>
             )}
+            {receiptJob.customerNotes && (
+              <div className="flex justify-between gap-2">
+                <span className="text-[#737373]">Catatan</span>
+                <span className="max-w-[190px] text-right font-medium text-[#92400e]">
+                  {receiptJob.customerNotes}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

@@ -922,18 +922,31 @@ export function LandingClient() {
                   Panel antrean cetak
                 </Link>
               </li>
+              <li>
+                <Link href="/panduan" className="hover:text-[#1f1b16]">
+                  Panduan penggunaan
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="text-xs font-medium text-[#1f1b16]">
-              Arsitektur & privasi
+              Legal &amp; privasi
             </h4>
             <ul className="mt-3 space-y-2 text-xs text-[#5e554a]">
               <li>Penghapusan file otomatis usai cetak</li>
-              <li>Otentikasi kunci agen per toko</li>
               <li>Tanpa penyimpanan dokumen permanen</li>
-              <li>Kompatibel printer USB Windows 10/11</li>
+              <li>
+                <Link href="/privasi" className="hover:text-[#1f1b16] hover:underline">
+                  Kebijakan privasi
+                </Link>
+              </li>
+              <li>
+                <Link href="/ketentuan" className="hover:text-[#1f1b16] hover:underline">
+                  Syarat &amp; ketentuan
+                </Link>
+              </li>
             </ul>
           </div>
 

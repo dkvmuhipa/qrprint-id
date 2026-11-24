@@ -32,11 +32,108 @@ export function playCashierBell() {
   }
 }
 
+const SATUAN_ID = [
+  "",
+  "satu",
+  "dua",
+  "tiga",
+  "empat",
+  "lima",
+  "enam",
+  "tujuh",
+  "delapan",
+  "sembilan",
+  "sepuluh",
+  "sebelas",
+];
+
+function terbilangCore(n: number): string {
+  if (n < 12) return SATUAN_ID[n];
+  if (n < 20) return `${terbilangCore(n - 10)} belas`;
+  if (n < 100) {
+    const rem = n % 10;
+    return `${terbilangCore(Math.floor(n / 10))} puluh${rem ? ` ${terbilangCore(rem)}` : ""}`;
+  }
+  if (n < 200) {
+    const rem = n % 100;
+    return `seratus${rem ? ` ${terbilangCore(rem)}` : ""}`;
+  }
+  if (n < 1000) {
+    const rem = n % 100;
+    return `${terbilangCore(Math.floor(n / 100))} ratus${rem ? ` ${terbilangCore(rem)}` : ""}`;
+  }
+  if (n < 2000) {
+    const rem = n % 1000;
+    return `seribu${rem ? ` ${terbilangCore(rem)}` : ""}`;
+  }
+  if (n < 1_000_000) {
+    const rem = n % 1000;
+    return `${terbilangCore(Math.floor(n / 1000))} ribu${rem ? ` ${terbilangCore(rem)}` : ""}`;
+  }
+  if (n < 1_000_000_000) {
+    const rem = n % 1_000_000;
+    return `${terbilangCore(Math.floor(n / 1_000_000))} juta${rem ? ` ${terbilangCore(rem)}` : ""}`;
+  }
+  return String(n);
+}
+
+export function terbilangIndonesia(amount: number): string {
+  const n = Math.floor(Math.max(0, Number(amount) || 0));
+  if (n === 0) return "nol";
+  return terbilangCore(n);
+}
+
+export function announceCashierOrder(params: {
+  type: "PAID_QRIS" | "PAID_CASH" | "NEW_CASH_PENDING" | "TEST";
+  amount: number;
+}): void {
+  playCashierBell();
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+
+  const nominalText = `${terbilangIndonesia(Math.round(params.amount))} rupiah`;
+  let text = "";
+  if (params.type === "TEST") {
+    text = "Suara kasir aktif. Contoh pembayaran masuk, sepuluh ribu rupiah.";
+  } else if (params.type === "PAID_QRIS") {
+    text = `Pembayaran QRIS masuk, ${nominalText}.`;
+  } else if (params.type === "PAID_CASH") {
+    text = `Pembayaran tunai diterima, ${nominalText}.`;
+  } else {
+    text = `Pesanan tunai baru, ${nominalText}. Menunggu konfirmasi kasir.`;
+  }
+
+  setTimeout(() => {
+    try {
+      const synth = window.speechSynthesis;
+      if (!synth) return;
+      if (synth.speaking || synth.pending) {
+        synth.cancel();
+      }
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "id-ID";
+      utter.rate = 1.02;
+      utter.pitch = 1.0;
+      utter.volume = 1.0;
+
+      const voices = synth.getVoices();
+      const idVoice = voices.find((v) =>
+        v.lang.toLowerCase().startsWith("id")
+      );
+      if (idVoice) utter.voice = idVoice;
+
+      synth.speak(utter);
+    } catch {
+      // Ignore Web Speech API errors in unsupported environments
+    }
+  }, 320);
+}
+
 export function exportShopJobsCsv(shopCode: string, jobs: PrintJobItem[]) {
   const headers = [
     "Kode Antrean",
     "Waktu",
     "Pelanggan",
+    "Catatan",
     "Nama Dokumen",
     "Halaman",
     "Rentang",
@@ -53,6 +150,7 @@ export function exportShopJobsCsv(shopCode: string, jobs: PrintJobItem[]) {
     j.jobCode,
     new Date(j.createdAt).toLocaleString("id-ID"),
     j.customerName,
+    j.customerNotes || "",
     j.fileName,
     j.pageCount,
     j.pageRange,

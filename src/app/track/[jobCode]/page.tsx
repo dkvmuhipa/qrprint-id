@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useEffect, useState } from "react";
+import { Suspense, use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
@@ -16,10 +16,15 @@ import {
   Trash2,
 } from "lucide-react";
 import { formatRupiah, getBindingLabel } from "@/lib/utils";
+import {
+  estimateClientPrintSeconds,
+  playCustomerCompleteFeedback,
+} from "@/lib/client-print-feedback";
 
 interface TrackedJob {
   jobCode: string;
   customerName: string;
+  customerNotes?: string | null;
   fileName: string;
   pageCount: number;
   copies: number;
@@ -50,6 +55,8 @@ function TrackJobContent({
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [printingProgressPct, setPrintingProgressPct] = useState(0);
+  const prevPrintStatusRef = useRef<string | null>(null);
 
   async function fetchJob(silent = false) {
     if (!silent) setRefreshing(true);
@@ -87,6 +94,46 @@ function TrackJobContent({
     return () => clearInterval(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [job?.jobCode, job?.printStatus]);
+
+  useEffect(() => {
+    const curStatus = job?.printStatus ?? null;
+    const prevStatus = prevPrintStatusRef.current;
+    if (
+      (prevStatus === "PRINTING" || prevStatus === "QUEUED") &&
+      curStatus === "COMPLETED"
+    ) {
+      playCustomerCompleteFeedback();
+    }
+    prevPrintStatusRef.current = curStatus;
+  }, [job?.jobCode, job?.printStatus]);
+
+  useEffect(() => {
+    if (!job || job.printStatus !== "PRINTING") {
+      setPrintingProgressPct(job?.printStatus === "COMPLETED" ? 100 : 0);
+      return;
+    }
+    const estSeconds = estimateClientPrintSeconds(job);
+    const startedAt = Date.now();
+    setPrintingProgressPct(10);
+    const timer = setInterval(() => {
+      const elapsed = (Date.now() - startedAt) / 1000;
+      const pct = Math.min(
+        94,
+        Math.max(10, Math.round(10 + (elapsed / estSeconds) * 84))
+      );
+      setPrintingProgressPct(pct);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [
+    job?.jobCode,
+    job?.printStatus,
+    job?.pageCount,
+    job?.pageRange,
+    job?.copies,
+    job?.colorMode,
+    job?.paperSize,
+    job?.duplex,
+  ]);
 
   if (loading) {
     return (
@@ -209,6 +256,11 @@ function TrackJobContent({
                   ? ` · ${getBindingLabel(job.bindingType)}`
                   : ""}
               </p>
+              {job.customerNotes && (
+                <p className="mt-1.5 rounded-md border border-[#b45309]/20 bg-[#b45309]/8 px-2 py-1 text-[11px] font-medium text-[#92400e]">
+                  Catatan kasir: {job.customerNotes}
+                </p>
+              )}
             </div>
           </div>
 
@@ -279,9 +331,26 @@ function TrackJobContent({
                   ) : (
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-[#7b7266]" strokeWidth={1.5} />
                   )}
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-[#1f1b16]">{step.title}</p>
                     <p className="mt-0.5 text-xs text-[#5e554a]">{step.desc}</p>
+                    {step.active &&
+                      step.title === "Pencetakan & penghapusan file" && (
+                        <div className="mt-2.5 space-y-1">
+                          <div className="flex items-center justify-between font-mono-num text-[10px] text-[#5e554a]">
+                            <span>Sedang mencetak di printer toko...</span>
+                            <span className="font-semibold text-[#16a34a]">
+                              {printingProgressPct}%
+                            </span>
+                          </div>
+                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1f1b16]/10">
+                            <div
+                              className="h-full rounded-full bg-[#16a34a] transition-all duration-700"
+                              style={{ width: `${printingProgressPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
                   </div>
                 </div>
               ))}

@@ -9,6 +9,7 @@ export interface ThermalReceiptData {
   jobCode: string;
   createdAt: string | Date;
   customerName: string;
+  customerNotes?: string | null;
   fileName: string;
   pageCount: number;
   pageRange: string;
@@ -230,6 +231,13 @@ export function buildReceiptEscPos(data: ThermalReceiptData): Uint8Array {
         data.bindingPrice ? `${bindLabel} (+${formatRp(data.bindingPrice)})` : bindLabel
       )
     );
+  }
+
+  if (data.customerNotes) {
+    b.line("Catatan:");
+    for (const l of wrapText(data.customerNotes, COLS_58MM)) {
+      b.line(" " + l);
+    }
   }
 
   b.divider("-")
@@ -580,6 +588,11 @@ export function printReceipt58mmWindow(data: ThermalReceiptData): void {
               ? "Jilid Spiral"
               : data.bindingType
           )}${data.bindingPrice ? ` (+${escapeHtml(formatRp(data.bindingPrice))})` : ""}</span></div>`
+        : ""
+    }
+    ${
+      data.customerNotes
+        ? `<div style="margin:3px 0;"><div>Catatan:</div><div class="bold" style="word-break:break-word;">${escapeHtml(data.customerNotes)}</div></div>`
         : ""
     }
     <hr class="hr" />

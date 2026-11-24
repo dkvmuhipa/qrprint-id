@@ -56,10 +56,10 @@ import { QrTab } from "@/components/dashboard/QrTab";
 import { BillingTab } from "@/components/dashboard/BillingTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import {
+  announceCashierOrder,
   downloadAgentEnvFile,
   downloadShopPosterPng,
   exportShopJobsCsv,
-  playCashierBell,
   type PosterThemeId,
 } from "@/components/dashboard/helpers";
 
@@ -81,6 +81,7 @@ function DashboardContent() {
   const [busyJobId, setBusyJobId] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const knownPaidJobIdsRef = useRef<Set<string> | null>(null);
+  const knownPendingCashIdsRef = useRef<Set<string> | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -226,6 +227,7 @@ function DashboardContent() {
       jobCode: job.jobCode,
       createdAt: job.createdAt,
       customerName: job.customerName,
+      customerNotes: job.customerNotes,
       fileName: job.fileName,
       pageCount: job.pageCount,
       pageRange: job.pageRange,
@@ -536,19 +538,55 @@ function DashboardContent() {
             .filter((j) => j.paymentStatus === "PAID")
             .map((j) => j.id)
         );
+        const currentPendingCashIds = new Set(
+          json.jobs
+            .filter(
+              (j) =>
+                j.paymentStatus === "PENDING" &&
+                j.paymentMethod === "CASH" &&
+                j.printStatus !== "CANCELLED"
+            )
+            .map((j) => j.id)
+        );
+
         if (knownPaidJobIdsRef.current !== null && soundEnabled) {
-          let hasNewPaidJob = false;
-          for (const id of currentPaidIds) {
-            if (!knownPaidJobIdsRef.current.has(id)) {
-              hasNewPaidJob = true;
-              break;
+          const newlyPaid = json.jobs.filter(
+            (j) =>
+              j.paymentStatus === "PAID" &&
+              !knownPaidJobIdsRef.current!.has(j.id)
+          );
+          if (newlyPaid.length > 0) {
+            const totalPaidAmount = newlyPaid.reduce(
+              (s, j) => s + j.totalPrice,
+              0
+            );
+            const isQris = newlyPaid[0].paymentMethod === "QRIS";
+            announceCashierOrder({
+              type: isQris ? "PAID_QRIS" : "PAID_CASH",
+              amount: totalPaidAmount,
+            });
+          } else if (knownPendingCashIdsRef.current !== null) {
+            const newlyPendingCash = json.jobs.filter(
+              (j) =>
+                j.paymentStatus === "PENDING" &&
+                j.paymentMethod === "CASH" &&
+                j.printStatus !== "CANCELLED" &&
+                !knownPendingCashIdsRef.current!.has(j.id)
+            );
+            if (newlyPendingCash.length > 0) {
+              const totalCashAmount = newlyPendingCash.reduce(
+                (s, j) => s + j.totalPrice,
+                0
+              );
+              announceCashierOrder({
+                type: "NEW_CASH_PENDING",
+                amount: totalCashAmount,
+              });
             }
-          }
-          if (hasNewPaidJob) {
-            playCashierBell();
           }
         }
         knownPaidJobIdsRef.current = currentPaidIds;
+        knownPendingCashIdsRef.current = currentPendingCashIds;
 
         setData(json);
         if (!settingsInitialized) {
@@ -1389,9 +1427,9 @@ function DashboardContent() {
                     } catch {
                       // ignore storage errors
                     }
-                    if (next) playCashierBell();
+                    if (next) announceCashierOrder({ type: "TEST", amount: 10000 });
                   }}
-                  title="Bunyikan notifikasi suara saat ada pesanan lunas masuk"
+                  title="Bunyikan suara kasir & nominal saat ada pembayaran QRIS atau pesanan tunai baru"
                   className={`btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${
                     soundEnabled
                       ? "border-[#171717]/15 bg-white text-[#171717] hover:bg-[#f4f4f5]"

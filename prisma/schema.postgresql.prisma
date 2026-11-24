@@ -51,6 +51,7 @@ model PrintJob {
   shopId          String
   shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customerName    String    @default("Pelanggan")
+  customerNotes   String?
   fileName        String
   storedFilePath  String?
   mimeType        String

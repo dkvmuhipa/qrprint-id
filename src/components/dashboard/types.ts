@@ -96,6 +96,7 @@ export interface PrintJobItem {
   jobCode: string;
   customerName: string;
   customerWhatsapp?: string | null;
+  customerNotes?: string | null;
   fileName: string;
   storedFilePath: string | null;
   pageCount: number;

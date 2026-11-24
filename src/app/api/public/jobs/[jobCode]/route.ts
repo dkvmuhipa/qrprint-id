@@ -124,6 +124,7 @@ export async function GET(
       job: {
         jobCode: job.jobCode,
         customerName: job.customerName,
+        customerNotes: job.customerNotes,
         fileName: job.fileName,
         pageCount: job.pageCount,
         copies: job.copies,

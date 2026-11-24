@@ -52,6 +52,10 @@ import {
   mergeFilesToSinglePdf,
   type DetectedPaperInfo,
 } from "@/lib/merge-files-pdf";
+import {
+  estimateClientPrintSeconds,
+  playCustomerCompleteFeedback,
+} from "@/lib/client-print-feedback";
 
 interface PublicShop {
   shopCode: string;
@@ -85,6 +89,7 @@ interface PublicShop {
 interface ActiveJob {
   jobCode: string;
   customerName: string;
+  customerNotes?: string | null;
   fileName: string;
   pageCount: number;
   copies: number;
@@ -130,6 +135,7 @@ function CustomerScanPortalContent({
   const [countingPages, setCountingPages] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerWhatsapp, setCustomerWhatsapp] = useState("");
+  const [customerNotes, setCustomerNotes] = useState("");
   const [colorMode, setColorMode] = useState<"BW" | "COLOR" | "AUTO">("BW");
   const [colorAnalysis, setColorAnalysis] = useState<{
     colorPageNumbers: number[];
@@ -155,6 +161,8 @@ function CustomerScanPortalContent({
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
+  const [printingProgressPct, setPrintingProgressPct] = useState(0);
+  const prevPrintStatusRef = useRef<string | null>(null);
   const [qrisDataUrl, setQrisDataUrl] = useState<string>("");
   const [checkingStatus, setCheckingStatus] = useState(false);
   const [simulatingPay, setSimulatingPay] = useState(false);
@@ -378,6 +386,46 @@ function CustomerScanPortalContent({
 
     return () => clearInterval(timer);
   }, [activeJob?.jobCode, activeJob?.printStatus]);
+
+  useEffect(() => {
+    const curStatus = activeJob?.printStatus ?? null;
+    const prevStatus = prevPrintStatusRef.current;
+    if (
+      (prevStatus === "PRINTING" || prevStatus === "QUEUED") &&
+      curStatus === "COMPLETED"
+    ) {
+      playCustomerCompleteFeedback();
+    }
+    prevPrintStatusRef.current = curStatus;
+  }, [activeJob?.jobCode, activeJob?.printStatus]);
+
+  useEffect(() => {
+    if (!activeJob || activeJob.printStatus !== "PRINTING") {
+      setPrintingProgressPct(activeJob?.printStatus === "COMPLETED" ? 100 : 0);
+      return;
+    }
+    const estSeconds = estimateClientPrintSeconds(activeJob);
+    const startedAt = Date.now();
+    setPrintingProgressPct(10);
+    const timer = setInterval(() => {
+      const elapsed = (Date.now() - startedAt) / 1000;
+      const pct = Math.min(
+        94,
+        Math.max(10, Math.round(10 + (elapsed / estSeconds) * 84))
+      );
+      setPrintingProgressPct(pct);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [
+    activeJob?.jobCode,
+    activeJob?.printStatus,
+    activeJob?.pageCount,
+    activeJob?.pageRange,
+    activeJob?.copies,
+    activeJob?.colorMode,
+    activeJob?.paperSize,
+    activeJob?.duplex,
+  ]);
 
   function isOfficeDocument(f: File): boolean {
     return /\.(docx?|xlsx?|pptx?)$/i.test(f.name || "");
@@ -658,6 +706,9 @@ function CustomerScanPortalContent({
       if (customerWhatsapp.trim()) {
         fd.append("customerWhatsapp", customerWhatsapp.trim());
       }
+      if (customerNotes.trim()) {
+        fd.append("customerNotes", customerNotes.trim().slice(0, 120));
+      }
       fd.append("copies", String(copies));
       fd.append("colorMode", colorMode);
       fd.append("paperSize", paperSize);
@@ -766,6 +817,7 @@ function CustomerScanPortalContent({
     setCopies(1);
     setPageRange("ALL");
     setBindingType("NONE");
+    setCustomerNotes("");
     setColorAnalysis(null);
     closeFilePreview();
     setSubmitError(null);
@@ -1051,6 +1103,11 @@ function CustomerScanPortalContent({
                       ? ` · ${getBindingLabel(activeJob.bindingType)}`
                       : ""}
                   </p>
+                  {activeJob.customerNotes && (
+                    <p className="mt-1.5 rounded-md border border-[#b45309]/20 bg-[#b45309]/8 px-2 py-1 text-[11px] font-medium text-[#92400e]">
+                      Catatan kasir: {activeJob.customerNotes}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -1292,13 +1349,30 @@ function CustomerScanPortalContent({
                         strokeWidth={1.5}
                       />
                     )}
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium text-[#1f1b16]">
                         {step.title}
                       </p>
                       <p className="mt-0.5 text-xs text-[#5e554a]">
                         {step.desc}
                       </p>
+                      {step.active &&
+                        step.title === "Pencetakan & penghapusan file" && (
+                          <div className="mt-2.5 space-y-1">
+                            <div className="flex items-center justify-between font-mono-num text-[10px] text-[#5e554a]">
+                              <span>Sedang mencetak di printer toko...</span>
+                              <span className="font-semibold text-[#16a34a]">
+                                {printingProgressPct}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#1f1b16]/10">
+                              <div
+                                className="h-full rounded-full bg-[#16a34a] transition-all duration-700"
+                                style={{ width: `${printingProgressPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
                     </div>
                   </div>
                 ))}
@@ -1366,6 +1440,14 @@ function CustomerScanPortalContent({
                         {formatRupiah(activeJob.totalPrice)}
                       </span>
                     </div>
+                    {activeJob.customerNotes && (
+                      <div className="flex justify-between gap-2">
+                        <span>Catatan</span>
+                        <span className="max-w-[200px] text-right font-medium text-[#92400e]">
+                          {activeJob.customerNotes}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-[#1f1b16]/12 pt-2 text-[10px] text-[#7b7266]">
                     <span>
@@ -1968,6 +2050,26 @@ function CustomerScanPortalContent({
                     </div>
                   </div>
                 )}
+
+              {/* Optional Customer Notes */}
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <label className="block text-xs text-[#5e554a]">
+                    Catatan untuk kasir (opsional)
+                  </label>
+                  <span className="font-mono-num text-[10px] text-[#7b7266]">
+                    {customerNotes.length}/120
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={customerNotes}
+                  onChange={(e) => setCustomerNotes(e.target.value)}
+                  placeholder="Contoh: Jilid mika warna biru, steples pojok kiri atas..."
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
+                />
+              </div>
             </div>
 
             {/* Payment Method */}

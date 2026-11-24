@@ -121,6 +121,7 @@ export async function GET(req: Request) {
       id: j.id,
       jobCode: j.jobCode,
       customerName: j.customerName,
+      customerNotes: j.customerNotes || "",
       fileName: j.fileName,
       mimeType: j.mimeType,
       pageCount: j.pageCount,

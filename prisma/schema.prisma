@@ -68,6 +68,7 @@ model PrintJob {
   shopCodeSnapshot String?
   customerName     String    @default("Pelanggan")
   customerWhatsapp String?
+  customerNotes    String?
   fileName        String
   storedFilePath  String?
   mimeType        String

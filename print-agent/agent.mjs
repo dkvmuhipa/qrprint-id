@@ -447,6 +447,10 @@ function buildThermalReceiptEscPos(shopInfo, job) {
   const spec = `${modeLabel} | ${job.paperSize || "A4"}${job.duplex ? " | Duplex" : ""}`;
   pushLine(padRow58("Halaman", pages));
   pushLine(padRow58("Jenis", spec));
+  if (job.customerNotes) {
+    pushLine("Catatan:");
+    for (const l of wrapText58(job.customerNotes)) pushLine(" " + l);
+  }
   pushLine("-".repeat(32));
   pushLine(padRow58("Metode", `${job.paymentMethod || "QRIS"} (LUNAS)`));
 
