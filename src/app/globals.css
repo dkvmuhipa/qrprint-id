@@ -202,6 +202,38 @@ textarea:focus-visible {
   }
 }
 
+@keyframes standeeIdle {
+  0%,
+  100% {
+    transform: rotateX(4deg) rotateY(-12deg) translateY(0px);
+  }
+  50% {
+    transform: rotateX(6deg) rotateY(-6deg) translateY(-5px);
+  }
+}
+
+@keyframes paperEjectIso {
+  0% {
+    transform: translate3d(0, -14px, 14px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  68% {
+    transform: translate3d(0, 26px, 22px);
+    opacity: 1;
+  }
+  90% {
+    transform: translate3d(0, 40px, 24px) scale(0.94);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(0, -14px, 14px);
+    opacity: 0;
+  }
+}
+
 .animate-qr-scan {
   animation: qrScanSweep 2.1s ease-in-out infinite;
 }
@@ -216,6 +248,14 @@ textarea:focus-visible {
 
 .animate-tab-in {
   animation: tabFadeIn 280ms var(--ease-out) both;
+}
+
+.animate-standee-idle {
+  animation: standeeIdle 6s ease-in-out infinite;
+}
+
+.animate-paper-eject {
+  animation: paperEjectIso 3.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 /* Scroll reveal transition */
@@ -236,7 +276,9 @@ textarea:focus-visible {
   .animate-qr-scan,
   .animate-subtle-float,
   .animate-pop-stamp,
-  .animate-tab-in {
+  .animate-tab-in,
+  .animate-standee-idle,
+  .animate-paper-eject {
     animation: none !important;
   }
   .reveal-base {

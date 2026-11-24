@@ -43,6 +43,9 @@ import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
 import { PartnerDirectoryMap } from "./PartnerDirectoryMap";
 import { RevealOnScroll } from "./RevealOnScroll";
+import { TiltCard3D } from "./TiltCard3D";
+import { Standee3DShowcase } from "./Standee3DShowcase";
+import { PrivacyIso3D } from "./PrivacyIso3D";
 
 interface PublicPartnerItem {
   shopCode: string;
@@ -691,6 +694,10 @@ export function LandingClient() {
             ))}
           </div>
 
+          <div className="mt-8 border-t border-[#efe9de]/10 pt-8">
+            <Standee3DShowcase />
+          </div>
+
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
               href="/register"
@@ -727,14 +734,18 @@ export function LandingClient() {
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLANS.map((plan) => (
-            <div
+            <TiltCard3D
               key={plan.id}
-              className={`card-lift flex flex-col justify-between rounded-xl p-5 ${
-                plan.featured
-                  ? "border-2 border-[#1f1b16] bg-[#ffffff] shadow-[0_8px_24px_rgba(0,0,0,0.05)]"
-                  : "border border-[#1f1b16]/10 bg-[#fdfbf7]"
-              }`}
+              maxDeg={plan.featured ? 5.5 : 4}
+              className="h-full rounded-xl"
             >
+              <div
+                className={`card-lift flex h-full flex-col justify-between rounded-xl p-5 ${
+                  plan.featured
+                    ? "border-2 border-[#1f1b16] bg-[#ffffff] shadow-[0_8px_24px_rgba(0,0,0,0.05)]"
+                    : "border border-[#1f1b16]/10 bg-[#fdfbf7]"
+                }`}
+              >
               <div>
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="text-base font-medium text-[#1f1b16]">
@@ -787,7 +798,8 @@ export function LandingClient() {
                   {plan.cta}
                 </Link>
               )}
-            </div>
+              </div>
+            </TiltCard3D>
           ))}
         </div>
 
@@ -894,17 +906,22 @@ export function LandingClient() {
       <section id="privasi" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
         <RevealOnScroll>
         <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-8 sm:p-10">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-xs font-medium text-[#16a34a]">
-              <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
-              <span>Privasi dokumen otomatis</span>
+          <div className="grid items-center gap-8 lg:grid-cols-12">
+            <div className="max-w-2xl lg:col-span-7">
+              <div className="inline-flex items-center gap-2 text-xs font-medium text-[#16a34a]">
+                <ShieldCheck className="h-4 w-4" strokeWidth={1.5} />
+                <span>Privasi dokumen otomatis</span>
+              </div>
+              <h2 className="mt-2 text-2xl font-medium tracking-[-0.01em] text-[#1f1b16] sm:text-3xl">
+                Dokumen pelanggan tidak pernah mengendap di komputer toko
+              </h2>
+              <p className="mt-2 text-sm text-[#5e554a]">
+                KTP, Kartu Keluarga, kontrak kerja, dan tugas akhir pelanggan aman dari risiko tertinggal di riwayat chat atau folder unduhan publik.
+              </p>
             </div>
-            <h2 className="mt-2 text-2xl font-medium tracking-[-0.01em] text-[#1f1b16] sm:text-3xl">
-              Dokumen pelanggan tidak pernah mengendap di komputer toko
-            </h2>
-            <p className="mt-2 text-sm text-[#5e554a]">
-              KTP, Kartu Keluarga, kontrak kerja, dan tugas akhir pelanggan aman dari risiko tertinggal di riwayat chat atau folder unduhan publik.
-            </p>
+            <div className="lg:col-span-5">
+              <PrivacyIso3D />
+            </div>
           </div>
 
           <div className="mt-8 grid gap-5 md:grid-cols-3">
@@ -927,20 +944,23 @@ export function LandingClient() {
             ].map((item) => {
               const Icon = item.icon;
               return (
-                <div
+                <TiltCard3D
                   key={item.title}
-                  className="rounded-xl border border-[#1f1b16]/8 bg-[#f7f4ee]/70 p-5"
+                  maxDeg={4}
+                  className="h-full rounded-xl"
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] text-[#1f1b16]">
-                    <Icon className="h-4 w-4" strokeWidth={1.5} />
+                  <div className="card-lift h-full rounded-xl border border-[#1f1b16]/8 bg-[#f7f4ee]/70 p-5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] text-[#1f1b16]">
+                      <Icon className="h-4 w-4" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="mt-3 text-base font-medium text-[#1f1b16]">
+                      {item.title}
+                    </h3>
+                    <p className="mt-1.5 text-xs leading-relaxed text-[#5e554a]">
+                      {item.desc}
+                    </p>
                   </div>
-                  <h3 className="mt-3 text-base font-medium text-[#1f1b16]">
-                    {item.title}
-                  </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-[#5e554a]">
-                    {item.desc}
-                  </p>
-                </div>
+                </TiltCard3D>
               );
             })}
           </div>
