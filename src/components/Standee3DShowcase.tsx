@@ -179,7 +179,7 @@ export function Standee3DShowcase() {
                   CETAK MANDIRI QR · {theme.tagText}
                 </p>
                 <p className="mt-0.5 truncate text-xs font-bold">
-                  Fotokopi Sinar Kampus
+                  Gellona Fotokopi
                 </p>
               </div>
 
@@ -191,8 +191,8 @@ export function Standee3DShowcase() {
                 >
                   <QrCode className="h-18 w-18 text-[#1f1b16]" strokeWidth={1.5} />
                 </div>
-                <span className="font-mono-num mt-1.5 text-[10px] font-medium text-[#5e554a]">
-                  ngeprint.gellona.web.id/s/toko
+                <span className="font-mono-num mt-1.5 max-w-full truncate text-[9px] font-medium text-[#5e554a]">
+                  ngeprint.gellona.web.id/s/gellona-fotokopi
                 </span>
               </div>
 

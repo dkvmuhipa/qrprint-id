@@ -138,7 +138,7 @@ export default function LoginPage() {
             Masuk ke dashboard
           </h2>
           <p className="mt-1 text-xs text-[#7b7266]">
-            Gunakan kode toko (contoh: sinar-jaya) atau alamat email terdaftar
+            Gunakan kode toko (contoh: gellona-fotokopi) atau alamat email terdaftar
           </p>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-4 sm:mt-6">
@@ -157,7 +157,7 @@ export default function LoginPage() {
                 autoComplete="username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder="sinar-jaya atau email@tokoanda.com"
+                placeholder="gellona-fotokopi atau email@tokoanda.com"
                 className="h-11 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
               />
             </div>

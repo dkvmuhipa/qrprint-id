@@ -119,7 +119,7 @@ export function HeroIllustration() {
           <div className="min-w-0">
             <p className="text-[11px] text-[#7b7266]">Simulasi meja kasir · 3D Live</p>
             <p className="truncate text-sm font-medium text-[#1f1b16]">
-              Fotokopi Sinar Kampus
+              Gellona Fotokopi
             </p>
           </div>
           <div className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-[#efe9df] px-2.5 py-1 shadow-2xs">
@@ -151,7 +151,7 @@ export function HeroIllustration() {
                   />
                 )}
                 <span className="font-mono-num mt-0.5 max-w-full truncate text-[9px] text-[#7b7266] sm:mt-1 sm:text-[11px]">
-                  /s/sinar-kampus
+                  /s/gellona-fotokopi
                 </span>
               </div>
 

@@ -24,7 +24,7 @@ const STEPS = [
     num: "01",
     icon: QrCode,
     title: "Daftar Akun & Coba Gratis 24 Jam",
-    desc: "Buka halaman pendaftaran, masukkan nama toko, email, nomor WhatsApp, dan sandi. Sistem otomatis membuat link portal khusus toko Anda (misal /s/fotokopi-sinar) dan mengaktifkan paket Demo 24 Jam gratis.",
+    desc: "Buka halaman pendaftaran, masukkan nama toko, email, nomor WhatsApp, dan sandi. Sistem otomatis membuat link portal khusus toko Anda (misal /s/gellona-fotokopi) dan mengaktifkan paket Demo 24 Jam gratis.",
     tips: [
       "URL portal (/s/nama-toko) bisa Anda sesuaikan 1× gratis di menu Pengaturan.",
       "Tidak perlu kartu kredit atau rekening khusus — cukup pakai QRIS yang sudah ada.",

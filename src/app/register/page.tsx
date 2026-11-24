@@ -205,7 +205,7 @@ function RegisterForm() {
                     required
                     maxLength={80}
                     autoComplete="organization"
-                    placeholder="Fotokopi Sinar Jaya"
+                    placeholder="Gellona Fotokopi"
                     value={form.name}
                     onChange={(e) =>
                       setForm((prev) => ({ ...prev, name: e.target.value }))

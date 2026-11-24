@@ -821,7 +821,7 @@ export function CreateShopModal({
                 onChange={(e) =>
                   setCreateForm({ ...createForm, name: e.target.value })
                 }
-                placeholder="Fotokopi Sinar Jaya"
+                placeholder="Gellona Fotokopi"
                 className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
               />
             </div>

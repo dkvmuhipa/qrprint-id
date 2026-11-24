@@ -394,7 +394,7 @@ export function SettingsTab({
                   })
                 }
                 maxLength={32}
-                placeholder="fotokopi-sinar-jaya"
+                placeholder="gellona-fotokopi"
                 className="font-mono-num h-10 w-full bg-transparent px-3 text-sm font-medium text-[#171717] outline-none disabled:cursor-not-allowed"
               />
             </div>
