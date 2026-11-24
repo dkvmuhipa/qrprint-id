@@ -8,16 +8,32 @@ export async function GET(
   context: { params: Promise<{ shopCode: string }> }
 ) {
   const { shopCode } = await context.params;
-  const rawCode = String(shopCode || "").trim();
-  const shop = await prisma.shop.findFirst({
-    where: {
-      OR: [
-        { shopCode: rawCode },
-        { shopCode: rawCode.toLowerCase() },
-        { shopCode: rawCode.toUpperCase() },
-      ],
-    },
-  });
+  let decodedCode = String(shopCode || "");
+  try {
+    decodedCode = decodeURIComponent(decodedCode);
+  } catch {
+    // keep raw if malformed URI component
+  }
+  // Strip invisible zero-width chars / whitespace often added by mobile WhatsApp copy-paste
+  const rawCode = decodedCode.replace(/[\u200B-\u200D\uFEFF\s]+/g, "").trim();
+  const slugCleaned = rawCode.replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase();
+
+  const candidates = Array.from(
+    new Set(
+      [rawCode, rawCode.toLowerCase(), rawCode.toUpperCase(), slugCleaned].filter(
+        Boolean
+      )
+    )
+  );
+
+  const shop =
+    candidates.length > 0
+      ? await prisma.shop.findFirst({
+          where: {
+            OR: candidates.map((code) => ({ shopCode: code })),
+          },
+        })
+      : null;
 
   if (!shop) {
     return NextResponse.json(

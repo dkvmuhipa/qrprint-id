@@ -1,6 +1,14 @@
 "use client";
 
-import { Suspense, use, useEffect, useState, useMemo } from "react";
+import {
+  Suspense,
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { PDFDocument } from "pdf-lib";
 import QRCode from "qrcode";
@@ -107,7 +115,10 @@ function CustomerScanPortalContent({
   const { shopCode } = use(params);
   const [shop, setShop] = useState<PublicShop | null>(null);
   const [shopError, setShopError] = useState<string | null>(null);
+  const [shopNotFound, setShopNotFound] = useState(false);
   const [loadingShop, setLoadingShop] = useState(true);
+  const hasLoadedShopRef = useRef(false);
+  const loadingShopInFlightRef = useRef(false);
 
   const [file, setFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<
@@ -220,37 +231,106 @@ function CustomerScanPortalContent({
     return () => URL.revokeObjectURL(objUrl);
   }, [file]);
 
-  useEffect(() => {
-    let active = true;
-    async function loadShop() {
+  const loadShop = useCallback(
+    async (isManualRetry = false) => {
+      if (loadingShopInFlightRef.current) return;
+      if (isManualRetry) {
+        setLoadingShop(true);
+        setShopError(null);
+      }
+      loadingShopInFlightRef.current = true;
+      const cleanCode = encodeURIComponent(
+        String(shopCode || "")
+          .replace(/[\u200B-\u200D\uFEFF\s]+/g, "")
+          .trim()
+      );
+      const maxAttempts = hasLoadedShopRef.current ? 1 : 3;
+
       try {
-        const res = await fetch(`/api/public/shop/${shopCode}?t=${Date.now()}`, {
-          cache: "no-store",
-        });
-        const data = await res.json();
-        if (!active) return;
-        if (!res.ok) {
-          setShopError(data.error || "Toko tidak ditemukan");
-        } else {
-          setShop(data.shop);
-          if (data.shop && data.shop.hasQrisPayment === false) {
-            setPaymentMethod("CASH");
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          try {
+            const res = await fetch(
+              `/api/public/shop/${cleanCode}?t=${Date.now()}`,
+              { cache: "no-store" }
+            );
+            const data = await res.json().catch(() => ({}));
+            if (res.ok && data.shop) {
+              hasLoadedShopRef.current = true;
+              setShop(data.shop);
+              setShopError(null);
+              setShopNotFound(false);
+              if (data.shop.hasQrisPayment === false) {
+                setPaymentMethod("CASH");
+              }
+              return;
+            }
+            if (res.status === 404) {
+              if (!hasLoadedShopRef.current) {
+                setShopNotFound(true);
+                setShopError(
+                  data.error || "Toko tidak ditemukan. Periksa kembali kode QR."
+                );
+              }
+              return;
+            }
+            // Non-404 server error: retry if initial load
+            if (attempt < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 700));
+              continue;
+            }
+            if (!hasLoadedShopRef.current) {
+              setShopNotFound(false);
+              setShopError(
+                data.error || "Gagal memuat halaman toko. Silakan coba lagi."
+              );
+            }
+          } catch {
+            // Mobile browsers often abort background fetches when switching to file picker / WA
+            if (attempt < maxAttempts) {
+              await new Promise((r) => setTimeout(r, 700));
+              continue;
+            }
+            if (!hasLoadedShopRef.current) {
+              setShopNotFound(false);
+              setShopError(
+                "Koneksi internet terputus saat memuat toko. Silakan tekan Coba Lagi."
+              );
+            }
           }
         }
-      } catch {
-        if (active) setShopError("Gagal memuat informasi toko");
       } finally {
-        if (active) setLoadingShop(false);
+        loadingShopInFlightRef.current = false;
+        setLoadingShop(false);
       }
-    }
+    },
+    [shopCode]
+  );
+
+  useEffect(() => {
+    hasLoadedShopRef.current = false;
     loadShop();
-    // Auto-sync shop tariff & agent status every 10 seconds so price changes reflect immediately
-    const timer = setInterval(loadShop, 10000);
-    return () => {
-      active = false;
-      clearInterval(timer);
+    // Auto-sync shop tariff & agent status every 10 seconds when tab is visible
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+      loadShop();
+    }, 10000);
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        loadShop();
+      }
     };
-  }, [shopCode]);
+    const onOnline = () => {
+      loadShop();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", onOnline);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [loadShop]);
 
   useEffect(() => {
     if (!activeJob || activeJob.paymentMethod !== "QRIS") return;
@@ -702,7 +782,7 @@ function CustomerScanPortalContent({
     );
   }
 
-  if (shopError || !shop) {
+  if (!shop) {
     return (
       <div className="bg-ambient flex min-h-screen flex-col items-center justify-center p-4 text-center">
         <div className="max-w-md rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-8">
@@ -711,18 +791,31 @@ function CustomerScanPortalContent({
             strokeWidth={1.5}
           />
           <h1 className="mt-3 text-xl font-medium text-[#1f1b16]">
-            Toko tidak ditemukan
+            {shopNotFound ? "Toko tidak ditemukan" : "Gagal memuat portal toko"}
           </h1>
           <p className="mt-1.5 text-xs text-[#7b7266]">
-            {shopError || "Kode QR toko tidak terdaftar"}
+            {shopError ||
+              (shopNotFound
+                ? "Kode QR toko tidak terdaftar"
+                : "Periksa koneksi internet Anda lalu coba lagi.")}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2.5">
-            <Link
-              href="/register"
-              className="btn-action inline-flex h-9 items-center rounded-lg bg-[#1f1b16] px-4 text-xs font-medium text-[#fdfbf7]"
+            <button
+              type="button"
+              onClick={() => loadShop(true)}
+              className="btn-action inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[#1f1b16] px-4 text-xs font-medium text-[#fdfbf7]"
             >
-              Daftarkan toko baru
-            </Link>
+              <RefreshCw className="h-3.5 w-3.5" strokeWidth={1.6} />
+              <span>Coba lagi</span>
+            </button>
+            {shopNotFound && (
+              <Link
+                href="/register"
+                className="btn-action inline-flex h-9 items-center rounded-lg border border-[#1f1b16]/15 px-4 text-xs font-medium text-[#1f1b16]"
+              >
+                Daftarkan toko baru
+              </Link>
+            )}
             <Link
               href="/"
               className="btn-action inline-flex h-9 items-center rounded-lg border border-[#1f1b16]/15 px-4 text-xs font-medium text-[#1f1b16]"

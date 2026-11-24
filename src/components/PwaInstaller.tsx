@@ -20,9 +20,14 @@ export function PwaRegistrar() {
     if (typeof window === "undefined") return;
 
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {
-        // Ignore registration errors in unsupported contexts
-      });
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          reg.update().catch(() => {});
+        })
+        .catch(() => {
+          // Ignore registration errors in unsupported contexts
+        });
     }
 
     const onBeforeInstall = (e: Event) => {
