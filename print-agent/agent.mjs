@@ -285,6 +285,75 @@ async function sendToWindowsPrinter(
     const copies = Math.min(50, Math.max(1, Number(job.copies) || 1));
     await sendViaWindowsShellFallback(filePath, verifiedPrinter, copies);
   }
+
+  return verifiedPrinter;
+}
+
+/**
+ * Memantau antrean Windows Print Spooler (`Get-PrintJob`) untuk dokumen yang sedang dicetak
+ * hingga printer fisik selesai memprosesnya atau melewati batas aman timeout.
+ */
+async function waitForWindowsSpooler(verifiedPrinter, docToken, job) {
+  const safeToken = String(docToken || "").replace(/[^A-Za-z0-9-]/g, "");
+  if (process.platform !== "win32" || !safeToken) {
+    await new Promise((r) => setTimeout(r, 2500));
+    return { spoolerDrained: false };
+  }
+
+  // Beri jeda awal agar job dari SumatraPDF sempat terdaftar di Windows Print Spooler
+  await new Promise((r) => setTimeout(r, 2500));
+
+  const pages = Math.max(1, Number(job.pageCount) || 1);
+  const copies = Math.max(1, Number(job.copies) || 1);
+  const maxWaitMs = Math.min(
+    10 * 60_000,
+    Math.max(90_000, pages * copies * 15_000)
+  );
+  const startWait = Date.now();
+  const escapedPrinter = String(verifiedPrinter || "").replace(/'/g, "''");
+
+  let sawJob = false;
+  let lastStatus = "";
+
+  while (Date.now() - startWait <= maxWaitMs) {
+    let statusText = "";
+    try {
+      const printerExpr = escapedPrinter
+        ? `'${escapedPrinter}'`
+        : "(Get-CimInstance Win32_Printer | Where-Object Default -eq $true | Select-Object -First 1 -ExpandProperty Name)";
+      const psCmd = `$p = ${printerExpr}; if ($p) { Get-PrintJob -PrinterName $p -ErrorAction SilentlyContinue | Where-Object { $_.DocumentName -like '*${safeToken}*' } | Select-Object -First 1 -ExpandProperty JobStatus }`;
+      const { stdout } = await execFileAsync(
+        "powershell.exe",
+        ["-NoProfile", "-Command", psCmd],
+        { timeout: 6000, windowsHide: true }
+      );
+      statusText = String(stdout || "").trim();
+    } catch {
+      return { spoolerDrained: sawJob };
+    }
+
+    if (!statusText) {
+      if (sawJob) {
+        log(
+          `[Spooler] Dokumen ${safeToken} selesai keluar dari antrean printer Windows.`
+        );
+        return { spoolerDrained: true };
+      }
+      return { spoolerDrained: false };
+    }
+
+    sawJob = true;
+    if (statusText !== lastStatus) {
+      lastStatus = statusText;
+      log(
+        `[Spooler] Printer masih mencetak ${safeToken} (Status: ${statusText})...`
+      );
+    }
+
+    await new Promise((r) => setTimeout(r, 2500));
+  }
+
+  return { spoolerDrained: sawJob };
 }
 
 // =========================================================================
@@ -626,6 +695,10 @@ async function main() {
         });
 
         let localPath = null;
+        const safeCode = String(job.jobCode || "JOB").replace(
+          /[^A-Z0-9-]/gi,
+          ""
+        );
         try {
           if (job.hasFile) {
             const fileRes = await fetch(
@@ -637,19 +710,26 @@ async function main() {
             if (fileRes.ok) {
               const buf = Buffer.from(await fileRes.arrayBuffer());
               const ext = getSafeExtension(job.fileName, job.mimeType);
-              const safeCode = String(job.jobCode || "JOB").replace(
-                /[^A-Z0-9-]/gi,
-                ""
-              );
               localPath = path.join(tempDir, `${safeCode}${ext}`);
               await fs.writeFile(localPath, buf);
             }
           }
 
+          const printStartMs = Date.now();
+          let spoolResult = { spoolerDrained: false };
+
           if (config.live && localPath) {
-            await sendToWindowsPrinter(localPath, job, printers, sumatraExe);
-            // Beri jeda singkat agar Windows spooler selesai membaca file sebelum dihapus
-            await new Promise((r) => setTimeout(r, 2500));
+            const verifiedPrinter = await sendToWindowsPrinter(
+              localPath,
+              job,
+              printers,
+              sumatraExe
+            );
+            spoolResult = await waitForWindowsSpooler(
+              verifiedPrinter,
+              safeCode,
+              job
+            );
           } else {
             log(
               `[SIMULASI] Mencetak "${job.fileName}" dengan opsi [${sumatraSettingsPreview}] ke "${job.targetPrinter}"...`
@@ -699,12 +779,30 @@ async function main() {
             }
           }
 
-          await fetch(`${config.url}/api/agent/jobs/${job.id}/status`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ status: "COMPLETED" }),
-          });
-          log(`SELESAI: ${job.jobCode} telah tercetak & file server dihapus.`);
+          const statusRes = await fetch(
+            `${config.url}/api/agent/jobs/${job.id}/status`,
+            {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                status: "COMPLETED",
+                spoolerDrained: spoolResult.spoolerDrained,
+                elapsedMs: Date.now() - printStartMs,
+              }),
+            }
+          );
+          const resJson = statusRes.ok
+            ? await statusRes.json().catch(() => ({}))
+            : {};
+          if (resJson.delayed && resJson.remainingMs) {
+            log(
+              `Data cetak ${job.jobCode} terkirim ke printer (estimasi cetak fisik ~${Math.ceil(
+                resJson.remainingMs / 1000
+              )} dtk).`
+            );
+          } else {
+            log(`SELESAI: ${job.jobCode} telah tercetak & file server dihapus.`);
+          }
         } catch (err) {
           log(`GAGAL mencetak ${job.jobCode}: ${err.message}`);
           if (localPath) await fs.unlink(localPath).catch(() => {});

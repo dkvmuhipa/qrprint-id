@@ -6,6 +6,7 @@ import {
 } from "@/lib/midtrans";
 import { deleteUploadedFile } from "@/lib/storage";
 import { PENDING_JOB_EXPIRE_MINUTES } from "@/lib/jobs-cleanup";
+import { finalizeDuePrintingJobs } from "@/lib/print-progress";
 
 const SHOP_SELECT = {
   name: true,
@@ -104,6 +105,17 @@ export async function GET(
       }
     } catch {
       // Ignore transient Midtrans status check error
+    }
+  }
+
+  if (job.printStatus === "PRINTING") {
+    await finalizeDuePrintingJobs(job.shopId || undefined).catch(() => {});
+    const refreshed = await prisma.printJob.findUnique({
+      where: { id: job.id },
+      include: { shop: { select: SHOP_SELECT } },
+    });
+    if (refreshed) {
+      job = refreshed;
     }
   }
 

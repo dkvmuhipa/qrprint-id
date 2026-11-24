@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { deleteUploadedFile } from "@/lib/storage";
+import {
+  cancelScheduledCompletion,
+  handleAgentJobCompleted,
+} from "@/lib/print-progress";
 
 export async function POST(
   req: Request,
@@ -29,6 +32,7 @@ export async function POST(
   }
 
   if (status === "PRINTING") {
+    cancelScheduledCompletion(job.id);
     const updated = await prisma.printJob.update({
       where: { id: job.id },
       data: { printStatus: "PRINTING" },
@@ -37,19 +41,30 @@ export async function POST(
   }
 
   if (status === "COMPLETED") {
-    await deleteUploadedFile(job.storedFilePath);
-    const updated = await prisma.printJob.update({
-      where: { id: job.id },
-      data: {
-        printStatus: "COMPLETED",
-        storedFilePath: null,
-        fileDeletedAt: new Date(),
-      },
+    if (job.printStatus === "COMPLETED" || job.printStatus === "CANCELLED") {
+      return NextResponse.json({
+        ok: true,
+        delayed: false,
+        remainingMs: 0,
+        job,
+      });
+    }
+
+    const progress = await handleAgentJobCompleted(job, {
+      spoolerDrained: Boolean(body.spoolerDrained),
+      elapsedAgentMs: Number(body.elapsedMs) || 0,
     });
-    return NextResponse.json({ ok: true, job: updated });
+    const latest = await prisma.printJob.findUnique({ where: { id: job.id } });
+    return NextResponse.json({
+      ok: true,
+      delayed: progress.delayed,
+      remainingMs: progress.remainingMs,
+      job: latest,
+    });
   }
 
   if (status === "FAILED") {
+    cancelScheduledCompletion(job.id);
     const updated = await prisma.printJob.update({
       where: { id: job.id },
       data: { printStatus: "FAILED" },

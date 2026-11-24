@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { cancelScheduledCompletion } from "@/lib/print-progress";
 import { deleteUploadedFile } from "@/lib/storage";
 
 export async function PATCH(
@@ -39,6 +40,7 @@ export async function PATCH(
   }
 
   if (action === "REQUEUE") {
+    cancelScheduledCompletion(job.id);
     if (job.paymentStatus !== "PAID" || !job.storedFilePath) {
       return NextResponse.json(
         {
@@ -56,6 +58,7 @@ export async function PATCH(
   }
 
   if (action === "PRINTING") {
+    cancelScheduledCompletion(job.id);
     const updated = await prisma.printJob.update({
       where: { id: job.id },
       data: { printStatus: "PRINTING" },
@@ -64,6 +67,7 @@ export async function PATCH(
   }
 
   if (action === "COMPLETE") {
+    cancelScheduledCompletion(job.id);
     await deleteUploadedFile(job.storedFilePath);
     const updated = await prisma.printJob.update({
       where: { id: job.id },
@@ -78,6 +82,7 @@ export async function PATCH(
   }
 
   if (action === "CANCEL") {
+    cancelScheduledCompletion(job.id);
     await deleteUploadedFile(job.storedFilePath);
     const updated = await prisma.printJob.update({
       where: { id: job.id },

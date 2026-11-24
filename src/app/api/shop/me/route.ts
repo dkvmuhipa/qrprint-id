@@ -12,6 +12,7 @@ import {
 } from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
+import { finalizeDuePrintingJobs } from "@/lib/print-progress";
 import {
   isValidShopSlug,
   parsePrinterPool,
@@ -34,6 +35,8 @@ export async function GET() {
     lastCleanupByShop.set(shop.id, nowMs);
     await expireStalePendingJobs(shop.id).catch(() => 0);
   }
+
+  await finalizeDuePrintingJobs(shop.id).catch(() => {});
 
   const [jobs, totalJobsCount, invoices, allPaidJobs, activeQueue, completedCount] =
     await Promise.all([
