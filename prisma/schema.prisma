@@ -57,6 +57,8 @@ model Shop {
   city                String                @default("")
   tagline             String                @default("")
   mapsUrl             String                @default("")
+  latitude            Float?
+  longitude           Float?
   instagramHandle     String                @default("")
   showInDirectory     Boolean               @default(true)
   isFeaturedPartner   Boolean               @default(false)

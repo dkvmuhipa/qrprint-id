@@ -13,6 +13,8 @@ import {
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
 import { finalizeDuePrintingJobs } from "@/lib/print-progress";
+import { isValidLatLng } from "@/lib/geo";
+import { resolveMapsUrlCoordinates } from "@/lib/maps-url-resolver";
 import {
   isValidShopSlug,
   parsePrinterPool,
@@ -232,6 +234,8 @@ export async function GET() {
       city: shop.city || "",
       tagline: shop.tagline || "",
       mapsUrl: shop.mapsUrl || "",
+      latitude: shop.latitude ?? null,
+      longitude: shop.longitude ?? null,
       instagramHandle: shop.instagramHandle || "",
       showInDirectory: shop.showInDirectory !== false,
     },
@@ -459,6 +463,52 @@ export async function PATCH(req: Request) {
       nextMapsUrl = rawMaps;
     }
 
+    let nextLatitude: number | null | undefined = undefined;
+    let nextLongitude: number | null | undefined = undefined;
+    const explicitClearCoords =
+      body.latitude === null ||
+      body.longitude === null ||
+      body.latitude === "" ||
+      body.longitude === "";
+    if (explicitClearCoords) {
+      nextLatitude = null;
+      nextLongitude = null;
+    } else if (body.latitude !== undefined && body.longitude !== undefined) {
+      const latNum = Number(body.latitude);
+      const lngNum = Number(body.longitude);
+      if (!isValidLatLng(latNum, lngNum)) {
+        return NextResponse.json(
+          { error: "Koordinat peta (latitude/longitude) tidak valid." },
+          { status: 400 }
+        );
+      }
+      nextLatitude = Number(latNum.toFixed(6));
+      nextLongitude = Number(lngNum.toFixed(6));
+    }
+
+    // Auto-resolve coordinates from mapsUrl when coordinates are still unset
+    const mapsUrlChanged =
+      nextMapsUrl !== undefined && nextMapsUrl !== (shop.mapsUrl || "");
+    const effectiveLat =
+      nextLatitude !== undefined ? nextLatitude : shop.latitude;
+    const effectiveLng =
+      nextLongitude !== undefined ? nextLongitude : shop.longitude;
+
+    if (
+      nextMapsUrl &&
+      effectiveLat == null &&
+      effectiveLng == null &&
+      (!explicitClearCoords || mapsUrlChanged)
+    ) {
+      const resolved = await resolveMapsUrlCoordinates(nextMapsUrl).catch(
+        () => null
+      );
+      if (resolved) {
+        nextLatitude = resolved.latitude;
+        nextLongitude = resolved.longitude;
+      }
+    }
+
     const updated = await prisma.shop.update({
       where: { id: shop.id },
       data: {
@@ -483,6 +533,8 @@ export async function PATCH(req: Request) {
           ? { tagline: String(body.tagline || "").trim().slice(0, 160) }
           : {}),
         ...(nextMapsUrl !== undefined ? { mapsUrl: nextMapsUrl } : {}),
+        ...(nextLatitude !== undefined ? { latitude: nextLatitude } : {}),
+        ...(nextLongitude !== undefined ? { longitude: nextLongitude } : {}),
         ...(body.instagramHandle !== undefined
           ? {
               instagramHandle: (() => {

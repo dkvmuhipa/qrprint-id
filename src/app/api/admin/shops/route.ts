@@ -17,6 +17,8 @@ import {
 } from "@/lib/utils";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
 import { rewardReferrerIfEligible } from "@/lib/referral";
+import { isValidLatLng } from "@/lib/geo";
+import { resolveMapsUrlCoordinates } from "@/lib/maps-url-resolver";
 
 export async function POST(req: Request) {
   const admin = await getCurrentAdmin();
@@ -598,6 +600,92 @@ export async function PATCH(req: Request) {
         message: nextVal
           ? `Mode Toko Testing / Simulasi diaktifkan untuk ${shop.name}.`
           : `Mode Toko Testing dinonaktifkan untuk ${shop.name}.`,
+      });
+    }
+
+    // 18. Update Shop City, Google Maps Link & Coordinates from Admin Drawer
+    if (action === "UPDATE_SHOP_LOCATION" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+
+      const nextCity =
+        body.city !== undefined
+          ? String(body.city || "").trim().slice(0, 80)
+          : shop.city;
+
+      let nextMapsUrl = shop.mapsUrl || "";
+      if (body.mapsUrl !== undefined) {
+        const rawMaps = String(body.mapsUrl || "").trim().slice(0, 300);
+        if (rawMaps !== "" && !/^https?:\/\//i.test(rawMaps)) {
+          return NextResponse.json(
+            { error: "Link Google Maps harus diawali https://" },
+            { status: 400 }
+          );
+        }
+        nextMapsUrl = rawMaps;
+      }
+
+      let nextLat: number | null | undefined = undefined;
+      let nextLng: number | null | undefined = undefined;
+      const clearCoords =
+        body.latitude === null ||
+        body.longitude === null ||
+        body.latitude === "" ||
+        body.longitude === "";
+
+      if (clearCoords) {
+        nextLat = null;
+        nextLng = null;
+      } else if (body.latitude !== undefined && body.longitude !== undefined) {
+        const latNum = Number(body.latitude);
+        const lngNum = Number(body.longitude);
+        if (!isValidLatLng(latNum, lngNum)) {
+          return NextResponse.json(
+            { error: "Koordinat latitude/longitude tidak valid." },
+            { status: 400 }
+          );
+        }
+        nextLat = Number(latNum.toFixed(6));
+        nextLng = Number(lngNum.toFixed(6));
+      }
+
+      const effLat = nextLat !== undefined ? nextLat : shop.latitude;
+      const effLng = nextLng !== undefined ? nextLng : shop.longitude;
+      if (nextMapsUrl && effLat == null && effLng == null && !clearCoords) {
+        const resolved = await resolveMapsUrlCoordinates(nextMapsUrl).catch(
+          () => null
+        );
+        if (resolved) {
+          nextLat = resolved.latitude;
+          nextLng = resolved.longitude;
+        }
+      }
+
+      const updated = await prisma.shop.update({
+        where: { id: shop.id },
+        data: {
+          city: nextCity,
+          mapsUrl: nextMapsUrl,
+          ...(nextLat !== undefined ? { latitude: nextLat } : {}),
+          ...(nextLng !== undefined ? { longitude: nextLng } : {}),
+        },
+      });
+
+      const hasCoords =
+        updated.latitude != null && updated.longitude != null;
+
+      return NextResponse.json({
+        ok: true,
+        latitude: updated.latitude,
+        longitude: updated.longitude,
+        message: hasCoords
+          ? `Lokasi & koordinat peta ${updated.name} diperbarui (${updated.latitude?.toFixed(5)}, ${updated.longitude?.toFixed(5)}).`
+          : `Info lokasi ${updated.name} diperbarui.`,
       });
     }
 

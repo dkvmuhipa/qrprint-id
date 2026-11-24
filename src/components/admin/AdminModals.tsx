@@ -1,10 +1,12 @@
 "use client";
 
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
 import {
   Ban,
   CalendarPlus,
   KeyRound,
+  Link2,
+  MapPin,
   MessageCircle,
   RotateCw,
   Trash2,
@@ -60,6 +62,65 @@ export function ShopDetailDrawer({
   onClose,
   onRunAdminAction,
 }: ShopDetailDrawerProps) {
+  const [locCity, setLocCity] = useState(selectedShop.city || "");
+  const [locMapsUrl, setLocMapsUrl] = useState(selectedShop.mapsUrl || "");
+  const [locLat, setLocLat] = useState(
+    selectedShop.latitude != null ? String(selectedShop.latitude) : ""
+  );
+  const [locLng, setLocLng] = useState(
+    selectedShop.longitude != null ? String(selectedShop.longitude) : ""
+  );
+  const [resolvingLoc, setResolvingLoc] = useState(false);
+  const [locNote, setLocNote] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLocCity(selectedShop.city || "");
+    setLocMapsUrl(selectedShop.mapsUrl || "");
+    setLocLat(
+      selectedShop.latitude != null ? String(selectedShop.latitude) : ""
+    );
+    setLocLng(
+      selectedShop.longitude != null ? String(selectedShop.longitude) : ""
+    );
+    setLocNote(null);
+  }, [
+    selectedShop.id,
+    selectedShop.city,
+    selectedShop.mapsUrl,
+    selectedShop.latitude,
+    selectedShop.longitude,
+  ]);
+
+  async function handleAdminResolveMaps() {
+    if (!locMapsUrl.trim()) {
+      setLocNote("Isi link Google Maps terlebih dahulu.");
+      return;
+    }
+    setResolvingLoc(true);
+    setLocNote(null);
+    try {
+      const res = await fetch("/api/shop/resolve-maps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: locMapsUrl.trim() }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        setLocLat(String(json.latitude));
+        setLocLng(String(json.longitude));
+        setLocNote(
+          `Titik ditemukan: ${Number(json.latitude).toFixed(5)}, ${Number(json.longitude).toFixed(5)}. Klik Simpan Lokasi.`
+        );
+      } else {
+        setLocNote(json.error || "Koordinat tidak ditemukan dari link ini.");
+      }
+    } catch {
+      setLocNote("Gagal membaca link Google Maps.");
+    } finally {
+      setResolvingLoc(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/45 backdrop-blur-xs">
       <div className="flex h-full w-full max-w-lg flex-col overflow-y-auto bg-white p-6 shadow-2xl">
@@ -406,6 +467,107 @@ export function ShopDetailDrawer({
               >
                 {selectedShop.isTestShop ? "Nonaktifkan" : "Aktifkan"}
               </button>
+            </div>
+
+            {/* City, Maps URL & Lat/Lng Coordinates */}
+            <div className="space-y-2.5 border-t border-[#171717]/8 pt-3 text-xs">
+              <div className="flex items-center justify-between gap-2">
+                <p className="inline-flex items-center gap-1 font-medium text-[#171717]">
+                  <MapPin className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
+                  <span>Lokasi peta &amp; Google Maps</span>
+                </p>
+                {selectedShop.latitude != null && selectedShop.longitude != null && (
+                  <span className="font-mono-num text-[10px] text-[#16a34a]">
+                    {selectedShop.latitude.toFixed(5)}, {selectedShop.longitude.toFixed(5)}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  type="text"
+                  value={locCity}
+                  onChange={(e) => setLocCity(e.target.value)}
+                  placeholder="Kota / Area (misal: Sleman)"
+                  className="h-8 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-2.5 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                />
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    value={locLat}
+                    onChange={(e) => setLocLat(e.target.value)}
+                    placeholder="Latitude (-7.7...)"
+                    className="font-mono-num h-8 w-1/2 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-2 text-[11px] outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                  <input
+                    type="text"
+                    value={locLng}
+                    onChange={(e) => setLocLng(e.target.value)}
+                    placeholder="Longitude (110.3...)"
+                    className="font-mono-num h-8 w-1/2 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-2 text-[11px] outline-none focus:border-[#171717] focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-1.5">
+                <input
+                  type="url"
+                  value={locMapsUrl}
+                  onChange={(e) => setLocMapsUrl(e.target.value)}
+                  placeholder="https://maps.app.goo.gl/... atau link Google Maps"
+                  className="font-mono-num h-8 flex-1 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-2.5 text-[11px] outline-none focus:border-[#171717] focus:bg-white"
+                />
+                <button
+                  type="button"
+                  disabled={resolvingLoc}
+                  onClick={handleAdminResolveMaps}
+                  title="Ekstrak latitude/longitude dari link Google Maps"
+                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1 rounded-lg border border-[#171717]/15 bg-white px-2.5 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+                >
+                  <Link2 className="h-3 w-3 text-[#d9381e]" strokeWidth={1.6} />
+                  <span>{resolvingLoc ? "..." : "Ambil Titik"}</span>
+                </button>
+              </div>
+
+              {locNote && (
+                <p className="text-[11px] text-[#525252]">{locNote}</p>
+              )}
+
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocLat("");
+                    setLocLng("");
+                  }}
+                  className="cursor-pointer text-[11px] text-[#737373] hover:text-[#dc2626]"
+                >
+                  Kosongkan titik GPS
+                </button>
+                <button
+                  type="button"
+                  disabled={busyId === "save_loc"}
+                  onClick={() => {
+                    const cleanLat = locLat.trim();
+                    const cleanLng = locLng.trim();
+                    onRunAdminAction("save_loc", {
+                      action: "UPDATE_SHOP_LOCATION",
+                      shopId: selectedShop.id,
+                      city: locCity,
+                      mapsUrl: locMapsUrl,
+                      ...(cleanLat === "" || cleanLng === ""
+                        ? { latitude: null, longitude: null }
+                        : {
+                            latitude: Number(cleanLat),
+                            longitude: Number(cleanLng),
+                          }),
+                    });
+                  }}
+                  className="btn-action inline-flex h-8 cursor-pointer items-center rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90 disabled:opacity-50"
+                >
+                  Simpan Lokasi &amp; Peta
+                </button>
+              </div>
             </div>
           </div>
 

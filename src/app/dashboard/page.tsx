@@ -174,6 +174,8 @@ function DashboardContent() {
     city: "",
     tagline: "",
     mapsUrl: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
     instagramHandle: "",
     logoDataUrl: "",
     showInDirectory: true,
@@ -628,6 +630,8 @@ function DashboardContent() {
             city: json.shop.city || "",
             tagline: json.shop.tagline || "",
             mapsUrl: json.shop.mapsUrl || "",
+            latitude: json.shop.latitude ?? null,
+            longitude: json.shop.longitude ?? null,
             instagramHandle: json.shop.instagramHandle || "",
             logoDataUrl: json.shop.logoDataUrl || "",
             showInDirectory: json.shop.showInDirectory !== false,
@@ -810,6 +814,8 @@ function DashboardContent() {
       city: s.city || "",
       tagline: s.tagline || "",
       mapsUrl: s.mapsUrl || "",
+      latitude: s.latitude ?? null,
+      longitude: s.longitude ?? null,
       instagramHandle: s.instagramHandle || "",
       logoDataUrl: s.logoDataUrl || "",
       showInDirectory: s.showInDirectory !== false,
@@ -852,6 +858,8 @@ function DashboardContent() {
         settingsForm.city.trim() !== (data.shop.city || "").trim() ||
         settingsForm.tagline.trim() !== (data.shop.tagline || "").trim() ||
         settingsForm.mapsUrl.trim() !== (data.shop.mapsUrl || "").trim() ||
+        (settingsForm.latitude ?? null) !== (data.shop.latitude ?? null) ||
+        (settingsForm.longitude ?? null) !== (data.shop.longitude ?? null) ||
         settingsForm.instagramHandle.trim() !==
           (data.shop.instagramHandle || "").trim() ||
         (settingsForm.logoDataUrl || "") !== (data.shop.logoDataUrl || "") ||
@@ -936,6 +944,8 @@ function DashboardContent() {
         city: settingsForm.city,
         tagline: settingsForm.tagline,
         mapsUrl: settingsForm.mapsUrl,
+        latitude: settingsForm.latitude,
+        longitude: settingsForm.longitude,
         instagramHandle: settingsForm.instagramHandle,
         logoDataUrl: settingsForm.logoDataUrl,
         showInDirectory: settingsForm.showInDirectory,
@@ -993,6 +1003,8 @@ function DashboardContent() {
             city: s.city || "",
             tagline: s.tagline || "",
             mapsUrl: s.mapsUrl || "",
+            latitude: s.latitude ?? null,
+            longitude: s.longitude ?? null,
             instagramHandle: s.instagramHandle || "",
             logoDataUrl: s.logoDataUrl || "",
             showInDirectory: s.showInDirectory !== false,

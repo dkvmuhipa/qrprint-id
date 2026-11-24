@@ -24,14 +24,24 @@ import {
   ChevronDown,
   Camera,
   Link2,
+  LocateFixed,
   PlusCircle,
+  Map as MapIcon,
   MapPin,
   Search,
   Store,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
+import {
+  buildGoogleMapsDirectionsUrl,
+  buildGoogleMapsSearchUrl,
+  formatDistanceId,
+  haversineDistanceKm,
+  isValidLatLng,
+} from "@/lib/geo";
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
+import { PartnerDirectoryMap } from "./PartnerDirectoryMap";
 
 interface PublicPartnerItem {
   shopCode: string;
@@ -40,6 +50,8 @@ interface PublicPartnerItem {
   city: string;
   tagline: string;
   mapsUrl: string;
+  latitude?: number | null;
+  longitude?: number | null;
   instagramHandle: string;
   logoDataUrl: string | null;
   plan: string;
@@ -217,6 +229,14 @@ export function LandingClient() {
   const [partners, setPartners] = useState<PublicPartnerItem[]>([]);
   const [loadingPartners, setLoadingPartners] = useState(true);
   const [partnerQuery, setPartnerQuery] = useState("");
+  const [selectedCity, setSelectedCity] = useState("ALL");
+  const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(
+    null
+  );
+  const [locatingUser, setLocatingUser] = useState(false);
+  const [locError, setLocError] = useState<string | null>(null);
+  const [showPartnerMap, setShowPartnerMap] = useState(false);
+  const [focusedShopCode, setFocusedShopCode] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -225,6 +245,13 @@ export function LandingClient() {
       .then((data) => {
         if (active && Array.isArray(data.partners)) {
           setPartners(data.partners);
+          if (
+            data.partners.some((p: PublicPartnerItem) =>
+              isValidLatLng(p.latitude, p.longitude)
+            )
+          ) {
+            setShowPartnerMap(true);
+          }
         }
       })
       .catch(() => {})
@@ -236,13 +263,91 @@ export function LandingClient() {
     };
   }, []);
 
-  const filteredPartners = partners.filter((p) => {
-    const q = partnerQuery.trim().toLowerCase();
-    if (!q) return true;
-    return `${p.name} ${p.city} ${p.address} ${p.tagline}`
-      .toLowerCase()
-      .includes(q);
+  function handleFindNearest() {
+    if (userLoc) {
+      setUserLoc(null);
+      setLocError(null);
+      return;
+    }
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setLocError("Browser Anda tidak mendukung pencarian lokasi GPS.");
+      return;
+    }
+    setLocatingUser(true);
+    setLocError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setUserLoc({
+          lat: Number(pos.coords.latitude.toFixed(6)),
+          lng: Number(pos.coords.longitude.toFixed(6)),
+        });
+        setShowPartnerMap(true);
+        setLocatingUser(false);
+      },
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "Izin lokasi ditolak di browser. Aktifkan izin lokasi untuk mengurutkan mitra terdekat, atau klik Rute Maps di kartu toko."
+            : err.code === err.TIMEOUT
+            ? "Waktu pencarian lokasi GPS habis. Silakan coba lagi."
+            : "Lokasi GPS belum berhasil dideteksi dari perangkat Anda.";
+        setLocError(msg);
+        setLocatingUser(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  const availableCities = Array.from(
+    new Set(partners.map((p) => (p.city || "").trim()).filter(Boolean))
+  );
+
+  const enrichedPartners = partners.map((p) => {
+    const hasCoords = isValidLatLng(p.latitude, p.longitude);
+    const distanceKm =
+      userLoc && hasCoords
+        ? haversineDistanceKm(
+            userLoc.lat,
+            userLoc.lng,
+            Number(p.latitude),
+            Number(p.longitude)
+          )
+        : null;
+    return {
+      ...p,
+      _hasCoords: hasCoords,
+      distanceKm,
+    };
   });
+
+  const filteredPartners = enrichedPartners
+    .filter((p) => {
+      if (
+        selectedCity !== "ALL" &&
+        (p.city || "").trim().toLowerCase() !== selectedCity.toLowerCase()
+      ) {
+        return false;
+      }
+      const q = partnerQuery.trim().toLowerCase();
+      if (!q) return true;
+      return `${p.name} ${p.city} ${p.address} ${p.tagline}`
+        .toLowerCase()
+        .includes(q);
+    })
+    .sort((a, b) => {
+      if (userLoc) {
+        if (a.distanceKm != null && b.distanceKm != null) {
+          return a.distanceKm - b.distanceKm;
+        }
+        if (a.distanceKm != null) return -1;
+        if (b.distanceKm != null) return 1;
+      }
+      return 0;
+    });
+
+  const nearestShopCode = userLoc
+    ? filteredPartners.find((p) => p.distanceKm != null)?.shopCode || null
+    : null;
 
   const currentProduct =
     PRODUCTS.find((p) => p.id === activeTab) || PRODUCTS[0];
@@ -900,22 +1005,122 @@ export function LandingClient() {
               dokumen dan cetak mandiri dari HP.
             </p>
           </div>
-          {partners.length > 3 && (
-            <div className="relative w-full sm:w-64">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[#7b7266]"
-                strokeWidth={1.6}
-              />
-              <input
-                type="search"
-                value={partnerQuery}
-                onChange={(e) => setPartnerQuery(e.target.value)}
-                placeholder="Cari nama toko atau kota..."
-                className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-[#fdfbf7] pr-3 pl-9 text-xs text-[#1f1b16] outline-none focus:border-[#1f1b16]"
-              />
+          {partners.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={locatingUser}
+                onClick={handleFindNearest}
+                className={`btn-action inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg px-3.5 text-xs font-medium transition-colors disabled:opacity-60 ${
+                  userLoc
+                    ? "border border-[#2563eb]/30 bg-[#2563eb]/10 text-[#1d4ed8]"
+                    : "border border-[#1f1b16]/15 bg-[#fdfbf7] text-[#1f1b16] hover:bg-[#efe9df]"
+                }`}
+              >
+                <LocateFixed className="h-3.5 w-3.5" strokeWidth={1.6} />
+                <span>
+                  {locatingUser
+                    ? "Mencari GPS..."
+                    : userLoc
+                    ? "Terdekat Aktif · Reset"
+                    : "Terdekat dari Saya"}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPartnerMap((prev) => !prev)}
+                className={`btn-action inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-lg px-3.5 text-xs font-medium transition-colors ${
+                  showPartnerMap
+                    ? "bg-[#1f1b16] text-[#fdfbf7]"
+                    : "border border-[#1f1b16]/15 bg-[#fdfbf7] text-[#1f1b16] hover:bg-[#efe9df]"
+                }`}
+              >
+                <MapIcon className="h-3.5 w-3.5" strokeWidth={1.6} />
+                <span>{showPartnerMap ? "Tutup Peta" : "Lihat di Peta"}</span>
+              </button>
+
+              <div className="relative w-full sm:w-56">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[#7b7266]"
+                  strokeWidth={1.6}
+                />
+                <input
+                  type="search"
+                  value={partnerQuery}
+                  onChange={(e) => setPartnerQuery(e.target.value)}
+                  placeholder="Cari nama toko atau kota..."
+                  className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-[#fdfbf7] pr-3 pl-9 text-xs text-[#1f1b16] outline-none focus:border-[#1f1b16]"
+                />
+              </div>
             </div>
           )}
         </div>
+
+        {availableCities.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setSelectedCity("ALL")}
+              className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                selectedCity === "ALL"
+                  ? "bg-[#1f1b16] text-[#fdfbf7]"
+                  : "border border-[#1f1b16]/12 bg-[#fdfbf7] text-[#5e554a] hover:bg-[#efe9df]"
+              }`}
+            >
+              Semua Kota
+            </button>
+            {availableCities.map((city) => (
+              <button
+                key={city}
+                type="button"
+                onClick={() => setSelectedCity(city)}
+                className={`cursor-pointer rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  selectedCity.toLowerCase() === city.toLowerCase()
+                    ? "bg-[#1f1b16] text-[#fdfbf7]"
+                    : "border border-[#1f1b16]/12 bg-[#fdfbf7] text-[#5e554a] hover:bg-[#efe9df]"
+                }`}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {locError && (
+          <div className="mt-4 rounded-xl border border-[#d9381e]/25 bg-[#d9381e]/10 px-4 py-2.5 text-xs text-[#991b1b]">
+            {locError}
+          </div>
+        )}
+
+        {userLoc && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#2563eb]/20 bg-[#eff6ff] px-4 py-2.5 text-xs text-[#1e40af]">
+            <span>
+              📍 Menampilkan mitra diurutkan dari jarak terdekat ke lokasi Anda
+              {!filteredPartners.some((p) => p.distanceKm != null)
+                ? " (mitra pada daftar ini belum menyetel titik GPS; gunakan tombol Rute Maps)."
+                : "."}
+            </span>
+            <button
+              type="button"
+              onClick={() => setUserLoc(null)}
+              className="cursor-pointer font-medium underline hover:opacity-80"
+            >
+              Reset lokasi
+            </button>
+          </div>
+        )}
+
+        {showPartnerMap && !loadingPartners && partners.length > 0 && (
+          <div className="mt-6">
+            <PartnerDirectoryMap
+              partners={filteredPartners}
+              userLocation={userLoc}
+              focusedShopCode={focusedShopCode}
+              onSelectShop={(code) => setFocusedShopCode(code)}
+            />
+          </div>
+        )}
 
         {loadingPartners ? (
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -930,6 +1135,15 @@ export function LandingClient() {
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {filteredPartners.map((p) => {
               const isDemoShowcase = Boolean(p.isTestShop || p.plan === "DEMO");
+              const isNearest = p.shopCode === nearestShopCode;
+              const mapsHref =
+                p.mapsUrl ||
+                (p._hasCoords
+                  ? buildGoogleMapsDirectionsUrl(
+                      Number(p.latitude),
+                      Number(p.longitude)
+                    )
+                  : buildGoogleMapsSearchUrl(p.name, p.address, p.city));
               const planBadge = p.isTestShop
                 ? "Toko Demo & Simulasi"
                 : p.plan === "DEMO"
@@ -948,7 +1162,11 @@ export function LandingClient() {
               return (
                 <div
                   key={p.shopCode}
-                  className="flex flex-col justify-between rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5 transition-colors hover:border-[#1f1b16]/25"
+                  className={`flex flex-col justify-between rounded-2xl border bg-[#fdfbf7] p-5 transition-colors hover:border-[#1f1b16]/25 ${
+                    isNearest
+                      ? "border-[#2563eb]/40 ring-1 ring-[#2563eb]/15"
+                      : "border-[#1f1b16]/10"
+                  }`}
                 >
                   <div>
                     <div className="flex items-start justify-between gap-3">
@@ -1008,6 +1226,25 @@ export function LandingClient() {
                       </span>
                     </div>
 
+                    {p.distanceKm != null && (
+                      <div className="mt-2.5 flex items-center gap-1.5">
+                        <span
+                          className={`font-mono-num inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                            isNearest
+                              ? "bg-[#16a34a]/12 text-[#15803d]"
+                              : "bg-[#2563eb]/10 text-[#1d4ed8]"
+                          }`}
+                        >
+                          <LocateFixed className="h-3 w-3" strokeWidth={1.8} />
+                          <span>
+                            {isNearest
+                              ? `Terdekat · ${formatDistanceId(p.distanceKm)}`
+                              : `${formatDistanceId(p.distanceKm)} dari Anda`}
+                          </span>
+                        </span>
+                      </div>
+                    )}
+
                     {p.tagline && (
                       <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-[#5e554a]">
                         {p.tagline}
@@ -1025,10 +1262,10 @@ export function LandingClient() {
                       <span>HP {formatRupiah(p.bwPrice)}/lbr</span>
                       <span>Warna {formatRupiah(p.colorPrice)}/lbr</span>
                     </div>
-                    <div className="mt-3 flex items-center gap-2">
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                       <Link
                         href={`/s/${p.shopCode}`}
-                        className="btn-action inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f1b16] px-3 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
+                        className="btn-action inline-flex h-9 min-w-[140px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f1b16] px-3 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
                       >
                         <span>
                           {isDemoShowcase
@@ -1037,21 +1274,39 @@ export function LandingClient() {
                         </span>
                         <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </Link>
-                      {p.mapsUrl && (
-                        <a
-                          href={p.mapsUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Buka lokasi di Google Maps"
-                          className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                      {p._hasCoords && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPartnerMap(true);
+                            setFocusedShopCode(p.shopCode);
+                            document
+                              .getElementById("mitra-map")
+                              ?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "center",
+                              });
+                          }}
+                          title="Lihat titik lokasi toko di peta"
+                          className="inline-flex h-9 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
                         >
-                          <MapPin
-                            className="h-3.5 w-3.5 text-[#d9381e]"
-                            strokeWidth={1.6}
-                          />
-                          <span>Maps</span>
-                        </a>
+                          <MapIcon className="h-3.5 w-3.5 text-[#1f1b16]" strokeWidth={1.6} />
+                          <span>Peta</span>
+                        </button>
                       )}
+                      <a
+                        href={mapsHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        title="Buka rute di Google Maps"
+                        className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                      >
+                        <MapPin
+                          className="h-3.5 w-3.5 text-[#d9381e]"
+                          strokeWidth={1.6}
+                        />
+                        <span>Rute</span>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -1063,7 +1318,7 @@ export function LandingClient() {
             <div className="max-w-2xl">
               <p className="text-sm font-medium text-[#1f1b16]">
                 {partners.length > 0
-                  ? `Tidak ada mitra yang cocok dengan pencarian "${partnerQuery}".`
+                  ? "Tidak ada mitra yang cocok dengan filter kota atau pencarian."
                   : "Toko fotokopi Anda bisa tampil otomatis di sini"}
               </p>
               <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
@@ -1076,7 +1331,10 @@ export function LandingClient() {
             {partners.length > 0 ? (
               <button
                 type="button"
-                onClick={() => setPartnerQuery("")}
+                onClick={() => {
+                  setPartnerQuery("");
+                  setSelectedCity("ALL");
+                }}
                 className="btn-action inline-flex h-9 shrink-0 cursor-pointer items-center rounded-lg border border-[#1f1b16]/15 bg-white px-4 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
               >
                 Tampilkan Semua ({partners.length})

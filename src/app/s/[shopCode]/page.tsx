@@ -70,6 +70,8 @@ interface PublicShop {
   city?: string;
   tagline?: string;
   mapsUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   instagramHandle?: string;
   bwPrice: number;
   colorPrice: number;
@@ -938,11 +940,20 @@ function CustomerScanPortalContent({
                 {shop.address}
                 {shop.scheduleLabel ? ` · Jam buka: ${shop.scheduleLabel}` : ""}
               </p>
-              {(shop.mapsUrl || shop.phone || shop.instagramHandle) && (
+              {(shop.mapsUrl ||
+                (shop.latitude != null && shop.longitude != null) ||
+                shop.phone ||
+                shop.instagramHandle) && (() => {
+                const resolvedMapsHref =
+                  shop.mapsUrl ||
+                  (shop.latitude != null && shop.longitude != null
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}`
+                    : "");
+                return (
                 <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                  {shop.mapsUrl && (
+                  {resolvedMapsHref && (
                     <a
-                      href={shop.mapsUrl}
+                      href={resolvedMapsHref}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 rounded-md border border-[#1f1b16]/12 bg-white px-2 py-1 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
@@ -973,7 +984,8 @@ function CustomerScanPortalContent({
                     </span>
                   )}
                 </div>
-              )}
+                );
+              })()}
             </div>
             {shop.logoDataUrl ? (
               <img

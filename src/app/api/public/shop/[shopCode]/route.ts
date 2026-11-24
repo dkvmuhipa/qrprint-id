@@ -85,6 +85,8 @@ export async function GET(
         city: shop.city || "",
         tagline: shop.tagline || "",
         mapsUrl: shop.mapsUrl || "",
+        latitude: shop.latitude ?? null,
+        longitude: shop.longitude ?? null,
         instagramHandle: shop.instagramHandle || "",
         bwPrice: shop.bwPrice,
         colorPrice: shop.colorPrice,

@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Bluetooth, Download, ImagePlus, Lock, Printer, Trash2 } from "lucide-react";
+import { Bluetooth, Download, ImagePlus, Link2, LocateFixed, Lock, MapPin, Printer, Trash2 } from "lucide-react";
 import type { EntitlementInfo, PrintJobItem, ShopInfo } from "./types";
+import { PartnerLocationPicker } from "./PartnerLocationPicker";
 
 export interface SettingsFormState {
   shopCode: string;
@@ -13,6 +14,8 @@ export interface SettingsFormState {
   city: string;
   tagline: string;
   mapsUrl: string;
+  latitude: number | null;
+  longitude: number | null;
   instagramHandle: string;
   logoDataUrl: string;
   showInDirectory: boolean;
@@ -111,6 +114,96 @@ export function SettingsTab({
 }: SettingsTabProps) {
   const [logoError, setLogoError] = useState<string | null>(null);
   const [processingLogo, setProcessingLogo] = useState(false);
+  const [locBusy, setLocBusy] = useState<"gps" | "maps" | null>(null);
+  const [locFeedback, setLocFeedback] = useState<{
+    type: "ok" | "err";
+    text: string;
+  } | null>(null);
+
+  function handleUseMyGps() {
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
+      setLocFeedback({
+        type: "err",
+        text: "Browser ini tidak mendukung akses lokasi GPS.",
+      });
+      return;
+    }
+    setLocBusy("gps");
+    setLocFeedback(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setSettingsForm((prev) => ({
+          ...prev,
+          latitude: lat,
+          longitude: lng,
+        }));
+        setLocFeedback({
+          type: "ok",
+          text: `Titik GPS berhasil diambil (${lat.toFixed(5)}, ${lng.toFixed(5)}). Klik "Simpan pengaturan" di bawah untuk menyimpan.`,
+        });
+        setLocBusy(null);
+      },
+      (err) => {
+        const msg =
+          err.code === err.PERMISSION_DENIED
+            ? "Izin lokasi ditolak oleh browser. Aktifkan izin lokasi atau klik titik langsung di peta."
+            : err.code === err.TIMEOUT
+            ? "Waktu pencarian GPS habis. Coba lagi di dekat jendela atau klik titik langsung di peta."
+            : "Gagal mendeteksi lokasi GPS perangkat.";
+        setLocFeedback({ type: "err", text: msg });
+        setLocBusy(null);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+    );
+  }
+
+  async function handleResolveFromMapsUrl() {
+    const raw = settingsForm.mapsUrl.trim();
+    if (!raw) {
+      setLocFeedback({
+        type: "err",
+        text: "Isi link Google Maps toko pada kolom di atas terlebih dahulu.",
+      });
+      return;
+    }
+    setLocBusy("maps");
+    setLocFeedback(null);
+    try {
+      const res = await fetch("/api/shop/resolve-maps", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: raw }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setLocFeedback({
+          type: "err",
+          text:
+            json.error ||
+            "Koordinat tidak terbaca dari link tersebut. Silakan klik titik toko langsung di peta.",
+        });
+      } else {
+        setSettingsForm((prev) => ({
+          ...prev,
+          latitude: Number(json.latitude),
+          longitude: Number(json.longitude),
+        }));
+        setLocFeedback({
+          type: "ok",
+          text: `Titik koordinat ditemukan (${Number(json.latitude).toFixed(5)}, ${Number(json.longitude).toFixed(5)}). Klik "Simpan pengaturan" untuk menyimpan.`,
+        });
+      }
+    } catch {
+      setLocFeedback({
+        type: "err",
+        text: "Gagal terhubung ke server untuk membaca link Google Maps.",
+      });
+    } finally {
+      setLocBusy(null);
+    }
+  }
 
   async function handleLogoFileSelect(file: File | null) {
     if (!file) return;
@@ -486,6 +579,97 @@ export function SettingsTab({
                 </p>
               </div>
             </label>
+          </div>
+
+          <div className="sm:col-span-2 rounded-xl border border-[#171717]/10 bg-[#fafafa] p-4">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="inline-flex items-center gap-1.5 text-xs font-medium text-[#171717]">
+                  <MapPin className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
+                  <span>Titik Koordinat Peta &amp; Pencarian Terdekat</span>
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#737373]">
+                  Agar pelanggan dapat menemukan toko Anda melalui fitur{" "}
+                  <strong>Mitra Terdekat</strong> &amp; peta interaktif di beranda
+                  Ngeprint. Klik langsung pada peta atau geser pin merah ke lokasi
+                  toko Anda.
+                </p>
+              </div>
+              {settingsForm.latitude != null && settingsForm.longitude != null && (
+                <div className="flex items-center gap-2">
+                  <span className="font-mono-num rounded-md border border-[#16a34a]/25 bg-[#16a34a]/10 px-2 py-1 text-[11px] font-medium text-[#15803d]">
+                    {settingsForm.latitude.toFixed(5)}, {settingsForm.longitude.toFixed(5)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocFeedback(null);
+                      setSettingsForm((prev) => ({
+                        ...prev,
+                        latitude: null,
+                        longitude: null,
+                      }));
+                    }}
+                    className="inline-flex h-7 cursor-pointer items-center gap-1 rounded-md border border-[#dc2626]/25 bg-white px-2 text-[11px] font-medium text-[#dc2626] hover:bg-[#fef2f2]"
+                  >
+                    <Trash2 className="h-3 w-3" strokeWidth={1.5} />
+                    <span>Hapus Titik</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={locBusy !== null}
+                onClick={handleUseMyGps}
+                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+              >
+                <LocateFixed className="h-3.5 w-3.5 text-[#2563eb]" strokeWidth={1.6} />
+                <span>
+                  {locBusy === "gps" ? "Mengambil GPS..." : "Gunakan GPS Lokasi Saya"}
+                </span>
+              </button>
+              <button
+                type="button"
+                disabled={locBusy !== null}
+                onClick={handleResolveFromMapsUrl}
+                className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+              >
+                <Link2 className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
+                <span>
+                  {locBusy === "maps" ? "Membaca Link..." : "Ambil Titik dari Link Maps"}
+                </span>
+              </button>
+            </div>
+
+            {locFeedback && (
+              <div
+                className={`mt-2.5 rounded-lg border px-3 py-2 text-[11px] ${
+                  locFeedback.type === "ok"
+                    ? "border-[#16a34a]/25 bg-[#16a34a]/10 text-[#15803d]"
+                    : "border-[#dc2626]/25 bg-[#dc2626]/10 text-[#dc2626]"
+                }`}
+              >
+                {locFeedback.text}
+              </div>
+            )}
+
+            <div className="mt-3">
+              <PartnerLocationPicker
+                latitude={settingsForm.latitude}
+                longitude={settingsForm.longitude}
+                onChange={(lat, lng) => {
+                  setLocFeedback(null);
+                  setSettingsForm((prev) => ({
+                    ...prev,
+                    latitude: lat,
+                    longitude: lng,
+                  }));
+                }}
+              />
+            </div>
           </div>
 
           <div>

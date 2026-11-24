@@ -6,6 +6,10 @@ export interface AdminShopRow {
   email: string;
   phone: string;
   address: string;
+  city?: string;
+  mapsUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   plan: string;
   planStatus: string;
   planExpiresAt: string | null;

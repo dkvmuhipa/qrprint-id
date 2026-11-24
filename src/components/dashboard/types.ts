@@ -52,6 +52,8 @@ export interface ShopInfo {
   city?: string;
   tagline?: string;
   mapsUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
   instagramHandle?: string;
   showInDirectory?: boolean;
 }
