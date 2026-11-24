@@ -59,7 +59,7 @@ export async function generateMetadata({
     return {
       title: "Portal Cetak Mandiri",
       description:
-        "Unggah dokumen PDF atau foto dari HP, bayar QRIS otomatis, langsung tercetak tanpa antre di kasir.",
+        "Unggah dokumen PDF, Word, Excel, PPT, atau foto dari HP, bayar QRIS otomatis, langsung tercetak tanpa antre di kasir.",
     };
   }
 
@@ -68,13 +68,16 @@ export async function generateMetadata({
   const locationText = shop.city
     ? `${shop.city}${shop.address ? ` · ${shop.address}` : ""}`
     : shop.address;
-  const description = `${shop.tagline ? `${shop.tagline}. ` : ""}Unggah PDF atau foto langsung dari HP ke printer ${shop.name}${
+  const description = `${shop.tagline ? `${shop.tagline}. ` : ""}Unggah PDF, Word, Excel, PPT, atau foto langsung dari HP ke printer ${shop.name}${
     locationText ? ` (${locationText})` : ""
   }. Bayar QRIS instan, langsung tercetak & file otomatis terhapus.`;
 
   return {
     title,
     description,
+    alternates: {
+      canonical: `/s/${shop.shopCode}`,
+    },
     openGraph: {
       type: "website",
       locale: "id_ID",
@@ -84,7 +87,7 @@ export async function generateMetadata({
       description,
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
     },

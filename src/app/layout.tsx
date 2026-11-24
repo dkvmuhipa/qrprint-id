@@ -24,6 +24,23 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
+  alternates: {
+    canonical: "/",
+  },
+  keywords: [
+    "cetak mandiri qr",
+    "print qris",
+    "aplikasi kasir fotokopi",
+    "sistem print self service",
+    "ngeprint",
+    "gellona teknologi",
+    "print agent windows",
+    "usaha fotokopi",
+    "cetak otomatis qris",
+  ],
+  authors: [{ name: "Gellona Teknologi" }],
+  creator: "Gellona Teknologi",
+  publisher: "Gellona Teknologi",
   appleWebApp: {
     capable: true,
     title: "Ngeprint",
@@ -41,7 +58,7 @@ export const metadata: Metadata = {
     template: "%s · Ngeprint",
   },
   description:
-    "Ngeprint adalah sistem cetak mandiri berbasis QR dari Gellona Teknologi untuk toko fotokopi, percetakan, dan koperasi kampus. Tanpa WhatsApp, tanpa flashdisk, bayar QRIS, langsung tercetak dan file otomatis terhapus.",
+    "Ngeprint adalah sistem cetak mandiri berbasis QR dari Gellona Teknologi untuk toko fotokopi, percetakan, dan koperasi kampus. Unggah PDF, Word, Excel, PPT, & Foto tanpa WhatsApp/flashdisk, bayar QRIS 0% potongan, langsung tercetak dan file otomatis terhapus.",
   openGraph: {
     type: "website",
     locale: "id_ID",
@@ -49,13 +66,13 @@ export const metadata: Metadata = {
     siteName: "Ngeprint by Gellona Teknologi",
     title: "Ngeprint — Cetak Mandiri via QR untuk Toko Fotokopi",
     description:
-      "Scan QR di meja kasir, unggah PDF/foto dari HP, bayar QRIS otomatis, dokumen langsung tercetak dan terhapus permanen demi privasi.",
+      "Scan QR di meja kasir, unggah PDF, Word, Excel, PPT, & Foto dari HP, bayar QRIS 0% potongan, dokumen langsung tercetak dan terhapus permanen demi privasi.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Ngeprint by Gellona Teknologi",
     description:
-      "Sistem cetak mandiri berbasis QR untuk toko fotokopi & percetakan. Bayar QRIS otomatis, langsung tercetak.",
+      "Sistem cetak mandiri berbasis QR untuk toko fotokopi & percetakan. Unggah PDF, Word, Excel, PPT, & Foto, bayar QRIS 0% potongan, langsung tercetak.",
   },
 };
 
