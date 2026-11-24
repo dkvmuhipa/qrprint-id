@@ -56,7 +56,8 @@ const STEPS = [
     title: "Atur Tarif, Add-on Jilid & Pilih Printer Fisik",
     desc: "Di Dashboard → Pengaturan, atur tarif Hitam Putih, Warna, tambahan kertas F4, serta Add-on Jilid (Lakban/Mika/Spiral). Lalu pilih nama printer USB/LAN untuk Hitam Putih, Warna, dan (opsional) Printer Thermal 58mm.",
     tips: [
-      "Pelanggan bisa unggah PDF, Word (.docx), Excel, PowerPoint, atau foto (maks. 10 file dalam 1× bayar) lengkap dengan Pratinjau & Deteksi Warna Otomatis.",
+      "Pelanggan bisa unggah PDF, Word (.docx), Excel, PowerPoint, atau foto (maks. 10 file dalam 1× bayar) lengkap dengan Pratinjau, Deteksi Ukuran Kertas (A4/F4/4×6), Deteksi Warna Otomatis, & Indikator Antrean Live.",
+      "Atur juga Jam Buka/Tutup & Titik Lokasi Peta GPS di Pengaturan agar toko Anda otomatis tampil di Peta Direktori Mitra beranda Ngeprint.",
       "Punya printer thermal 58mm Bluetooth/USB? Pilih di bagian Printer Thermal 58mm agar struk bukti bayar ikut tercetak otomatis.",
     ],
   },

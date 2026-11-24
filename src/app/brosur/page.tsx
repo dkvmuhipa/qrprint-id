@@ -122,9 +122,9 @@ export default function BrosurPage() {
               <ul className="mt-2.5 space-y-1.5 text-xs text-[#1f1b16]">
                 {[
                   "Scan QR → upload PDF, Word, Excel, PPT, atau foto (bisa multi-file 1× bayar)",
-                  "Pratinjau dokumen, pilih rentang halaman, deteksi warna otomatis & add-on jilid",
-                  "Bayar langsung ke QRIS toko Anda (nominal otomatis) + cetak struk 58mm",
-                  "Kertas langsung keluar di printer, file auto-hapus & laporan Excel/audit rim siap!",
+                  "Deteksi otomatis ukuran kertas (A4/F4/4×6), halaman warna/HP, pratinjau, & add-on jilid",
+                  "Bayar langsung ke QRIS toko Anda (nominal otomatis), tampil di Peta Direktori Mitra & cetak struk 58mm",
+                  "Mendukung Windows 7, 8, 10 & 11 (.exe ringan tersedia), file auto-hapus & laporan Excel/audit rim!",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <Check

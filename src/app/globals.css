@@ -104,10 +104,127 @@ textarea:focus-visible {
     background-color 150ms var(--ease-out),
     border-color 150ms var(--ease-out),
     color 150ms var(--ease-out),
-    transform 120ms var(--ease-out);
+    box-shadow 180ms var(--ease-out),
+    transform 150ms var(--ease-out);
+}
+.btn-action:hover {
+  transform: translateY(-1px);
 }
 .btn-action:active {
   transform: scale(0.98);
+}
+
+/* Tactile 3D lift for interactive cards */
+.card-lift {
+  transition:
+    transform 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out),
+    border-color 200ms var(--ease-out);
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px -12px rgba(31, 27, 22, 0.12);
+}
+
+/* 3D Hero Stage & Micro-Motion Keyframes */
+.hero-3d-stage {
+  perspective: 1150px;
+}
+
+@keyframes qrScanSweep {
+  0%,
+  100% {
+    transform: translateY(4px);
+    opacity: 0.9;
+  }
+  50% {
+    transform: translateY(62px);
+    opacity: 1;
+  }
+}
+
+@keyframes subtleFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes popStamp {
+  0% {
+    transform: scale(0.84);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes tabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-qr-scan {
+  animation: qrScanSweep 2.1s ease-in-out infinite;
+}
+
+.animate-subtle-float {
+  animation: subtleFloat 4.5s ease-in-out infinite;
+}
+
+.animate-pop-stamp {
+  animation: popStamp 360ms var(--ease-out) both;
+}
+
+.animate-tab-in {
+  animation: tabFadeIn 280ms var(--ease-out) both;
+}
+
+/* Scroll reveal transition */
+.reveal-base {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 540ms var(--ease-out),
+    transform 580ms var(--ease-out);
+  will-change: opacity, transform;
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-qr-scan,
+  .animate-subtle-float,
+  .animate-pop-stamp,
+  .animate-tab-in {
+    animation: none !important;
+  }
+  .reveal-base {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .card-lift:hover,
+  .btn-action:hover {
+    transform: none !important;
+  }
 }
 
 /* Print-shop crop marks signature detail */

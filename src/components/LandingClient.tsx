@@ -42,6 +42,7 @@ import {
 import { Navbar } from "./Navbar";
 import { HeroIllustration } from "./HeroIllustration";
 import { PartnerDirectoryMap } from "./PartnerDirectoryMap";
+import { RevealOnScroll } from "./RevealOnScroll";
 
 interface PublicPartnerItem {
   shopCode: string;
@@ -74,8 +75,8 @@ const PRODUCTS = [
     icon: Monitor,
     context: "Mode 1 · Untuk toko fotokopi & percetakan dengan komputer kasir",
     headline: "Dari HP pelanggan, langsung keluar di printer meja Anda",
-    subline: "Mendukung PDF, Word, Excel, PowerPoint, & Foto — tanpa WA dan tanpa flashdisk",
-    desc: "Jalankan Ngeprint Agent di Windows 7, 8, 10, atau 11 (tersedia versi .exe ringan tanpa Node.js khusus Windows 7). Pelanggan memindai QR di meja kasir, mengunggah PDF, Word (.docx), Excel, PPT, atau foto (bisa gabung banyak file 1× bayar), pilih deteksi warna otomatis & jilid, bayar QRIS, lalu dokumen langsung tercetak.",
+    subline: "Mendukung PDF, Word, Excel, PowerPoint, & Foto — deteksi ukuran kertas & warna otomatis",
+    desc: "Jalankan Ngeprint Agent di Windows 7, 8, 10, atau 11 (tersedia versi .exe ringan tanpa Node.js khusus Windows 7). Pelanggan memindai QR di meja kasir, mengunggah PDF, Word (.docx), Excel, PPT, atau foto (bisa gabung banyak file 1× bayar), melihat jumlah antrean live, pilih deteksi warna & kertas otomatis (A4/F4/4×6) serta jilid, bayar QRIS, lalu dokumen langsung tercetak.",
   },
   {
     id: "kasir",
@@ -434,25 +435,27 @@ export function LandingClient() {
       <section className="mx-auto max-w-6xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 sm:pb-16 lg:pt-20 lg:pb-24">
         <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-6">
-            <p className="text-xs font-medium text-[#d9381e]">
-              {currentProduct.context}
-            </p>
+            <div key={currentProduct.id} className="animate-tab-in">
+              <p className="text-xs font-medium text-[#d9381e]">
+                {currentProduct.context}
+              </p>
 
-            <h1 className="mt-2.5 text-[28px] leading-[1.14] font-semibold tracking-[-0.02em] text-[#1f1b16] sm:mt-3 sm:text-5xl sm:leading-[1.08] sm:font-medium">
-              {currentProduct.headline}
-            </h1>
+              <h1 className="mt-2.5 text-[28px] leading-[1.14] font-semibold tracking-[-0.02em] text-[#1f1b16] sm:mt-3 sm:text-5xl sm:leading-[1.08] sm:font-medium">
+                {currentProduct.headline}
+              </h1>
 
-            <p className="mt-3 text-sm font-medium text-[#1f1b16] sm:mt-4 sm:text-base">
-              {currentProduct.subline}
-            </p>
+              <p className="mt-3 text-sm font-medium text-[#1f1b16] sm:mt-4 sm:text-base">
+                {currentProduct.subline}
+              </p>
 
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#5e554a] sm:text-base">
-              {currentProduct.desc}
-            </p>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-[#5e554a] sm:text-base">
+                {currentProduct.desc}
+              </p>
 
-            <p className="font-mono-num mt-4 block w-full rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] px-3 py-2 text-[11px] leading-relaxed text-[#5e554a] sm:inline-block sm:w-auto sm:text-xs">
-              {currentProduct.requirement}
-            </p>
+              <p className="font-mono-num mt-4 block w-full rounded-lg border border-[#1f1b16]/10 bg-[#fdfbf7] px-3 py-2 text-[11px] leading-relaxed text-[#5e554a] sm:inline-block sm:w-auto sm:text-xs">
+                {currentProduct.requirement}
+              </p>
+            </div>
 
             {/* Primary & Secondary Action (Full-width symmetrical stack on mobile) */}
             <div className="mt-6 flex flex-col gap-2.5 sm:mt-8 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
@@ -504,7 +507,7 @@ export function LandingClient() {
 
       {/* Capability Strip & Key Numbers */}
       <section className="border-y border-[#1f1b16]/8 bg-[#fdfbf7] py-10">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <RevealOnScroll className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
@@ -515,7 +518,7 @@ export function LandingClient() {
               {
                 figure: "2 menit",
                 label: "Waktu koneksi Print Agent",
-                detail: "Deteksi otomatis semua printer USB Windows",
+                detail: "Deteksi otomatis semua printer USB Windows 7–11",
               },
               {
                 figure: "0 file",
@@ -524,13 +527,13 @@ export function LandingClient() {
               },
               {
                 figure: "A4 · F4 · 4×6",
-                label: "Dukungan kertas & tarif",
-                detail: "Hitam putih, warna, dan diskon bolak-balik",
+                label: "Deteksi kertas & warna otomatis",
+                detail: "Hitam putih, warna, add-on jilid, & antrean live",
               },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className="rounded-xl border border-[#1f1b16]/8 bg-[#f7f4ee]/60 p-5"
+                className="card-lift rounded-xl border border-[#1f1b16]/8 bg-[#f7f4ee]/60 p-5"
               >
                 <p className="font-mono-num text-2xl font-medium text-[#1f1b16]">
                   {stat.figure}
@@ -558,15 +561,16 @@ export function LandingClient() {
               </span>
               <span className="inline-flex items-center gap-2">
                 <FileCheck2 className="h-4 w-4 text-[#7b7266]" strokeWidth={1.5} />
-                PDF, JPG, PNG, WEBP
+                PDF, Office (Word/Excel/PPT), Foto
               </span>
             </div>
           </div>
-        </div>
+        </RevealOnScroll>
       </section>
 
       {/* Pain Point vs Solution (#fitur) */}
       <section id="fitur" className="mx-auto max-w-6xl px-4 sm:px-6 py-20">
+        <RevealOnScroll>
         <div className="max-w-2xl">
           <p className="text-xs font-medium text-[#d9381e]">
             Perbandingan alur kerja kasir
@@ -580,7 +584,7 @@ export function LandingClient() {
         </div>
 
         <div className="mt-10 grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6">
+          <div className="card-lift rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6">
             <h3 className="text-base font-medium text-[#5e554a]">
               Cara manual di meja operator
             </h3>
@@ -602,7 +606,7 @@ export function LandingClient() {
             </ul>
           </div>
 
-          <div className="rounded-xl border border-[#1f1b16]/15 bg-[#ffffff] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+          <div className="card-lift rounded-xl border border-[#1f1b16]/15 bg-[#ffffff] p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
             <h3 className="text-base font-medium text-[#1f1b16]">
               Otomatisasi dengan Ngeprint
             </h3>
@@ -610,7 +614,7 @@ export function LandingClient() {
               {[
                 "Pelanggan cukup memindai QR poster (atau buka URL /s/nama-toko) tanpa perlu chat WhatsApp",
                 "Bebas colok flashdisk sehingga komputer kasir tetap bersih dari virus",
-                "Jumlah halaman PDF dihitung otomatis, nominal QRIS toko (semua bank & e-wallet) terisi tepat & terverifikasi otomatis lewat APK Ngeprint Listener",
+                "Halaman, warna (HP/Warna), & ukuran kertas (A4/F4/4×6) dideteksi otomatis; nominal QRIS toko terisi tepat & terverifikasi otomatis lewat APK Ngeprint Listener",
                 "Grafik omzet 7 hari, ekspor CSV, suara bel kasir, serta penghapusan file otomatis usai cetak atau batal (30 menit)",
               ].map((item) => (
                 <li key={item} className="flex items-start gap-3">
@@ -624,6 +628,7 @@ export function LandingClient() {
             </ul>
           </div>
         </div>
+        </RevealOnScroll>
       </section>
 
       {/* Setup 2 Minutes Guide (#setup) */}
@@ -719,7 +724,7 @@ export function LandingClient() {
           {PLANS.map((plan) => (
             <div
               key={plan.id}
-              className={`flex flex-col justify-between rounded-xl p-5 ${
+              className={`card-lift flex flex-col justify-between rounded-xl p-5 ${
                 plan.featured
                   ? "border-2 border-[#1f1b16] bg-[#ffffff] shadow-[0_8px_24px_rgba(0,0,0,0.05)]"
                   : "border border-[#1f1b16]/10 bg-[#fdfbf7]"
@@ -840,7 +845,7 @@ export function LandingClient() {
               return (
                 <div
                   key={addon.name}
-                  className="flex flex-col justify-between rounded-xl border border-[#1f1b16]/10 bg-[#f7f4ee]/70 p-4"
+                  className="card-lift flex flex-col justify-between rounded-xl border border-[#1f1b16]/10 bg-[#f7f4ee]/70 p-4"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
