@@ -1773,10 +1773,10 @@ function CustomerScanPortalContent({
                 2. Pengaturan cetak kertas
               </p>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
                 <div>
                   <label className="mb-1 block text-xs text-[#5e554a]">
-                    Nama pemesan (penanda di baki printer)
+                    Nama pemesan (penanda baki)
                   </label>
                   <input
                     placeholder="Contoh: Andi"
@@ -1787,12 +1787,12 @@ function CustomerScanPortalContent({
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-[#5e554a]">
-                    No. WA (opsional — dikabari saat siap diambil)
+                    No. WA (opsional · info siap ambil)
                   </label>
                   <input
                     type="tel"
                     inputMode="numeric"
-                    placeholder="08xxxxxxxxxx (pesan dari kos)"
+                    placeholder="Contoh: 0812xxxxxxxx"
                     value={customerWhatsapp}
                     onChange={(e) => setCustomerWhatsapp(e.target.value)}
                     className="font-mono-num h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
