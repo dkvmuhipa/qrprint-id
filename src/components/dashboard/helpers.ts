@@ -307,6 +307,86 @@ export const POSTER_THEMES: Record<
   },
 };
 
+function drawDotGridBackground(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  dotColor: string
+) {
+  ctx.fillStyle = dotColor;
+  for (let gx = 36; gx < width; gx += 32) {
+    for (let gy = 36; gy < height; gy += 32) {
+      ctx.beginPath();
+      ctx.arc(gx, gy, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawQrViewfinderBrackets(
+  ctx: CanvasRenderingContext2D,
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  len: number,
+  color: string,
+  lineWidth = 10
+) {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x1, y1 + len); ctx.lineTo(x1, y1); ctx.lineTo(x1 + len, y1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2 - len, y1); ctx.lineTo(x2, y1); ctx.lineTo(x2, y1 + len); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x1, y2 - len); ctx.lineTo(x1, y2); ctx.lineTo(x1 + len, y2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x2 - len, y2); ctx.lineTo(x2, y2); ctx.lineTo(x2, y2 - len); ctx.stroke();
+}
+
+function loadCanvasImage(src: string): Promise<HTMLImageElement | null> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function wrapStoryTextLines(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines = 2
+): string[] {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      current = candidate;
+      continue;
+    }
+    if (current) {
+      lines.push(current);
+      if (lines.length >= maxLines) {
+        const last = lines[maxLines - 1];
+        lines[maxLines - 1] =
+          last.length > 3 ? `${last.slice(0, last.length - 3)}...` : `${last}...`;
+        return lines;
+      }
+      current = word;
+    } else {
+      lines.push(word);
+      current = "";
+    }
+  }
+  if (current && lines.length < maxLines) {
+    lines.push(current);
+  }
+  return lines;
+}
+
 export async function downloadShopPosterPng(params: {
   shop: ShopInfo;
   qrImage: string;
@@ -330,15 +410,7 @@ export async function downloadShopPosterPng(params: {
   // 1. Base paper background + subtle editorial dot grid
   ctx.fillStyle = t.bg;
   ctx.fillRect(0, 0, 1200, 1697);
-
-  ctx.fillStyle = t.dotColor;
-  for (let gx = 36; gx < 1200; gx += 32) {
-    for (let gy = 36; gy < 1697; gy += 32) {
-      ctx.beginPath();
-      ctx.arc(gx, gy, 2.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
+  drawDotGridBackground(ctx, 1200, 1697, t.dotColor);
 
   // 2. Bold Colored Header Banner with decorative geometric accents
   ctx.save();
@@ -418,28 +490,12 @@ export async function downloadShopPosterPng(params: {
   ctx.stroke();
 
   // Draw QR Image
-  const qrImgEl = new Image();
-  await new Promise<void>((resolve, reject) => {
-    qrImgEl.onload = () => resolve();
-    qrImgEl.onerror = () => reject(new Error("QR load failed"));
-    qrImgEl.src = qrImage;
-  });
+  const qrImgEl = await loadCanvasImage(qrImage);
+  if (!qrImgEl) throw new Error("QR load failed");
   ctx.drawImage(qrImgEl, 360, 404, 480, 480);
 
   // 4 Camera-Viewfinder Corner Brackets around QR
-  ctx.strokeStyle = t.primary;
-  ctx.lineWidth = 10;
-  ctx.lineCap = "round";
-  const bLen = 46;
-  const x1 = 338, y1 = 382, x2 = 862, y2 = 906;
-  // Top-left
-  ctx.beginPath(); ctx.moveTo(x1, y1 + bLen); ctx.lineTo(x1, y1); ctx.lineTo(x1 + bLen, y1); ctx.stroke();
-  // Top-right
-  ctx.beginPath(); ctx.moveTo(x2 - bLen, y1); ctx.lineTo(x2, y1); ctx.lineTo(x2, y1 + bLen); ctx.stroke();
-  // Bottom-left
-  ctx.beginPath(); ctx.moveTo(x1, y2 - bLen); ctx.lineTo(x1, y2); ctx.lineTo(x1 + bLen, y2); ctx.stroke();
-  // Bottom-right
-  ctx.beginPath(); ctx.moveTo(x2 - bLen, y2); ctx.lineTo(x2, y2); ctx.lineTo(x2, y2 - bLen); ctx.stroke();
+  drawQrViewfinderBrackets(ctx, 338, 382, 862, 906, 46, t.primary, 10);
 
   // "SCAN QR DI SINI" Pill inside QR Card bottom
   ctx.fillStyle = t.primary;
@@ -558,6 +614,247 @@ export async function downloadShopPosterPng(params: {
   const a = document.createElement("a");
   a.href = pngUrl;
   a.download = `Poster-QR-${s.shopCode}-${theme}-${posterSize}.png`;
+  a.click();
+}
+
+export async function downloadShopStoryCardPng(params: {
+  shop: ShopInfo;
+  qrImage: string;
+  qrUrl: string;
+  theme?: PosterThemeId;
+  headline?: string;
+}) {
+  const {
+    shop: s,
+    qrImage,
+    qrUrl,
+    theme = "vermilion",
+    headline = "Kirim File dari Kos, Tinggal Ambil!",
+  } = params;
+  const t = POSTER_THEMES[theme] || POSTER_THEMES.vermilion;
+
+  const W = 1080;
+  const H = 1920;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  // 1. Warm paper base + dot grid
+  ctx.fillStyle = t.bg;
+  ctx.fillRect(0, 0, W, H);
+  drawDotGridBackground(ctx, W, H, t.dotColor);
+
+  // 2. Curved header with safe top space (>= 170px before text)
+  ctx.save();
+  ctx.fillStyle = t.headerBg;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(W, 0);
+  ctx.lineTo(W, 595);
+  ctx.quadraticCurveTo(540, 665, 0, 595);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.clip();
+  ctx.fillStyle = t.headerAccent;
+  ctx.globalAlpha = 0.22;
+  ctx.beginPath();
+  ctx.arc(990, 95, 220, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(90, 560, 175, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // Top 14px accent stripe
+  ctx.fillStyle = t.headerAccent;
+  ctx.fillRect(0, 0, W, 14);
+
+  // Eyebrow pill (starting cleanly below IG/WA Story top chrome safe area)
+  ctx.fillStyle = t.headerAccent;
+  ctx.beginPath();
+  ctx.roundRect(275, 178, 530, 46, 23);
+  ctx.fill();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "700 19px system-ui, -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("CETAK MANDIRI QRIS  ·  TANPA ANTRE", 540, 208);
+
+  // Headline (1-2 lines max, auto-sized)
+  const cleanHeadline =
+    headline.trim() || "Kirim File dari Kos, Tinggal Ambil!";
+  const headlineSize = cleanHeadline.length > 34 ? 42 : 48;
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = `800 ${headlineSize}px system-ui, -apple-system, sans-serif`;
+  const headlineLines = wrapStoryTextLines(ctx, cleanHeadline, 900, 2);
+  const lineSpacing = headlineSize + 10;
+  const headlineStartY = headlineLines.length === 1 ? 302 : 284;
+  headlineLines.forEach((line, idx) => {
+    ctx.fillText(line, 540, headlineStartY + idx * lineSpacing);
+  });
+
+  // Shop name (+ optional logo thumbnail) centered below headline
+  const shopRowY = headlineLines.length === 1 ? 378 : 408;
+  const cleanShopName = (s.name || "Toko Cetak").trim().slice(0, 32);
+  const logoImg = s.logoDataUrl ? await loadCanvasImage(s.logoDataUrl) : null;
+
+  ctx.font = "700 32px system-ui, -apple-system, sans-serif";
+  if (logoImg) {
+    const logoSize = 54;
+    const gap = 14;
+    const textWidth = ctx.measureText(cleanShopName).width;
+    const totalWidth = logoSize + gap + textWidth;
+    const startX = Math.max(80, (W - totalWidth) / 2);
+
+    ctx.save();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(startX, shopRowY - 10, logoSize, logoSize, 12);
+    ctx.fill();
+    ctx.clip();
+    ctx.drawImage(logoImg, startX, shopRowY - 10, logoSize, logoSize);
+    ctx.restore();
+
+    ctx.fillStyle = "#FDE68A";
+    ctx.textAlign = "left";
+    ctx.fillText(cleanShopName, startX + logoSize + gap, shopRowY + 28);
+    ctx.textAlign = "center";
+  } else {
+    ctx.fillStyle = "#FDE68A";
+    ctx.fillText(cleanShopName, 540, shopRowY + 24);
+  }
+
+  // City / address + optional opening hours
+  const locationParts = [s.city, s.address]
+    .map((v) => String(v || "").trim())
+    .filter(Boolean);
+  const locationText = (
+    locationParts.join(" · ") || "Upload PDF/Word/Foto · Langsung Jadi"
+  ).slice(0, 56);
+  const hoursText =
+    s.openHour && s.closeHour
+      ? `Buka ${s.openHour} – ${s.closeHour}`
+      : "";
+  const subInfoText = hoursText
+    ? `${locationText}  ·  ${hoursText}`
+    : locationText;
+
+  ctx.fillStyle = "rgba(255,255,255,0.78)";
+  ctx.font = "500 20px system-ui, -apple-system, sans-serif";
+  ctx.fillText(subInfoText.slice(0, 68), 540, shopRowY + 72);
+
+  // 3. Elevated White QR Card
+  ctx.save();
+  ctx.shadowColor = "rgba(0, 0, 0, 0.14)";
+  ctx.shadowBlur = 36;
+  ctx.shadowOffsetY = 14;
+  ctx.fillStyle = t.cardBg;
+  ctx.beginPath();
+  ctx.roundRect(180, 564, 720, 626, 36);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(0,0,0,0.08)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(180, 564, 720, 626, 36);
+  ctx.stroke();
+
+  const qrImgEl = await loadCanvasImage(qrImage);
+  if (!qrImgEl) throw new Error("QR load failed");
+  ctx.drawImage(qrImgEl, 330, 616, 420, 420);
+
+  drawQrViewfinderBrackets(ctx, 308, 594, 772, 1058, 42, t.primary, 10);
+
+  ctx.fillStyle = t.primary;
+  ctx.beginPath();
+  ctx.roundRect(290, 1084, 500, 46, 23);
+  ctx.fill();
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "800 20px system-ui, -apple-system, sans-serif";
+  ctx.fillText("SCAN QR ATAU KLIK LINK DI BIO", 540, 1114);
+
+  ctx.fillStyle = t.ink;
+  ctx.font = "700 22px ui-monospace, monospace";
+  ctx.fillText(qrUrl.replace(/^https?:\/\//, "").slice(0, 48), 540, 1166);
+
+  // 4. 2-Column Tariff Cards
+  ctx.fillStyle = t.tariffBg;
+  ctx.beginPath();
+  ctx.roundRect(90, 1232, 436, 164, 24);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = "600 18px system-ui, sans-serif";
+  ctx.fillText("HITAM PUTIH (A4)", 308, 1280);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "800 42px ui-monospace, monospace";
+  ctx.fillText(formatRupiah(s.bwPrice), 308, 1340);
+  ctx.fillStyle = "rgba(255,255,255,0.68)";
+  ctx.font = "500 17px system-ui, sans-serif";
+  ctx.fillText("per lembar", 308, 1374);
+
+  ctx.fillStyle = t.tariffAccentBg;
+  ctx.beginPath();
+  ctx.roundRect(554, 1232, 436, 164, 24);
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  ctx.font = "600 18px system-ui, sans-serif";
+  ctx.fillText("FULL WARNA (A4)", 772, 1280);
+  ctx.fillStyle = "#FFFFFF";
+  ctx.font = "800 42px ui-monospace, monospace";
+  ctx.fillText(formatRupiah(s.colorPrice), 772, 1340);
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.font = "500 17px system-ui, sans-serif";
+  ctx.fillText("per lembar", 772, 1374);
+
+  // 5. 3 Compact Feature Chips
+  const chips = [
+    "PDF · Word · Foto",
+    "Bayar QRIS Instan",
+    "File Auto-Hapus",
+  ];
+  chips.forEach((label, idx) => {
+    const cx = 90 + idx * 307;
+    ctx.fillStyle = "#FFFFFF";
+    ctx.beginPath();
+    ctx.roundRect(cx, 1432, 286, 62, 16);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(31,27,22,0.1)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(cx, 1432, 286, 62, 16);
+    ctx.stroke();
+
+    ctx.fillStyle = t.ink;
+    ctx.font = "700 20px system-ui, sans-serif";
+    ctx.fillText(label, cx + 143, 1470);
+  });
+
+  // 6. Privacy Trust Banner
+  ctx.fillStyle = t.trustBg;
+  ctx.beginPath();
+  ctx.roundRect(90, 1528, 900, 68, 18);
+  ctx.fill();
+  ctx.fillStyle = t.trustText;
+  ctx.font = "700 21px system-ui, sans-serif";
+  ctx.fillText(
+    "✓  Privasi Terjaga — Dokumen otomatis terhapus usai dicetak",
+    540,
+    1570
+  );
+
+  // 7. Subtle Brand Footer (leaves >= 220px clean bottom safe margin for IG/WA reply box)
+  ctx.fillStyle = t.muted;
+  ctx.font = "600 19px system-ui, sans-serif";
+  ctx.fillText("Powered by Ngeprint · Gellona Teknologi", 540, 1656);
+
+  const pngUrl = canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = pngUrl;
+  a.download = `Story-Promo-${s.shopCode}-${theme}.png`;
   a.click();
 }
 
