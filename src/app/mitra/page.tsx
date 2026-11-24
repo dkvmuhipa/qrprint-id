@@ -19,12 +19,21 @@ export const metadata: Metadata = {
     title: "Direktori Mitra Fotokopi & Percetakan Terdekat — Ngeprint",
     description:
       "Temukan mitra fotokopi terdekat yang sedang buka & printer online. Unggah PDF, Word, atau foto dari HP dan bayar QRIS tanpa antre.",
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "Ngeprint by Gellona Teknologi — Cetak Mandiri via QR untuk Toko Fotokopi",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Direktori Mitra Fotokopi Terdekat — Ngeprint",
     description:
       "Filter kota, status buka, jarak GPS, dan tarif cetak di jaringan mitra resmi Ngeprint.",
+    images: ["/twitter-image"],
   },
 };
 
