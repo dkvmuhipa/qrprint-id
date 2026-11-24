@@ -181,8 +181,8 @@ function buildSumatraPrintSettings(job) {
     settings.push(cleanRange);
   }
 
-  // 2. Mode Warna / Hitam Putih
-  if (job.colorMode === "COLOR") {
+  // 2. Mode Warna / Hitam Putih (AUTO mengandung halaman warna sehingga driver wajib mode color)
+  if (job.colorMode === "COLOR" || job.colorMode === "AUTO") {
     settings.push("color");
   } else {
     settings.push("monochrome");
@@ -368,7 +368,14 @@ function buildThermalReceiptEscPos(shopInfo, job) {
   for (const l of wrapText58(job.fileName || "Dokumen")) pushLine(" " + l);
 
   const pages = `${job.pageCount || 1} hal (${job.pageRange || "ALL"}) x${job.copies || 1}`;
-  const spec = `${job.colorMode === "COLOR" ? "Warna" : "Hitam Putih"} | ${job.paperSize || "A4"}${job.duplex ? " | Duplex" : ""}`;
+  const rawMode = job.rawColorMode || job.colorMode;
+  const modeLabel =
+    rawMode === "AUTO"
+      ? "Otomatis"
+      : job.colorMode === "COLOR"
+      ? "Warna"
+      : "Hitam Putih";
+  const spec = `${modeLabel} | ${job.paperSize || "A4"}${job.duplex ? " | Duplex" : ""}`;
   pushLine(padRow58("Halaman", pages));
   pushLine(padRow58("Jenis", spec));
   pushLine("-".repeat(32));

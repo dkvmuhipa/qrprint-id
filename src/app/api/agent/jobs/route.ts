@@ -125,7 +125,10 @@ export async function GET(req: Request) {
       mimeType: j.mimeType,
       pageCount: j.pageCount,
       copies: j.copies,
-      colorMode: j.colorMode,
+      // Normalize AUTO (mixed B&W + Color pages) to COLOR for the print driver
+      // so existing installed print-agents pass "color" (not "monochrome") to SumatraPDF
+      colorMode: j.colorMode === "AUTO" ? "COLOR" : j.colorMode,
+      rawColorMode: j.colorMode,
       paperSize: j.paperSize,
       duplex: j.duplex,
       pageRange: j.pageRange,
