@@ -56,6 +56,7 @@ import { QrTab } from "@/components/dashboard/QrTab";
 import { BillingTab } from "@/components/dashboard/BillingTab";
 import { SettingsTab } from "@/components/dashboard/SettingsTab";
 import {
+  announceAgentOfflineAlert,
   announceCashierOrder,
   downloadAgentEnvFile,
   downloadShopPosterPng,
@@ -82,6 +83,7 @@ function DashboardContent() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const knownPaidJobIdsRef = useRef<Set<string> | null>(null);
   const knownPendingCashIdsRef = useRef<Set<string> | null>(null);
+  const lastOfflineAlertAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -588,6 +590,25 @@ function DashboardContent() {
         knownPaidJobIdsRef.current = currentPaidIds;
         knownPendingCashIdsRef.current = currentPendingCashIds;
 
+        const nowMs = Date.now();
+        const overdueQueued = json.jobs.filter(
+          (j) =>
+            j.paymentStatus === "PAID" &&
+            j.printStatus === "QUEUED" &&
+            nowMs - new Date(j.createdAt).getTime() >= 20_000
+        );
+        if (!json.shop.isAgentOnline && overdueQueued.length > 0) {
+          if (
+            soundEnabled &&
+            nowMs - lastOfflineAlertAtRef.current >= 60_000
+          ) {
+            lastOfflineAlertAtRef.current = nowMs;
+            announceAgentOfflineAlert(overdueQueued.length);
+          }
+        } else {
+          lastOfflineAlertAtRef.current = 0;
+        }
+
         setData(json);
         if (!settingsInitialized) {
           setSettingsForm({
@@ -1058,6 +1079,9 @@ function DashboardContent() {
   const pendingInvoiceCount = invoices.filter(
     (inv) => inv.status === "PENDING"
   ).length;
+  const stuckPaidQueuedCount = jobs.filter(
+    (j) => j.paymentStatus === "PAID" && j.printStatus === "QUEUED"
+  ).length;
 
   const NAV_ITEMS = [
     {
@@ -1395,6 +1419,49 @@ function DashboardContent() {
                 </button>
               </div>
             )}
+
+          {/* Print Agent Offline Stuck-Queue Alarm Banner */}
+          {!shop.isAgentOnline && stuckPaidQueuedCount > 0 && (
+            <div className="no-print mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#dc2626]/35 bg-[#fef2f2] p-4 text-xs">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle
+                  className="mt-0.5 h-4 w-4 shrink-0 text-[#dc2626]"
+                  strokeWidth={1.7}
+                />
+                <div>
+                  <p className="font-semibold text-[#991b1b]">
+                    Print Agent sedang Offline — {stuckPaidQueuedCount} pesanan
+                    LUNAS tertahan belum tercetak!
+                  </p>
+                  <p className="mt-0.5 text-[#7f1d1d]">
+                    Jalankan kembali Print Agent (
+                    <code className="font-mono-num rounded bg-white/80 px-1 py-0.5 text-[#991b1b]">
+                      PASANG-DAN-JALANKAN.bat
+                    </code>
+                    ) di PC kasir agar dokumen langsung tercetak otomatis, atau
+                    buka file di antrean untuk cetak manual.
+                  </p>
+                </div>
+              </div>
+              {tab !== "agent" ? (
+                <button
+                  type="button"
+                  onClick={() => setTab("agent")}
+                  className="btn-action h-8 shrink-0 cursor-pointer rounded-lg bg-[#dc2626] px-3.5 text-xs font-medium text-white hover:bg-[#b91c1c]"
+                >
+                  Buka Menu Print Agent
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setTab("queue")}
+                  className="btn-action h-8 shrink-0 cursor-pointer rounded-lg bg-[#171717] px-3.5 text-xs font-medium text-white hover:bg-[#333]"
+                >
+                  Lihat Antrean ({stuckPaidQueuedCount})
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Page Header */}
           <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-4">

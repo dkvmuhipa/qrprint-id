@@ -83,25 +83,8 @@ export function terbilangIndonesia(amount: number): string {
   return terbilangCore(n);
 }
 
-export function announceCashierOrder(params: {
-  type: "PAID_QRIS" | "PAID_CASH" | "NEW_CASH_PENDING" | "TEST";
-  amount: number;
-}): void {
-  playCashierBell();
+function speakIndonesianText(text: string, delayMs = 320): void {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-
-  const nominalText = `${terbilangIndonesia(Math.round(params.amount))} rupiah`;
-  let text = "";
-  if (params.type === "TEST") {
-    text = "Suara kasir aktif. Contoh pembayaran masuk, sepuluh ribu rupiah.";
-  } else if (params.type === "PAID_QRIS") {
-    text = `Pembayaran QRIS masuk, ${nominalText}.`;
-  } else if (params.type === "PAID_CASH") {
-    text = `Pembayaran tunai diterima, ${nominalText}.`;
-  } else {
-    text = `Pesanan tunai baru, ${nominalText}. Menunggu konfirmasi kasir.`;
-  }
-
   setTimeout(() => {
     try {
       const synth = window.speechSynthesis;
@@ -125,7 +108,68 @@ export function announceCashierOrder(params: {
     } catch {
       // Ignore Web Speech API errors in unsupported environments
     }
-  }, 320);
+  }, delayMs);
+}
+
+export function announceCashierOrder(params: {
+  type: "PAID_QRIS" | "PAID_CASH" | "NEW_CASH_PENDING" | "TEST";
+  amount: number;
+}): void {
+  playCashierBell();
+
+  const nominalText = `${terbilangIndonesia(Math.round(params.amount))} rupiah`;
+  let text = "";
+  if (params.type === "TEST") {
+    text = "Suara kasir aktif. Contoh pembayaran masuk, sepuluh ribu rupiah.";
+  } else if (params.type === "PAID_QRIS") {
+    text = `Pembayaran QRIS masuk, ${nominalText}.`;
+  } else if (params.type === "PAID_CASH") {
+    text = `Pembayaran tunai diterima, ${nominalText}.`;
+  } else {
+    text = `Pesanan tunai baru, ${nominalText}. Menunggu konfirmasi kasir.`;
+  }
+
+  speakIndonesianText(text, 320);
+}
+
+export function playWarningAlertTone(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    [587.33, 440].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      const t0 = now + idx * 0.16;
+      osc.frequency.setValueAtTime(freq, t0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.2, t0 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.32);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0);
+      osc.stop(t0 + 0.34);
+    });
+    setTimeout(() => ctx.close().catch(() => {}), 850);
+  } catch {
+    // Ignore autoplay restrictions before user interaction
+  }
+}
+
+export function announceAgentOfflineAlert(queuedCount: number): void {
+  playWarningAlertTone();
+  const countWords = terbilangIndonesia(Math.max(1, queuedCount));
+  speakIndonesianText(
+    `Perhatian kasir. Print Agent sedang terputus. Ada ${countWords} pesanan lunas menunggu dicetak.`,
+    360
+  );
 }
 
 export function exportShopJobsCsv(shopCode: string, jobs: PrintJobItem[]) {

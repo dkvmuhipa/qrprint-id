@@ -1,10 +1,20 @@
 "use client";
 
 import { useState, type Dispatch, type SetStateAction } from "react";
-import { Check, Copy, Gift, RefreshCw, Share2, ShoppingCart, Trash2 } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  Gift,
+  RefreshCw,
+  Share2,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { formatInvoicePlanLabel } from "@/lib/plans";
 import { ENABLE_PASFOTO_GRID } from "@/lib/feature-flags";
+import { downloadSaasInvoicePng } from "@/lib/saas-invoice-png";
 import type {
   EntitlementInfo,
   PlanDefItem,
@@ -55,6 +65,7 @@ export function BillingTab({
   onCheckoutCart,
 }: BillingTabProps) {
   const [copiedRef, setCopiedRef] = useState(false);
+  const [downloadingInvId, setDownloadingInvId] = useState<string | null>(null);
   const referralUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/register?ref=${shop.shopCode}`
@@ -759,7 +770,7 @@ export function BillingTab({
                     })}
                   </span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="font-mono-num font-medium text-[#171717]">
                     {formatRupiah(inv.amount)}
                   </span>
@@ -778,6 +789,30 @@ export function BillingTab({
                       ? "Menunggu bayar"
                       : "Dibatalkan"}
                   </span>
+                  {(inv.status === "PAID" || inv.status === "PENDING") && (
+                    <button
+                      type="button"
+                      disabled={downloadingInvId === inv.id}
+                      onClick={async () => {
+                        setDownloadingInvId(inv.id);
+                        try {
+                          await downloadSaasInvoicePng({ shop, invoice: inv });
+                        } finally {
+                          setDownloadingInvId(null);
+                        }
+                      }}
+                      className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-[#171717]/15 bg-[#fafafa] px-2.5 text-[11px] font-medium text-[#171717] transition-colors hover:bg-[#f4f4f5] disabled:opacity-60"
+                    >
+                      <Download className="h-3 w-3 text-[#525252]" strokeWidth={1.6} />
+                      <span>
+                        {downloadingInvId === inv.id
+                          ? "Menyiapkan..."
+                          : inv.status === "PAID"
+                          ? "Unduh Kwitansi"
+                          : "Unduh Invoice"}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
