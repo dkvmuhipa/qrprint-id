@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type Dispatch, type FormEvent, type SetStateAction } from "react";
-import { Bluetooth, Download, ImagePlus, Link2, LocateFixed, Lock, MapPin, Printer, Trash2 } from "lucide-react";
+import { useState, type CSSProperties, type Dispatch, type FormEvent, type SetStateAction } from "react";
+import { Bluetooth, Download, Eye, EyeOff, ImagePlus, Link2, LocateFixed, Lock, MapPin, Printer, Trash2 } from "lucide-react";
 import type { EntitlementInfo, PrintJobItem, ShopInfo } from "./types";
 import { PartnerLocationPicker } from "./PartnerLocationPicker";
 
@@ -119,6 +119,7 @@ export function SettingsTab({
     type: "ok" | "err";
     text: string;
   } | null>(null);
+  const [showMidtransKey, setShowMidtransKey] = useState(false);
 
   function handleUseMyGps() {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -263,6 +264,7 @@ export function SettingsTab({
   return (
     <div className="space-y-6 pb-20">
       <form
+        autoComplete="off"
         onSubmit={onSaveSettings}
         className="rounded-xl border border-[#171717]/8 bg-white p-6"
       >
@@ -1332,6 +1334,12 @@ export function SettingsTab({
               </label>
               <input
                 type="text"
+                name="shop_static_qris_payload"
+                autoComplete="off"
+                spellCheck={false}
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
                 placeholder="00020101021126..."
                 value={settingsForm.staticQrisString}
                 onChange={(e) =>
@@ -1497,18 +1505,47 @@ export function SettingsTab({
                     </span>
                   )}
                 </label>
-                <input
-                  type="password"
-                  placeholder="SB-Mid-server-xxxx atau Mid-server-xxxx"
-                  value={settingsForm.midtransServerKey}
-                  onChange={(e) =>
-                    setSettingsForm({
-                      ...settingsForm,
-                      midtransServerKey: e.target.value,
-                    })
-                  }
-                  className="h-10 w-full rounded-lg border border-[#171717]/12 bg-white px-3.5 text-sm outline-none focus:border-[#171717]"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="shop_midtrans_server_key"
+                    autoComplete="off"
+                    spellCheck={false}
+                    data-lpignore="true"
+                    data-1p-ignore="true"
+                    data-form-type="other"
+                    placeholder="SB-Mid-server-xxxx atau Mid-server-xxxx"
+                    value={settingsForm.midtransServerKey}
+                    style={
+                      !showMidtransKey
+                        ? ({ WebkitTextSecurity: "disc" } as CSSProperties)
+                        : undefined
+                    }
+                    onChange={(e) =>
+                      setSettingsForm({
+                        ...settingsForm,
+                        midtransServerKey: e.target.value,
+                      })
+                    }
+                    className="h-10 w-full rounded-lg border border-[#171717]/12 bg-white pr-10 pl-3.5 text-sm outline-none focus:border-[#171717]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowMidtransKey((prev) => !prev)}
+                    aria-label={
+                      showMidtransKey
+                        ? "Sembunyikan server key"
+                        : "Tampilkan server key"
+                    }
+                    className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer rounded p-1 text-[#737373] hover:text-[#171717]"
+                  >
+                    {showMidtransKey ? (
+                      <EyeOff className="h-4 w-4" strokeWidth={1.6} />
+                    ) : (
+                      <Eye className="h-4 w-4" strokeWidth={1.6} />
+                    )}
+                  </button>
+                </div>
                 <div className="mt-1 flex items-center justify-between text-[11px] text-[#737373]">
                   <span>Biarkan kosong jika tidak ingin mengganti kunci</span>
                   {shop.hasMidtransKey && (
