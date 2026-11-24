@@ -5,18 +5,28 @@ import Link from "next/link";
 import {
   AlertCircle,
   ArrowLeft,
+  Check,
   CheckCircle2,
   Clock,
   Copy,
   Download,
   FileText,
   Loader2,
+  MapPin,
+  MessageCircle,
   Printer,
   RefreshCw,
+  Share2,
   ShieldCheck,
+  Store,
   Trash2,
 } from "lucide-react";
 import { formatRupiah, getBindingLabel } from "@/lib/utils";
+import {
+  buildGoogleMapsDirectionsUrl,
+  buildGoogleMapsSearchUrl,
+  isValidLatLng,
+} from "@/lib/geo";
 import {
   estimateClientPrintSeconds,
   playCustomerCompleteFeedback,
@@ -44,6 +54,20 @@ interface TrackedJob {
   createdAt: string;
   shopName: string;
   shopCode: string;
+  shopAddress?: string;
+  shopCity?: string;
+  shopPhone?: string;
+  shopMapsUrl?: string;
+  shopLatitude?: number | null;
+  shopLongitude?: number | null;
+}
+
+function formatWaNumber(phone: string): string {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+  if (digits.startsWith("62")) return digits;
+  return `62${digits}`;
 }
 
 function TrackJobContent({
@@ -57,6 +81,7 @@ function TrackJobContent({
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [copiedTrackLink, setCopiedTrackLink] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [printingProgressPct, setPrintingProgressPct] = useState(0);
   const prevPrintStatusRef = useRef<string | null>(null);
@@ -178,29 +203,65 @@ function TrackJobContent({
       ? "Otomatis (HP+Warna)"
       : "Hitam Putih";
 
+  const hasShopCoords = isValidLatLng(job.shopLatitude, job.shopLongitude);
+  const mapsHref =
+    job.shopMapsUrl ||
+    (hasShopCoords
+      ? buildGoogleMapsDirectionsUrl(
+          Number(job.shopLatitude),
+          Number(job.shopLongitude)
+        )
+      : buildGoogleMapsSearchUrl(job.shopName, job.shopAddress, job.shopCity));
+  const shopWaNumber = formatWaNumber(job.shopPhone || "");
+
+  function handleCopyTrackLink() {
+    if (typeof window === "undefined") return;
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        setCopiedTrackLink(true);
+        setTimeout(() => setCopiedTrackLink(false), 2000);
+      })
+      .catch(() => {});
+  }
+
   return (
     <div className="bg-ambient min-h-screen pb-16">
       <header className="sticky top-0 z-30 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
-        <div className="mx-auto flex h-13 max-w-xl items-center justify-between px-4">
+        <div className="mx-auto flex h-13 max-w-xl items-center justify-between gap-2 px-4">
           <Link
             href={job.shopCode ? `/s/${job.shopCode}` : "/"}
-            className="inline-flex items-center gap-2 text-xs font-medium text-[#5e554a] hover:text-[#1f1b16]"
+            className="inline-flex min-w-0 items-center gap-2 text-xs font-medium text-[#5e554a] hover:text-[#1f1b16]"
           >
-            <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
-            <span>{job.shopName}</span>
+            <ArrowLeft className="h-4 w-4 shrink-0" strokeWidth={1.5} />
+            <span className="truncate">{job.shopName}</span>
           </Link>
-          <button
-            type="button"
-            disabled={refreshing}
-            onClick={() => fetchJob(false)}
-            className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/12 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
-          >
-            <RefreshCw
-              className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
-              strokeWidth={1.5}
-            />
-            <span>Segarkan</span>
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleCopyTrackLink}
+              className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/12 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+            >
+              {copiedTrackLink ? (
+                <Check className="h-3.5 w-3.5 text-[#16a34a]" strokeWidth={1.75} />
+              ) : (
+                <Share2 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              )}
+              <span>{copiedTrackLink ? "Tersalin" : "Salin Link"}</span>
+            </button>
+            <button
+              type="button"
+              disabled={refreshing}
+              onClick={() => fetchJob(false)}
+              className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/12 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`}
+                strokeWidth={1.5}
+              />
+              <span>Segarkan</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -380,6 +441,7 @@ function TrackJobContent({
                       try {
                         await downloadCustomerReceiptPng({
                           shopName: job.shopName,
+                          shopAddress: job.shopAddress || undefined,
                           jobCode: job.jobCode,
                           createdAt: job.createdAt,
                           customerName: job.customerName,
@@ -395,6 +457,10 @@ function TrackJobContent({
                           bindingPrice: job.bindingPrice,
                           paymentMethod: job.paymentMethod,
                           totalPrice: job.totalPrice,
+                          trackUrl:
+                            typeof window !== "undefined"
+                              ? window.location.href
+                              : undefined,
                         });
                       } finally {
                         setDownloadingReceipt(false);
@@ -444,16 +510,72 @@ function TrackJobContent({
             </div>
           )}
 
-          <div className="mt-5 flex items-center gap-2">
+          {/* Pickup Location & Direct Shop Contact */}
+          <div className="mt-4 rounded-xl border border-[#1f1b16]/10 bg-[#f7f4ee] p-4 text-xs">
+            <div className="flex items-start gap-2.5">
+              <Store
+                className="mt-0.5 h-4 w-4 shrink-0 text-[#5e554a]"
+                strokeWidth={1.6}
+              />
+              <div className="min-w-0 flex-1">
+                <p className="font-mono-num text-[10px] tracking-wider text-[#7b7266] uppercase">
+                  Lokasi Pengambilan &amp; Kontak Toko
+                </p>
+                <p className="mt-0.5 font-medium text-[#1f1b16]">
+                  {job.shopName}
+                </p>
+                {(job.shopCity || job.shopAddress) && (
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-[#5e554a]">
+                    {job.shopCity ? `${job.shopCity} · ` : ""}
+                    {job.shopAddress}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-action inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#1f1b16]/15 bg-white px-3 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+              >
+                <MapPin className="h-3.5 w-3.5 text-[#d9381e]" strokeWidth={1.6} />
+                <span>Rute Google Maps</span>
+              </a>
+
+              {shopWaNumber && (
+                <a
+                  href={`https://wa.me/${shopWaNumber}?text=${encodeURIComponent(
+                    `Halo ${job.shopName}, saya ${job.customerName} ingin menanyakan pesanan cetak kode ${job.jobCode}.`
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-action inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#16a34a]/30 bg-[#16a34a]/10 px-3 text-[11px] font-medium text-[#15803d] hover:bg-[#16a34a]/15"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.6} />
+                  <span>Chat WA Toko</span>
+                </a>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:items-center">
             {job.shopCode && (
               <Link
                 href={`/s/${job.shopCode}`}
-                className="btn-action inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[#1f1b16] text-xs font-medium text-[#fdfbf7] hover:bg-[#333]"
+                className="btn-action inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17]"
               >
-                <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
-                <span>Cetak dokumen lagi di {job.shopName}</span>
+                <Printer className="h-3.5 w-3.5" strokeWidth={1.6} />
+                <span>Cetak Dokumen Lagi di {job.shopName}</span>
               </Link>
             )}
+            <Link
+              href="/mitra"
+              className="btn-action inline-flex h-10 items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-white px-4 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+            >
+              Cari Mitra Lain
+            </Link>
           </div>
         </div>
 
