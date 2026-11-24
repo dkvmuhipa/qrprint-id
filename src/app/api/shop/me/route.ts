@@ -11,6 +11,7 @@ import {
   SAAS_PLANS,
 } from "@/lib/plans";
 import { extractQrisMerchantName, isValidStaticQris } from "@/lib/qris";
+import { decryptSecret, encryptSecret } from "@/lib/crypto-secrets";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
 import { finalizeDuePrintingJobs } from "@/lib/print-progress";
 import { isValidLatLng } from "@/lib/geo";
@@ -160,6 +161,8 @@ export async function GET() {
     printers = [];
   }
 
+  const plainMidtransKey = decryptSecret(shop.midtransServerKey);
+
   return NextResponse.json({
     shop: {
       id: shop.id,
@@ -227,9 +230,9 @@ export async function GET() {
       staticQrisPreview: shop.staticQrisString
         ? `${shop.staticQrisString.slice(0, 22)}...${shop.staticQrisString.slice(-8)}`
         : "",
-      hasMidtransKey: Boolean(shop.midtransServerKey),
-      midtransServerKeyMasked: shop.midtransServerKey
-        ? `${shop.midtransServerKey.slice(0, 10)}••••${shop.midtransServerKey.slice(-4)}`
+      hasMidtransKey: Boolean(plainMidtransKey),
+      midtransServerKeyMasked: plainMidtransKey
+        ? `${plainMidtransKey.slice(0, 10)}••••${plainMidtransKey.slice(-4)}`
         : "",
       midtransIsProd: shop.midtransIsProd,
       referralCount: shop.referralCount,
@@ -630,7 +633,9 @@ export async function PATCH(req: Request) {
           : {}),
         ...(body.midtransServerKey !== undefined
           ? {
-              midtransServerKey: String(body.midtransServerKey).trim() || null,
+              midtransServerKey: String(body.midtransServerKey).trim()
+                ? encryptSecret(String(body.midtransServerKey).trim())
+                : null,
             }
           : {}),
         ...(body.midtransIsProd !== undefined
@@ -639,7 +644,15 @@ export async function PATCH(req: Request) {
       },
     });
 
-    return NextResponse.json({ ok: true, shop: updated });
+    const {
+      passwordHash: _omitPasswordHash,
+      midtransServerKey: _omitMidtransKey,
+      ...safeShop
+    } = updated;
+    void _omitPasswordHash;
+    void _omitMidtransKey;
+
+    return NextResponse.json({ ok: true, shop: safeShop });
   } catch (err) {
     console.error("Update shop error:", err);
     return NextResponse.json(

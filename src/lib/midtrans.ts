@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { decryptSecret } from "./crypto-secrets";
 
 export interface MidtransConfig {
   serverKey: string;
@@ -9,7 +10,8 @@ export function resolveMidtransConfig(shop: {
   midtransServerKey?: string | null;
   midtransIsProd?: boolean;
 }): MidtransConfig | null {
-  const key = (shop.midtransServerKey || process.env.MIDTRANS_SERVER_KEY || "").trim();
+  const decryptedShopKey = decryptSecret(shop.midtransServerKey);
+  const key = (decryptedShopKey || process.env.MIDTRANS_SERVER_KEY || "").trim();
   if (!key) return null;
 
   // Auto-detect sandbox if key starts with SB-Mid-
