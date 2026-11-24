@@ -1104,17 +1104,20 @@ function CustomerScanPortalContent({
                     <Link
                       key={o.jobCode}
                       href={`/track/${o.jobCode}`}
-                      className="flex items-center justify-between gap-2 rounded-lg border border-[#1f1b16]/8 bg-[#f7f4ee] px-3 py-2 hover:bg-[#efe9df]"
+                      className="flex items-center justify-between gap-3 rounded-lg border border-[#1f1b16]/8 bg-[#f7f4ee] px-3 py-2.5 transition-colors hover:bg-[#efe9df]"
                     >
-                      <div className="min-w-0">
-                        <span className="font-mono-num font-semibold text-[#1f1b16]">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                        <span className="font-mono-num shrink-0 whitespace-nowrap rounded bg-[#1f1b16]/8 px-1.5 py-0.5 text-[11px] font-semibold text-[#1f1b16]">
                           {o.jobCode}
                         </span>
-                        <span className="ml-2 truncate text-[#5e554a]">
+                        <span
+                          title={o.fileName}
+                          className="min-w-0 flex-1 truncate text-[#5e554a]"
+                        >
                           {o.fileName}
                         </span>
                       </div>
-                      <span className="shrink-0 font-medium text-[#d9381e]">
+                      <span className="shrink-0 whitespace-nowrap font-medium text-[#d9381e]">
                         Lacak / Bukti →
                       </span>
                     </Link>
