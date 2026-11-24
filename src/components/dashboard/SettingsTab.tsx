@@ -660,6 +660,8 @@ export function SettingsTab({
               <PartnerLocationPicker
                 latitude={settingsForm.latitude}
                 longitude={settingsForm.longitude}
+                shopName={settingsForm.name || shop.name}
+                logoDataUrl={settingsForm.logoDataUrl || null}
                 onChange={(lat, lng) => {
                   setLocFeedback(null);
                   setSettingsForm((prev) => ({

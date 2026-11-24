@@ -205,6 +205,13 @@ const LEAFLET_CORE_CSS = `
   background: transparent;
   border: none;
 }
+.ngeprint-pin-body {
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform-origin: 50% 100%;
+}
+.leaflet-marker-icon:hover .ngeprint-pin-body {
+  transform: translateY(-2px) scale(1.07);
+}
 @keyframes ngeprint-gps-pulse {
   0% { transform: scale(1); opacity: 0.55; }
   70% { transform: scale(2.1); opacity: 0; }
@@ -212,6 +219,14 @@ const LEAFLET_CORE_CSS = `
 }
 .ngeprint-gps-ring {
   animation: ngeprint-gps-pulse 2s infinite ease-out;
+}
+@keyframes ngeprint-ready-pulse {
+  0% { transform: scale(0.95); opacity: 0.65; }
+  75% { transform: scale(1.45); opacity: 0; }
+  100% { transform: scale(1.45); opacity: 0; }
+}
+.ngeprint-ready-ring {
+  animation: ngeprint-ready-pulse 2.2s infinite ease-out;
 }
 `;
 

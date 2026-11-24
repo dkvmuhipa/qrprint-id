@@ -10,6 +10,13 @@ import {
   isValidLatLng,
 } from "@/lib/geo";
 import { ensureLeafletStyles } from "@/lib/leaflet-styles";
+import {
+  buildPartnerMapPinHtml,
+  buildPrinterBadgeSvg,
+  buildUserGpsPinHtml,
+  getPartnerPinColor,
+  sanitizeDataImageUrl,
+} from "@/lib/map-pin-icons";
 import { formatRupiah } from "@/lib/utils";
 
 export interface DirectoryMapPartner {
@@ -17,6 +24,7 @@ export interface DirectoryMapPartner {
   name: string;
   address: string;
   city: string;
+  logoDataUrl?: string | null;
   bwPrice: number;
   colorPrice: number;
   isShopOpen: boolean;
@@ -46,6 +54,9 @@ export function PartnerDirectoryMap({
   const leafletRef = useRef<typeof LType | null>(null);
   const layerGroupRef = useRef<LType.LayerGroup | null>(null);
   const markersByCodeRef = useRef<Map<string, LType.Marker>>(new Map());
+  const partnerByCodeRef = useRef<Map<string, DirectoryMapPartner>>(new Map());
+  const focusedCodeRef = useRef<string | null>(focusedShopCode);
+  focusedCodeRef.current = focusedShopCode;
   const onSelectShopRef = useRef(onSelectShop);
   onSelectShopRef.current = onSelectShop;
 
@@ -99,6 +110,7 @@ export function PartnerDirectoryMap({
       cancelled = true;
       setMapReady(false);
       markersByCodeRef.current.clear();
+      partnerByCodeRef.current.clear();
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
@@ -117,6 +129,7 @@ export function PartnerDirectoryMap({
 
     group.clearLayers();
     markersByCodeRef.current.clear();
+    partnerByCodeRef.current.clear();
 
     const boundsPoints: [number, number][] = [];
 
@@ -124,12 +137,10 @@ export function PartnerDirectoryMap({
       boundsPoints.push([userLocation.lat, userLocation.lng]);
       const userIcon = L.divIcon({
         className: "ngeprint-pin-icon",
-        html: `<div style="position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">
-          <span class="ngeprint-gps-ring" style="position:absolute;width:22px;height:22px;border-radius:9999px;background:rgba(37,99,235,0.35);"></span>
-          <span style="position:relative;width:13px;height:13px;border-radius:9999px;background:#2563eb;border:2.5px solid #ffffff;box-shadow:0 2px 6px rgba(0,0,0,0.35);"></span>
-        </div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
+        html: buildUserGpsPinHtml(),
+        iconSize: [36, 36],
+        iconAnchor: [18, 18],
+        popupAnchor: [0, -18],
       });
       L.marker([userLocation.lat, userLocation.lng], {
         icon: userIcon,
@@ -145,34 +156,24 @@ export function PartnerDirectoryMap({
       const lat = Number(p.latitude);
       const lng = Number(p.longitude);
       boundsPoints.push([lat, lng]);
+      partnerByCodeRef.current.set(p.shopCode, p);
 
-      const isReady = p.isShopOpen && p.isAgentOnline;
-      const pinBg = p.isTestShop
-        ? "#7c3aed"
-        : isReady
-        ? "#16a34a"
-        : p.isShopOpen
-        ? "#d9381e"
-        : "#6b7280";
-
-      const shortLabel = escapeHtml(
-        p.name.length > 18 ? `${p.name.slice(0, 17)}…` : p.name
-      );
+      const pinColor = getPartnerPinColor(p);
+      const safeLogo = sanitizeDataImageUrl(p.logoDataUrl);
 
       const icon = L.divIcon({
         className: "ngeprint-pin-icon",
-        html: `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);">
-          <div style="background:${pinBg};color:#ffffff;padding:4px 9px;border-radius:9999px;font-size:11px;font-weight:600;white-space:nowrap;border:2px solid #ffffff;box-shadow:0 4px 12px rgba(31,27,22,0.28);display:flex;align-items:center;gap:5px;">
-            <span style="width:6px;height:6px;border-radius:9999px;background:${
-              isReady ? "#bbf7d0" : "#ffffff"
-            };opacity:0.95;"></span>
-            <span>${shortLabel}</span>
-          </div>
-          <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid ${pinBg};margin-top:-1px;"></div>
-        </div>`,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-        popupAnchor: [0, -34],
+        html: buildPartnerMapPinHtml({
+          label: p.name,
+          logoDataUrl: p.logoDataUrl,
+          isShopOpen: p.isShopOpen,
+          isAgentOnline: p.isAgentOnline,
+          isTestShop: p.isTestShop,
+          isFocused: focusedCodeRef.current === p.shopCode,
+        }),
+        iconSize: [44, 54],
+        iconAnchor: [22, 52],
+        popupAnchor: [0, -50],
       });
 
       const statusText = !p.isShopOpen
@@ -189,22 +190,32 @@ export function PartnerDirectoryMap({
         p.mapsUrl || buildGoogleMapsDirectionsUrl(lat, lng)
       );
       const shopHref = escapeHtml(`/s/${encodeURIComponent(p.shopCode)}`);
+      const avatarHtml = safeLogo
+        ? `<img src="${safeLogo}" alt="" style="width:34px;height:34px;border-radius:9px;object-fit:cover;border:1px solid rgba(31,27,22,0.12);background:#ffffff;flex-shrink:0;" />`
+        : `<div style="width:34px;height:34px;border-radius:9px;background:#f7f4ee;border:1px solid rgba(31,27,22,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">${buildPrinterBadgeSvg(
+            pinColor
+          )}</div>`;
       const distanceHtml =
         typeof p.distanceKm === "number"
-          ? `<div style="margin-top:4px;font-size:11px;font-weight:600;color:#2563eb;">📍 ${escapeHtml(
+          ? `<div style="margin-top:5px;font-size:11px;font-weight:600;color:#2563eb;">📍 ${escapeHtml(
               formatDistanceId(p.distanceKm)
             )} dari Anda</div>`
           : "";
 
       const popupHtml = `
         <div style="font-family:inherit;">
-          <div style="font-size:10px;font-weight:600;color:${statusColor};margin-bottom:2px;">${escapeHtml(
+          <div style="display:flex;align-items:center;gap:9px;">
+            ${avatarHtml}
+            <div style="min-width:0;">
+              <div style="font-size:10px;font-weight:600;color:${statusColor};margin-bottom:1px;">${escapeHtml(
         statusText
       )}</div>
-          <div style="font-size:13px;font-weight:600;color:#1f1b16;line-height:1.3;">${escapeHtml(
+              <div style="font-size:13px;font-weight:600;color:#1f1b16;line-height:1.25;">${escapeHtml(
             p.name
           )}</div>
-          <div style="margin-top:3px;font-size:11px;color:#5e554a;line-height:1.35;">${escapeHtml(
+            </div>
+          </div>
+          <div style="margin-top:6px;font-size:11px;color:#5e554a;line-height:1.35;">${escapeHtml(
             p.city ? `${p.city} · ${p.address}` : p.address
           )}</div>
           ${distanceHtml}
@@ -240,10 +251,34 @@ export function PartnerDirectoryMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, partners, userLocation]);
 
-  // Smoothly focus marker when user selects a shop card's "Pin Peta" button
+  // Smoothly focus marker and update highlight pin styling when focusedShopCode changes
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || !map || !focusedShopCode) return;
+    const L = leafletRef.current;
+    if (!mapReady || !map || !L) return;
+
+    markersByCodeRef.current.forEach((m, code) => {
+      const partner = partnerByCodeRef.current.get(code);
+      if (!partner) return;
+      m.setIcon(
+        L.divIcon({
+          className: "ngeprint-pin-icon",
+          html: buildPartnerMapPinHtml({
+            label: partner.name,
+            logoDataUrl: partner.logoDataUrl,
+            isShopOpen: partner.isShopOpen,
+            isAgentOnline: partner.isAgentOnline,
+            isTestShop: partner.isTestShop,
+            isFocused: focusedShopCode === code,
+          }),
+          iconSize: [44, 54],
+          iconAnchor: [22, 52],
+          popupAnchor: [0, -50],
+        })
+      );
+    });
+
+    if (!focusedShopCode) return;
     const marker = markersByCodeRef.current.get(focusedShopCode);
     if (!marker) return;
     const pos = marker.getLatLng();
@@ -275,21 +310,35 @@ export function PartnerDirectoryMap({
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#1f1b16]/8 bg-[#fdfbf7] px-4 py-2 text-[11px] text-[#5e554a]">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#16a34a]" />
-            <span>Siap Cetak (Online)</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#d9381e]" />
-            <span>Toko Buka</span>
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-2.5 w-2.5 rounded-full bg-[#7c3aed]" />
-            <span>Toko Demo</span>
-          </span>
+          {[
+            { color: "#16a34a", label: "Siap Cetak (Online)" },
+            { color: "#d9381e", label: "Toko Buka" },
+            { color: "#7c3aed", label: "Toko Demo" },
+          ].map((item) => (
+            <span key={item.label} className="inline-flex items-center gap-1.5">
+              <svg
+                width="13"
+                height="16"
+                viewBox="0 0 44 52"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M22 2C11.507 2 3 10.507 3 21c0 12.6 14.3 25.4 17.85 28.45a1.8 1.8 0 0 0 2.3 0C26.7 46.4 41 33.6 41 21 41 10.507 32.493 2 22 2Z"
+                  fill={item.color}
+                  stroke="#ffffff"
+                  strokeWidth="3"
+                />
+                <circle cx="22" cy="21" r="10.5" fill="#fdfbf7" />
+                <rect x="16" y="18" width="12" height="7" rx="1.5" fill="#1f1b16" />
+                <rect x="18" y="14.5" width="8" height="4" rx="0.8" fill={item.color} />
+              </svg>
+              <span>{item.label}</span>
+            </span>
+          ))}
           {userLocation && (
             <span className="inline-flex items-center gap-1.5 font-medium text-[#2563eb]">
-              <span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />
+              <span className="h-3 w-3 rounded-full border border-white bg-[#2563eb] shadow-xs" />
               <span>Lokasi Anda</span>
             </span>
           )}

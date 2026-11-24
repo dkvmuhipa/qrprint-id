@@ -4,16 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import type LType from "leaflet";
 import { isValidLatLng } from "@/lib/geo";
 import { ensureLeafletStyles } from "@/lib/leaflet-styles";
+import { buildPartnerMapPinHtml } from "@/lib/map-pin-icons";
 
 interface PartnerLocationPickerProps {
   latitude: number | null;
   longitude: number | null;
+  shopName?: string;
+  logoDataUrl?: string | null;
   onChange: (lat: number, lng: number) => void;
 }
 
 export function PartnerLocationPicker({
   latitude,
   longitude,
+  shopName,
+  logoDataUrl,
   onChange,
 }: PartnerLocationPickerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -105,14 +110,14 @@ export function PartnerLocationPicker({
     if (!markerRef.current) {
       const icon = L.divIcon({
         className: "ngeprint-pin-icon",
-        html: `<div style="display:flex;flex-direction:column;align-items:center;transform:translate(-50%,-100%);">
-          <div style="background:#d9381e;color:#ffffff;padding:4px 9px;border-radius:9999px;font-size:11px;font-weight:600;white-space:nowrap;border:2px solid #ffffff;box-shadow:0 4px 12px rgba(31,27,22,0.28);">
-            Lokasi Toko
-          </div>
-          <div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid #d9381e;margin-top:-1px;"></div>
-        </div>`,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
+        html: buildPartnerMapPinHtml({
+          label: shopName || "Lokasi Toko",
+          logoDataUrl,
+          isShopOpen: true,
+          isAgentOnline: false,
+        }),
+        iconSize: [44, 54],
+        iconAnchor: [22, 52],
       });
 
       const marker = L.marker([latitude, longitude], {
@@ -137,7 +142,28 @@ export function PartnerLocationPicker({
     map.setView([latitude, longitude], currentZoom < 12 ? 16 : currentZoom, {
       animate: true,
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, latitude, longitude]);
+
+  // Live-update custom pin logo or label without re-centering the picker map
+  useEffect(() => {
+    const marker = markerRef.current;
+    const L = leafletRef.current;
+    if (!mapReady || !marker || !L) return;
+    marker.setIcon(
+      L.divIcon({
+        className: "ngeprint-pin-icon",
+        html: buildPartnerMapPinHtml({
+          label: shopName || "Lokasi Toko",
+          logoDataUrl,
+          isShopOpen: true,
+          isAgentOnline: false,
+        }),
+        iconSize: [44, 54],
+        iconAnchor: [22, 52],
+      })
+    );
+  }, [mapReady, shopName, logoDataUrl]);
 
   return (
     <div className="overflow-hidden rounded-xl border border-[#171717]/12 bg-[#ede8df]">
