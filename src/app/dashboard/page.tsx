@@ -34,6 +34,7 @@ import {
   ShoppingCart,
   Trash2,
   Bluetooth,
+  Megaphone,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { formatInvoicePlanLabel } from "@/lib/plans";
@@ -81,6 +82,7 @@ function DashboardContent() {
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [busyJobId, setBusyJobId] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [dismissedBroadcastAt, setDismissedBroadcastAt] = useState<string>("");
   const knownPaidJobIdsRef = useRef<Set<string> | null>(null);
   const knownPendingCashIdsRef = useRef<Set<string> | null>(null);
   const lastOfflineAlertAtRef = useRef<number>(0);
@@ -91,6 +93,8 @@ function DashboardContent() {
       const saved = window.localStorage.getItem("ngeprint_cashier_bell_v1");
       if (saved === "0") setSoundEnabled(false);
       else if (saved === "1") setSoundEnabled(true);
+      const dismissed = window.localStorage.getItem("ngeprint_dismissed_broadcast_v1");
+      if (dismissed) setDismissedBroadcastAt(dismissed);
     } catch {
       // ignore storage errors
     }
@@ -1431,6 +1435,88 @@ function DashboardContent() {
       {/* Main Content Fluid Area (reserves bottom nav height on mobile) */}
       <main className="flex-1 px-3.5 pt-5 pb-24 sm:px-8 lg:py-8">
         <div className="mx-auto max-w-5xl">
+          {/* Global Broadcast Banner from Super Admin */}
+          {data.broadcast &&
+            dismissedBroadcastAt !== data.broadcast.updatedAt && (() => {
+              const bc = data.broadcast!;
+              const tone =
+                bc.level === "PROMO"
+                  ? "border-[#d9381e]/30 bg-[#fff5f3] text-[#1f1b16]"
+                  : bc.level === "WARNING"
+                  ? "border-[#b45309]/30 bg-[#fffbeb] text-[#1f1b16]"
+                  : "border-[#171717]/15 bg-[#fdfbf7] text-[#171717]";
+              const iconColor =
+                bc.level === "PROMO"
+                  ? "text-[#d9381e]"
+                  : bc.level === "WARNING"
+                  ? "text-[#b45309]"
+                  : "text-[#171717]";
+
+              return (
+                <div
+                  className={`no-print mb-5 flex flex-col justify-between gap-3 rounded-xl border p-4 text-xs sm:flex-row sm:items-center ${tone}`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <Megaphone
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${iconColor}`}
+                      strokeWidth={1.6}
+                    />
+                    <div className="space-y-0.5">
+                      {bc.title && (
+                        <p className="font-semibold text-[#171717]">
+                          {bc.title}
+                        </p>
+                      )}
+                      {bc.message && (
+                        <p className="leading-relaxed text-[#525252]">
+                          {bc.message}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+                    {bc.linkUrl && (
+                      bc.linkUrl.startsWith("/") ? (
+                        <Link
+                          href={bc.linkUrl}
+                          className="btn-action inline-flex h-8 items-center rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90"
+                        >
+                          {bc.linkLabel || "Lihat Detail"}
+                        </Link>
+                      ) : (
+                        <a
+                          href={bc.linkUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="btn-action inline-flex h-8 items-center rounded-lg bg-[#171717] px-3 text-xs font-medium text-white hover:bg-[#171717]/90"
+                        >
+                          {bc.linkLabel || "Buka Tautan"}
+                        </a>
+                      )
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDismissedBroadcastAt(bc.updatedAt);
+                        try {
+                          window.localStorage.setItem(
+                            "ngeprint_dismissed_broadcast_v1",
+                            bc.updatedAt
+                          );
+                        } catch {
+                          // ignore storage errors
+                        }
+                      }}
+                      aria-label="Tutup pengumuman"
+                      className="cursor-pointer rounded-lg p-1.5 text-[#737373] hover:bg-black/5 hover:text-[#171717]"
+                    >
+                      <X className="h-3.5 w-3.5" strokeWidth={1.75} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
           {/* SaaS Subscription Alert Banner if Expired, Quota Exceeded, or Pending Invoice */}
           {(!entitlement.canAcceptJobs || activePendingInvoice) &&
             tab !== "billing" && (

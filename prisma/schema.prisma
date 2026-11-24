@@ -133,3 +133,24 @@ model DemoRequest {
   status    String   @default("NEW")
   createdAt DateTime @default(now())
 }
+
+model PlatformBroadcast {
+  id        String   @id @default("global")
+  active    Boolean  @default(false)
+  level     String   @default("INFO")
+  title     String   @default("")
+  message   String   @default("")
+  linkUrl   String   @default("")
+  linkLabel String   @default("")
+  updatedBy String   @default("")
+  updatedAt DateTime @updatedAt
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  adminEmail String
+  action     String
+  target     String   @default("")
+  details    String   @default("")
+  createdAt  DateTime @default(now())
+}

@@ -17,6 +17,7 @@ export interface AdminShopRow {
   showInDirectory?: boolean;
   isFeaturedPartner?: boolean;
   hasListenerAddon?: boolean;
+  hasPasFotoAddon?: boolean;
   extraPrinterSlots?: number;
   daysLeft: number | null;
   hoursLeft: number | null;
@@ -82,6 +83,39 @@ export interface GlobalJobRow {
   createdAt: string;
 }
 
+export interface ServerMetricsData {
+  uptimeSeconds: number;
+  processRssBytes: number;
+  totalMemBytes: number;
+  freeMemBytes: number;
+  dbSizeBytes: number | null;
+  uploadsFilesCount: number;
+  uploadsSizeBytes: number;
+  diskTotalBytes: number | null;
+  diskFreeBytes: number | null;
+}
+
+export interface PlatformBroadcastData {
+  id: string;
+  active: boolean;
+  level: string;
+  title: string;
+  message: string;
+  linkUrl: string;
+  linkLabel: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export interface AdminAuditLogRow {
+  id: string;
+  adminEmail: string;
+  action: string;
+  target: string;
+  details: string;
+  createdAt: string;
+}
+
 export interface OverviewData {
   admin: { email: string };
   system?: {
@@ -92,7 +126,10 @@ export interface OverviewData {
     platformListenerKey?: string;
     dbEngine: string;
     pendingStaleCount: number;
+    metrics?: ServerMetricsData;
   };
+  broadcast?: PlatformBroadcastData | null;
+  auditLogs?: AdminAuditLogRow[];
   stats: {
     totalShops: number;
     activePaidShops: number;

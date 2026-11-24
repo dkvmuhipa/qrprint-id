@@ -17,6 +17,7 @@ import {
 } from "@/lib/utils";
 import { expireStalePendingJobs } from "@/lib/jobs-cleanup";
 import { rewardReferrerIfEligible } from "@/lib/referral";
+import { recordAdminAudit } from "@/lib/admin-audit";
 import { isValidLatLng } from "@/lib/geo";
 import { resolveMapsUrlCoordinates } from "@/lib/maps-url-resolver";
 
@@ -123,6 +124,13 @@ export async function POST(req: Request) {
         .catch(() => null);
     }
 
+    await recordAdminAudit({
+      adminEmail: admin.email,
+      action: "CREATE_SHOP",
+      target: `${shop.name} (/s/${shop.shopCode})`,
+      details: `Paket ${requestedPlan.name}${isTestShop ? " · Testing" : ""}`,
+    });
+
     return NextResponse.json(
       {
         ok: true,
@@ -187,6 +195,13 @@ export async function PATCH(req: Request) {
 
       await rewardReferrerIfEligible(inv.shopId, inv.plan).catch(() => null);
 
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "APPROVE_INVOICE",
+        target: `${inv.shop.name} (${inv.invoiceCode})`,
+        details: `${fulfillment.label} · Rp ${inv.amount.toLocaleString("id-ID")}`,
+      });
+
       return NextResponse.json({
         ok: true,
         message: `Invoice ${inv.invoiceCode} disetujui. ${fulfillment.label} aktif untuk ${inv.shop.name}.`,
@@ -195,9 +210,16 @@ export async function PATCH(req: Request) {
 
     // 2. Cancel pending SubscriptionInvoice
     if (action === "CANCEL_INVOICE" && invoiceId) {
-      await prisma.subscriptionInvoice.update({
+      const inv = await prisma.subscriptionInvoice.update({
         where: { id: invoiceId },
         data: { status: "CANCELLED" },
+        include: { shop: { select: { name: true } } },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "CANCEL_INVOICE",
+        target: `${inv.shop?.name || inv.shopNameSnapshot || "Toko"} (${inv.invoiceCode})`,
+        details: `Paket ${inv.plan} · Rp ${inv.amount.toLocaleString("id-ID")}`,
       });
       return NextResponse.json({
         ok: true,
@@ -258,7 +280,15 @@ export async function PATCH(req: Request) {
 
       return NextResponse.json({
         ok: true,
-        message: `Paket ${planDef.name} berhasil diaktifkan untuk ${shop.name}.`,
+        message: await (async () => {
+          await recordAdminAudit({
+            adminEmail: admin.email,
+            action: "ACTIVATE_PLAN",
+            target: `${shop.name} (/s/${shop.shopCode})`,
+            details: `Aktifkan paket ${planDef.name} (Rp ${planDef.price.toLocaleString("id-ID")})`,
+          });
+          return `Paket ${planDef.name} berhasil diaktifkan untuk ${shop.name}.`;
+        })(),
       });
     }
 
@@ -280,6 +310,12 @@ export async function PATCH(req: Request) {
           planExpiresAt: newExpiresAt,
         },
       });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "EXTEND_DAYS",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: `Perpanjang masa aktif +${days} hari`,
+      });
       return NextResponse.json({
         ok: true,
         message: `Masa aktif ${shop.name} diperpanjang +${days} hari.`,
@@ -300,6 +336,12 @@ export async function PATCH(req: Request) {
         where: { id: shopId },
         data: { passwordHash: hash },
       });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "RESET_PASSWORD",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: `Reset kata sandi akun ${shop.email}`,
+      });
       return NextResponse.json({
         ok: true,
         message: `Kata sandi untuk ${shop.name} (${shop.email}) berhasil diatur ulang.`,
@@ -312,6 +354,12 @@ export async function PATCH(req: Request) {
       const shop = await prisma.shop.update({
         where: { id: shopId },
         data: { agentKey: newKey },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "REGENERATE_AGENT_KEY",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: "Generate ulang Agent Key",
       });
       return NextResponse.json({
         ok: true,
@@ -330,6 +378,12 @@ export async function PATCH(req: Request) {
         );
       }
       await setShopSession(shop.id);
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "IMPERSONATE_SHOP",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: "Buka sesi dashboard toko untuk bantuan teknis",
+      });
       return NextResponse.json({
         ok: true,
         redirectUrl: "/dashboard",
@@ -340,12 +394,18 @@ export async function PATCH(req: Request) {
     // 8. Suspend / Expire a Shop
     if (action === "SUSPEND_SHOP" && shopId) {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      await prisma.shop.update({
+      const shop = await prisma.shop.update({
         where: { id: shopId },
         data: {
           planStatus: "EXPIRED",
           planExpiresAt: yesterday,
         },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "SUSPEND_SHOP",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: "Nonaktifkan langganan toko",
       });
       return NextResponse.json({
         ok: true,
@@ -391,6 +451,13 @@ export async function PATCH(req: Request) {
 
       await prisma.shop.delete({ where: { id: shopId } });
 
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "DELETE_SHOP",
+        target: `${targetShop.name} (${targetShop.shopCode})`,
+        details: `${paidInvCount.count} invoice & ${paidJobCount.count} job lunas dipertahankan`,
+      });
+
       return NextResponse.json({
         ok: true,
         message: `Akun toko ${targetShop.name} (${targetShop.shopCode}) dihapus. ${paidInvCount.count} invoice lunas & ${paidJobCount.count} transaksi cetak lunas tetap disimpan di pembukuan.`,
@@ -399,9 +466,15 @@ export async function PATCH(req: Request) {
 
     // 10. Update or Delete Demo Request
     if (action === "UPDATE_DEMO_STATUS" && demoId && demoStatus) {
-      await prisma.demoRequest.update({
+      const d = await prisma.demoRequest.update({
         where: { id: demoId },
         data: { status: String(demoStatus) },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "UPDATE_DEMO_STATUS",
+        target: d.shopName,
+        details: `Status diubah ke ${demoStatus}`,
       });
       return NextResponse.json({
         ok: true,
@@ -410,7 +483,13 @@ export async function PATCH(req: Request) {
     }
 
     if (action === "DELETE_DEMO" && demoId) {
-      await prisma.demoRequest.delete({ where: { id: demoId } });
+      const d = await prisma.demoRequest.delete({ where: { id: demoId } });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "DELETE_DEMO",
+        target: d.shopName,
+        details: `Hapus prospek ${d.name} (${d.whatsapp})`,
+      });
       return NextResponse.json({
         ok: true,
         message: "Data permintaan demo dihapus.",
@@ -465,6 +544,12 @@ export async function PATCH(req: Request) {
           phone: body.phone ? String(body.phone).trim().slice(0, 20) : shop.phone,
         },
       });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "UPDATE_SHOP_PROFILE",
+        target: `${updated.name} (/s/${updated.shopCode})`,
+        details: `Slug /s/${updated.shopCode} · WA ${updated.phone}`,
+      });
       return NextResponse.json({
         ok: true,
         message: `Profil ${updated.name} (/s/${updated.shopCode}) diperbarui.`,
@@ -474,6 +559,12 @@ export async function PATCH(req: Request) {
     // 12. Global cleanup of abandoned pending print jobs (> 30 min)
     if (action === "CLEANUP_STALE_JOBS") {
       const cleaned = await expireStalePendingJobs();
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "CLEANUP_STALE_JOBS",
+        target: "global",
+        details: `${cleaned} antrean >30m dibatalkan & file dihapus`,
+      });
       return NextResponse.json({
         ok: true,
         cleaned,
@@ -497,6 +588,12 @@ export async function PATCH(req: Request) {
       await prisma.shop.update({
         where: { id: shop.id },
         data: { hasListenerAddon: nextVal },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "TOGGLE_LISTENER_ADDON",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: nextVal ? "Aktifkan APK Listener" : "Nonaktifkan APK Listener",
       });
       return NextResponse.json({
         ok: true,
@@ -524,6 +621,12 @@ export async function PATCH(req: Request) {
         where: { id: shop.id },
         data: { extraPrinterSlots: nextSlots },
       });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "SET_EXTRA_PRINTER_SLOTS",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: `Slot tambahan diatur menjadi +${nextSlots}`,
+      });
       return NextResponse.json({
         ok: true,
         extraPrinterSlots: nextSlots,
@@ -544,6 +647,12 @@ export async function PATCH(req: Request) {
       await prisma.shop.update({
         where: { id: shop.id },
         data: { showInDirectory: nextVal },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "TOGGLE_DIRECTORY_VISIBILITY",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: nextVal ? "Tampilkan di Direktori" : "Sembunyikan dari Direktori",
       });
       return NextResponse.json({
         ok: true,
@@ -571,6 +680,12 @@ export async function PATCH(req: Request) {
           ...(nextVal ? { showInDirectory: true } : {}),
         },
       });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "TOGGLE_FEATURED_PARTNER",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: nextVal ? "Pin Unggulan Beranda" : "Lepas Pin Unggulan",
+      });
       return NextResponse.json({
         ok: true,
         isFeaturedPartner: nextVal,
@@ -593,6 +708,12 @@ export async function PATCH(req: Request) {
       await prisma.shop.update({
         where: { id: shop.id },
         data: { isTestShop: nextVal },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "TOGGLE_TEST_SHOP",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: nextVal ? "Aktifkan Mode Testing" : "Nonaktifkan Mode Testing",
       });
       return NextResponse.json({
         ok: true,
@@ -679,6 +800,15 @@ export async function PATCH(req: Request) {
       const hasCoords =
         updated.latitude != null && updated.longitude != null;
 
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "UPDATE_SHOP_LOCATION",
+        target: `${updated.name} (/s/${updated.shopCode})`,
+        details: hasCoords
+          ? `${updated.city || "-"} (${updated.latitude?.toFixed(4)}, ${updated.longitude?.toFixed(4)})`
+          : `Kota: ${updated.city || "-"}`,
+      });
+
       return NextResponse.json({
         ok: true,
         latitude: updated.latitude,
@@ -686,6 +816,162 @@ export async function PATCH(req: Request) {
         message: hasCoords
           ? `Lokasi & koordinat peta ${updated.name} diperbarui (${updated.latitude?.toFixed(5)}, ${updated.longitude?.toFixed(5)}).`
           : `Info lokasi ${updated.name} diperbarui.`,
+      });
+    }
+
+    // 19. Create Manual SaaS Invoice (optionally mark PAID & activate plan immediately)
+    if (action === "CREATE_MANUAL_INVOICE") {
+      if (!shopId) {
+        return NextResponse.json(
+          { error: "Pilih toko mitra terlebih dahulu." },
+          { status: 400 }
+        );
+      }
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+
+      const planCode = String(plan || "PRO").trim().toUpperCase();
+      const planDef = getPlanDef(planCode);
+      const rawAmount =
+        body.amount !== undefined && body.amount !== ""
+          ? Number(body.amount)
+          : planDef.price;
+      const finalAmount = Math.round(rawAmount);
+
+      if (!Number.isFinite(finalAmount) || finalAmount <= 0 || finalAmount > 50_000_000) {
+        return NextResponse.json(
+          { error: "Nominal tagihan harus lebih besar dari Rp 0." },
+          { status: 400 }
+        );
+      }
+
+      const markPaid = Boolean(body.markPaid);
+      const invoiceCode = generateInvoiceCode();
+
+      if (markPaid) {
+        const fulfillment = buildShopUpdateForPaidInvoice(planDef.id, shop);
+        await prisma.$transaction([
+          prisma.subscriptionInvoice.create({
+            data: {
+              invoiceCode,
+              shopId: shop.id,
+              plan: planDef.id,
+              amount: finalAmount,
+              durationDays: planDef.durationDays,
+              paymentProvider: "MANUAL_ADMIN",
+              status: "PAID",
+              paidAt: new Date(),
+            },
+          }),
+          prisma.shop.update({
+            where: { id: shop.id },
+            data: fulfillment.data,
+          }),
+        ]);
+        await rewardReferrerIfEligible(shop.id, planDef.id).catch(() => null);
+      } else {
+        await prisma.subscriptionInvoice.create({
+          data: {
+            invoiceCode,
+            shopId: shop.id,
+            plan: planDef.id,
+            amount: finalAmount,
+            durationDays: planDef.durationDays,
+            paymentProvider: "MANUAL_ADMIN",
+            status: "PENDING",
+          },
+        });
+      }
+
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "CREATE_MANUAL_INVOICE",
+        target: `${shop.name} (${invoiceCode})`,
+        details: `Paket ${planDef.id} · Rp ${finalAmount.toLocaleString("id-ID")} · ${
+          markPaid ? "Lunas & Aktif" : "Menunggu Bayar"
+        }`,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        message: markPaid
+          ? `Tagihan ${invoiceCode} dicatat LUNAS dan Paket ${planDef.name} aktif untuk ${shop.name}.`
+          : `Tagihan manual ${invoiceCode} dibuat (Menunggu bayar) untuk ${shop.name}.`,
+      });
+    }
+
+    // 20. Save Global Broadcast Banner to all Shop Dashboards
+    if (action === "SAVE_BROADCAST") {
+      const active = Boolean(body.active);
+      const rawLevel = String(body.level || "INFO").trim().toUpperCase();
+      const level = ["INFO", "WARNING", "PROMO"].includes(rawLevel)
+        ? rawLevel
+        : "INFO";
+      const title = String(body.title || "").trim().slice(0, 120);
+      const message = String(body.message || "").trim().slice(0, 500);
+      const linkUrl = String(body.linkUrl || "").trim().slice(0, 240);
+      const linkLabel = String(body.linkLabel || "").trim().slice(0, 40);
+
+      if (
+        linkUrl &&
+        !(
+          (linkUrl.startsWith("/") && !linkUrl.startsWith("//")) ||
+          linkUrl.startsWith("https://")
+        )
+      ) {
+        return NextResponse.json(
+          { error: "URL tautan broadcast harus diawali / atau https://" },
+          { status: 400 }
+        );
+      }
+
+      if (active && !title && !message) {
+        return NextResponse.json(
+          { error: "Isi judul atau isi pengumuman sebelum mengaktifkan broadcast." },
+          { status: 400 }
+        );
+      }
+
+      await prisma.platformBroadcast.upsert({
+        where: { id: "global" },
+        create: {
+          id: "global",
+          active,
+          level,
+          title,
+          message,
+          linkUrl,
+          linkLabel,
+          updatedBy: admin.email,
+        },
+        update: {
+          active,
+          level,
+          title,
+          message,
+          linkUrl,
+          linkLabel,
+          updatedBy: admin.email,
+        },
+      });
+
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "UPDATE_BROADCAST",
+        target: "global",
+        details: `${active ? "AKTIF" : "NONAKTIF"} [${level}] ${title || message.slice(0, 60)}`,
+      });
+
+      return NextResponse.json({
+        ok: true,
+        message: active
+          ? "Pengumuman global diaktifkan dan langsung tampil di Dashboard seluruh mitra."
+          : "Pengumuman global dimatikan.",
       });
     }
 

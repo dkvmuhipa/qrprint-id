@@ -970,3 +970,181 @@ export function CreateShopModal({
     </div>
   );
 }
+
+const MANUAL_INVOICE_PLAN_PRICES: Record<string, number> = {
+  BULANAN: 79000,
+  PRO: 449000,
+  PREMIUM: 749000,
+};
+
+interface CreateManualInvoiceModalProps {
+  shops: AdminShopRow[];
+  creating: boolean;
+  onClose: () => void;
+  onSubmit: (payload: {
+    shopId: string;
+    plan: string;
+    amount: number;
+    markPaid: boolean;
+  }) => Promise<void>;
+}
+
+export function CreateManualInvoiceModal({
+  shops,
+  creating,
+  onClose,
+  onSubmit,
+}: CreateManualInvoiceModalProps) {
+  const [shopId, setShopId] = useState(shops[0]?.id || "");
+  const [plan, setPlan] = useState("PRO");
+  const [amount, setAmount] = useState(String(MANUAL_INVOICE_PLAN_PRICES.PRO));
+  const [markPaid, setMarkPaid] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  function handlePlanChange(nextPlan: string) {
+    setPlan(nextPlan);
+    const defaultPrice = MANUAL_INVOICE_PLAN_PRICES[nextPlan];
+    if (defaultPrice) {
+      setAmount(String(defaultPrice));
+    }
+  }
+
+  async function handleFormSubmit(e: FormEvent) {
+    e.preventDefault();
+    const numericAmount = Math.round(Number(amount));
+    if (!shopId) {
+      setError("Pilih toko mitra terlebih dahulu.");
+      return;
+    }
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      setError("Nominal tagihan harus lebih besar dari Rp 0.");
+      return;
+    }
+    setError(null);
+    await onSubmit({
+      shopId,
+      plan,
+      amount: numericAmount,
+      markPaid,
+    });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+      <div className="relative w-full max-w-md rounded-2xl border border-[#171717]/10 bg-white p-6 shadow-2xl">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Tutup dialog"
+          className="absolute top-4 right-4 cursor-pointer rounded-lg p-1.5 text-[#737373] hover:bg-[#f4f4f5] hover:text-[#171717]"
+        >
+          <X className="h-4 w-4" strokeWidth={1.5} />
+        </button>
+
+        <p className="font-mono-num text-xs text-[#d9381e]">
+          Penagihan manual admin
+        </p>
+        <h2 className="mt-1 text-lg font-medium text-[#171717]">
+          Buat tagihan SaaS untuk mitra
+        </h2>
+
+        <form onSubmit={handleFormSubmit} className="mt-4 space-y-3">
+          {error && (
+            <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3 text-xs font-medium text-[#dc2626]">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="mb-1 block text-xs text-[#525252]">
+              Pilih toko mitra
+            </label>
+            <select
+              required
+              value={shopId}
+              onChange={(e) => setShopId(e.target.value)}
+              className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            >
+              {shops.length === 0 ? (
+                <option value="">Belum ada toko</option>
+              ) : (
+                shops.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} (/s/{s.shopCode}) · {s.plan}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-[#525252]">
+              Paket langganan
+            </label>
+            <select
+              value={plan}
+              onChange={(e) => handlePlanChange(e.target.value)}
+              className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            >
+              <option value="BULANAN">Bulanan (Rp 79.000 · 30 hari)</option>
+              <option value="PRO">Pro Tahunan (Rp 449.000 · 365 hari)</option>
+              <option value="PREMIUM">
+                Premium Tahunan (Rp 749.000 · 365 hari)
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-[#525252]">
+              Nominal tagihan (Rp) — bisa disesuaikan jika ada diskon
+            </label>
+            <input
+              required
+              type="number"
+              min={1000}
+              step={500}
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[#16a34a]/25 bg-[#f0fdf4] p-3 text-xs">
+            <input
+              type="checkbox"
+              checked={markPaid}
+              onChange={(e) => setMarkPaid(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#15803d]"
+            />
+            <div>
+              <p className="font-medium text-[#15803d]">
+                Langsung tandai LUNAS &amp; aktifkan paket
+              </p>
+              <p className="mt-0.5 text-[11px] text-[#525252]">
+                Centang jika mitra sudah transfer manual dan paket ingin
+                langsung diaktifkan saat ini juga.
+              </p>
+            </div>
+          </label>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 cursor-pointer rounded-lg border border-[#171717]/12 px-4 text-xs text-[#525252] hover:text-[#171717]"
+            >
+              Batal
+            </button>
+            <button
+              disabled={creating || !shopId}
+              type="submit"
+              className="btn-action h-9 cursor-pointer rounded-lg bg-[#d9381e] px-5 text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
+            >
+              {creating ? "Menyimpan..." : "Buat Tagihan"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

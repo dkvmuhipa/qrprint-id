@@ -1,7 +1,102 @@
+import fs from "fs/promises";
+import os from "os";
+import path from "path";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/admin-auth";
 import { prisma } from "@/lib/prisma";
-import { evaluateShopEntitlement, SAAS_PLANS } from "@/lib/plans";
+import {
+  evaluateShopEntitlement,
+  EXTRA_PRINTER_ADDON_PRICE,
+  LISTENER_ADDON_PRICE,
+  PASFOTO_ADDON_PRICE,
+  SAAS_PLANS,
+} from "@/lib/plans";
+
+function resolveSqliteDbPath(): string | null {
+  const dbUrl = (process.env.DATABASE_URL || "").trim();
+  if (!dbUrl.startsWith("file:")) return null;
+  let rel = dbUrl.slice("file:".length);
+  const qIdx = rel.indexOf("?");
+  if (qIdx >= 0) rel = rel.slice(0, qIdx);
+  if (!rel) return null;
+  if (path.isAbsolute(rel)) return rel;
+  return path.resolve(process.cwd(), "prisma", rel);
+}
+
+async function collectServerMetrics() {
+  const uptimeSeconds = Math.floor(process.uptime());
+  const processRssBytes = process.memoryUsage().rss;
+  const totalMemBytes = os.totalmem();
+  const freeMemBytes = os.freemem();
+
+  let dbSizeBytes: number | null = null;
+  try {
+    const primaryDbPath = resolveSqliteDbPath();
+    if (primaryDbPath) {
+      const st = await fs.stat(/*turbopackIgnore: true*/ primaryDbPath).catch(async () => {
+        const dbUrl = (process.env.DATABASE_URL || "").trim();
+        const rel = dbUrl.slice("file:".length).split("?")[0];
+        return fs.stat(
+          /*turbopackIgnore: true*/ path.resolve(/*turbopackIgnore: true*/ process.cwd(), rel)
+        );
+      });
+      dbSizeBytes = st.size;
+    }
+  } catch {
+    dbSizeBytes = null;
+  }
+
+  let uploadsFilesCount = 0;
+  let uploadsSizeBytes = 0;
+  try {
+    const uploadsDir =
+      process.env.UPLOADS_DIR ||
+      (process.env.VERCEL
+        ? path.join(os.tmpdir(), "ngeprint-uploads")
+        : path.join(process.cwd(), "uploads"));
+    const entries = await fs
+      .readdir(uploadsDir, { withFileTypes: true })
+      .catch(() => []);
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      uploadsFilesCount += 1;
+      const st = await fs.stat(path.join(uploadsDir, entry.name)).catch(() => null);
+      if (st) uploadsSizeBytes += st.size;
+    }
+  } catch {
+    // ignore uploads folder inspection failure
+  }
+
+  let diskTotalBytes: number | null = null;
+  let diskFreeBytes: number | null = null;
+  try {
+    if (typeof fs.statfs === "function") {
+      const stFs = await fs.statfs(process.cwd());
+      const bsize = Number(stFs.bsize) || 0;
+      const blocks = Number(stFs.blocks) || 0;
+      const bavail = Number(stFs.bavail ?? stFs.bfree) || 0;
+      if (bsize > 0 && blocks > 0) {
+        diskTotalBytes = bsize * blocks;
+        diskFreeBytes = bsize * bavail;
+      }
+    }
+  } catch {
+    diskTotalBytes = null;
+    diskFreeBytes = null;
+  }
+
+  return {
+    uptimeSeconds,
+    processRssBytes,
+    totalMemBytes,
+    freeMemBytes,
+    dbSizeBytes,
+    uploadsFilesCount,
+    uploadsSizeBytes,
+    diskTotalBytes,
+    diskFreeBytes,
+  };
+}
 
 export async function GET() {
   const admin = await getCurrentAdmin();
@@ -9,44 +104,59 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const [shops, invoices, demos, recentJobs, totalJobsCount] =
-    await Promise.all([
-      prisma.shop.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          _count: {
-            select: { jobs: true, invoices: true },
-          },
-          jobs: {
-            where: { paymentStatus: "PAID" },
-            select: { totalPrice: true },
-          },
+  const [
+    shops,
+    invoices,
+    demos,
+    recentJobs,
+    totalJobsCount,
+    broadcast,
+    auditLogs,
+    metrics,
+  ] = await Promise.all([
+    prisma.shop.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        _count: {
+          select: { jobs: true, invoices: true },
         },
-      }),
-      prisma.subscriptionInvoice.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 100,
-        include: {
-          shop: {
-            select: { shopCode: true, name: true, email: true, phone: true },
-          },
+        jobs: {
+          where: { paymentStatus: "PAID" },
+          select: { totalPrice: true },
         },
-      }),
-      prisma.demoRequest.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 100,
-      }),
-      prisma.printJob.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 60,
-        include: {
-          shop: {
-            select: { shopCode: true, name: true },
-          },
+      },
+    }),
+    prisma.subscriptionInvoice.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 300,
+      include: {
+        shop: {
+          select: { shopCode: true, name: true, email: true, phone: true },
         },
-      }),
-      prisma.printJob.count(),
-    ]);
+      },
+    }),
+    prisma.demoRequest.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 100,
+    }),
+    prisma.printJob.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 150,
+      include: {
+        shop: {
+          select: { shopCode: true, name: true },
+        },
+      },
+    }),
+    prisma.printJob.count(),
+    prisma.platformBroadcast
+      .findUnique({ where: { id: "global" } })
+      .catch(() => null),
+    prisma.adminAuditLog
+      .findMany({ orderBy: { createdAt: "desc" }, take: 80 })
+      .catch(() => []),
+    collectServerMetrics(),
+  ]);
 
   const enrichedShops = shops.map((s) => {
     const entitlement = evaluateShopEntitlement({
@@ -85,6 +195,7 @@ export async function GET() {
       showInDirectory: Boolean(s.showInDirectory),
       isFeaturedPartner: Boolean(s.isFeaturedPartner),
       hasListenerAddon: s.hasListenerAddon,
+      hasPasFotoAddon: Boolean(s.hasPasFotoAddon),
       extraPrinterSlots: s.extraPrinterSlots,
       daysLeft: entitlement.daysLeft,
       hoursLeft: entitlement.hoursLeft,
@@ -117,14 +228,28 @@ export async function GET() {
     0
   );
 
-  // Estimate MRR (Monthly Recurring Revenue) from active paid shops (excluding internal test shops)
+  // Estimate MRR (Monthly Recurring Revenue) from active paid shops using SAAS_PLANS (excluding internal test shops)
   const estimatedMrr = enrichedShops
     .filter((s) => !s.isTestShop && s.plan !== "DEMO" && s.canAcceptJobs)
     .reduce((acc, s) => {
-      if (s.plan === "BULANAN") return acc + 79000;
-      if (s.plan === "PRO") return acc + Math.round(349000 / 12);
-      if (s.plan === "PREMIUM") return acc + Math.round(599000 / 12);
-      return acc;
+      let base = 0;
+      if (s.plan === "BULANAN") base = SAAS_PLANS.BULANAN.price;
+      else if (s.plan === "PRO") base = Math.round(SAAS_PLANS.PRO.price / 12);
+      else if (s.plan === "PREMIUM") {
+        base = Math.round(SAAS_PLANS.PREMIUM.price / 12);
+      }
+
+      let addons = 0;
+      if (s.plan === "BULANAN" && s.hasListenerAddon) {
+        addons += LISTENER_ADDON_PRICE;
+      }
+      if (s.plan !== "PREMIUM") {
+        addons += (s.extraPrinterSlots || 0) * EXTRA_PRINTER_ADDON_PRICE;
+        if (s.hasPasFotoAddon) {
+          addons += PASFOTO_ADDON_PRICE;
+        }
+      }
+      return acc + base + addons;
     }, 0);
 
   const activePaidShops = enrichedShops.filter(
@@ -218,7 +343,10 @@ export async function GET() {
         ? "SQLite (Local Disk)"
         : "PostgreSQL",
       pendingStaleCount,
+      metrics,
     },
+    broadcast,
+    auditLogs,
     stats: {
       totalShops: enrichedShops.length,
       activePaidShops,

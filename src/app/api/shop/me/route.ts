@@ -40,7 +40,7 @@ export async function GET() {
 
   await finalizeDuePrintingJobs(shop.id).catch(() => {});
 
-  const [jobs, totalJobsCount, invoices, allPaidJobs, activeQueue, completedCount] =
+  const [jobs, totalJobsCount, invoices, allPaidJobs, activeQueue, completedCount, broadcast] =
     await Promise.all([
       prisma.printJob.findMany({
         where: { shopId: shop.id },
@@ -81,6 +81,9 @@ export async function GET() {
           printStatus: "COMPLETED",
         },
       }),
+      prisma.platformBroadcast
+        .findUnique({ where: { id: "global" } })
+        .catch(() => null),
     ]);
 
   const entitlement = evaluateShopEntitlement({
@@ -258,6 +261,17 @@ export async function GET() {
       completedCount,
     },
     jobs,
+    broadcast:
+      broadcast?.active && (broadcast.title || broadcast.message)
+        ? {
+            level: broadcast.level,
+            title: broadcast.title,
+            message: broadcast.message,
+            linkUrl: broadcast.linkUrl,
+            linkLabel: broadcast.linkLabel,
+            updatedAt: broadcast.updatedAt.toISOString(),
+          }
+        : null,
   });
 }
 

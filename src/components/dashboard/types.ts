@@ -139,6 +139,15 @@ export interface DashboardStats {
   completedCount: number;
 }
 
+export interface DashboardBroadcast {
+  level: "INFO" | "WARNING" | "PROMO" | string;
+  title: string;
+  message: string;
+  linkUrl: string;
+  linkLabel: string;
+  updatedAt: string;
+}
+
 export interface DashboardData {
   shop: ShopInfo;
   entitlement: EntitlementInfo;
@@ -146,4 +155,5 @@ export interface DashboardData {
   invoices: SubscriptionInvoiceItem[];
   stats: DashboardStats;
   jobs: PrintJobItem[];
+  broadcast?: DashboardBroadcast | null;
 }

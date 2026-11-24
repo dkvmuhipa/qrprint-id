@@ -30,12 +30,74 @@ import {
   Server,
   Plus,
   UserPlus,
+  History,
 } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
 import { downloadCsv, type OverviewData } from "@/components/admin/types";
 import { AdminOverviewTab } from "@/components/admin/AdminOverviewTab";
 import { AdminSystemTab } from "@/components/admin/AdminSystemTab";
-import { CreateShopModal, ShopDetailDrawer } from "@/components/admin/AdminModals";
+import { AdminAuditTab } from "@/components/admin/AdminAuditTab";
+import {
+  CreateManualInvoiceModal,
+  CreateShopModal,
+  ShopDetailDrawer,
+} from "@/components/admin/AdminModals";
+
+type InvoicePeriodFilter = "ALL" | "THIS_MONTH" | "LAST_30D" | "LAST_MONTH" | "CUSTOM";
+type JobPeriodFilter = "ALL" | "TODAY" | "7D" | "30D";
+
+function matchesInvoicePeriod(
+  isoDate: string,
+  period: InvoicePeriodFilter,
+  startDate: string,
+  endDate: string
+): boolean {
+  if (period === "ALL") return true;
+  const d = new Date(isoDate);
+  const now = new Date();
+
+  if (period === "THIS_MONTH") {
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth()
+    );
+  }
+  if (period === "LAST_MONTH") {
+    const ref = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return (
+      d.getFullYear() === ref.getFullYear() &&
+      d.getMonth() === ref.getMonth()
+    );
+  }
+  if (period === "LAST_30D") {
+    return d.getTime() >= now.getTime() - 30 * 24 * 60 * 60 * 1000;
+  }
+  if (period === "CUSTOM") {
+    if (startDate) {
+      const start = new Date(`${startDate}T00:00:00`);
+      if (d < start) return false;
+    }
+    if (endDate) {
+      const end = new Date(`${endDate}T23:59:59.999`);
+      if (d > end) return false;
+    }
+  }
+  return true;
+}
+
+function matchesJobPeriod(isoDate: string, period: JobPeriodFilter): boolean {
+  if (period === "ALL") return true;
+  const d = new Date(isoDate);
+  const now = new Date();
+  if (period === "TODAY") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return d >= start;
+  }
+  if (period === "7D") {
+    return d.getTime() >= now.getTime() - 7 * 24 * 60 * 60 * 1000;
+  }
+  return d.getTime() >= now.getTime() - 30 * 24 * 60 * 60 * 1000;
+}
 
 export default function SuperAdminPage() {
   const [data, setData] = useState<OverviewData | null>(null);
@@ -51,7 +113,7 @@ export default function SuperAdminPage() {
 
   // Panel state
   const [tab, setTab] = useState<
-    "overview" | "shops" | "invoices" | "jobs" | "demos" | "system"
+    "overview" | "shops" | "invoices" | "jobs" | "demos" | "system" | "audit"
   >("overview");
   const [search, setSearch] = useState("");
   const [shopFilter, setShopFilter] = useState<
@@ -60,6 +122,16 @@ export default function SuperAdminPage() {
   const [invoiceFilter, setInvoiceFilter] = useState<
     "ALL" | "PENDING" | "PAID" | "CANCELLED"
   >("ALL");
+  const [invoiceSearch, setInvoiceSearch] = useState("");
+  const [invoicePeriod, setInvoicePeriod] =
+    useState<InvoicePeriodFilter>("ALL");
+  const [invoiceStartDate, setInvoiceStartDate] = useState("");
+  const [invoiceEndDate, setInvoiceEndDate] = useState("");
+  const [manualInvoiceOpen, setManualInvoiceOpen] = useState(false);
+
+  const [jobSearch, setJobSearch] = useState("");
+  const [jobPeriod, setJobPeriod] = useState<JobPeriodFilter>("ALL");
+
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -326,6 +398,7 @@ export default function SuperAdminPage() {
 
   const { stats, planDistribution, dailyTrend, shops, invoices, demos, recentJobs } =
     data;
+  const auditLogs = data.auditLogs || [];
   const pendingInvoicesCount = invoices.filter(
     (i) => i.status === "PENDING"
   ).length;
@@ -348,9 +421,44 @@ export default function SuperAdminPage() {
     );
   });
 
-  const filteredInvoices = invoices.filter((inv) =>
-    invoiceFilter === "ALL" ? true : inv.status === invoiceFilter
-  );
+  const filteredInvoices = invoices.filter((inv) => {
+    if (invoiceFilter !== "ALL" && inv.status !== invoiceFilter) return false;
+    if (
+      !matchesInvoicePeriod(
+        inv.createdAt,
+        invoicePeriod,
+        invoiceStartDate,
+        invoiceEndDate
+      )
+    ) {
+      return false;
+    }
+    const q = invoiceSearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${inv.invoiceCode} ${inv.plan} ${inv.shop.name} ${inv.shop.shopCode} ${inv.shop.email}`
+      .toLowerCase()
+      .includes(q);
+  });
+
+  const filteredInvoicePaidSum = filteredInvoices
+    .filter((i) => i.status === "PAID")
+    .reduce((acc, i) => acc + i.amount, 0);
+  const filteredInvoicePendingSum = filteredInvoices
+    .filter((i) => i.status === "PENDING")
+    .reduce((acc, i) => acc + i.amount, 0);
+
+  const filteredJobs = recentJobs.filter((j) => {
+    if (!matchesJobPeriod(j.createdAt, jobPeriod)) return false;
+    const q = jobSearch.trim().toLowerCase();
+    if (!q) return true;
+    return `${j.jobCode} ${j.shopName} ${j.shopCode} ${j.customerName} ${j.fileName}`
+      .toLowerCase()
+      .includes(q);
+  });
+
+  const filteredJobsPaidGmv = filteredJobs
+    .filter((j) => j.paymentStatus === "PAID")
+    .reduce((acc, j) => acc + j.totalPrice, 0);
 
   const maxTrendRev = Math.max(1, ...dailyTrend.map((d) => d.saasRevenue));
   const maxTrendJobs = Math.max(1, ...dailyTrend.map((d) => d.printJobs));
@@ -393,6 +501,12 @@ export default function SuperAdminPage() {
       icon: Server,
       count: data.system?.pendingStaleCount || undefined,
       highlight: (data.system?.pendingStaleCount || 0) > 0,
+    },
+    {
+      id: "audit" as const,
+      label: "Audit Log",
+      icon: History,
+      count: auditLogs.length || undefined,
     },
   ];
 
@@ -549,6 +663,8 @@ export default function SuperAdminPage() {
                   ? "Monitor aktivitas cetak global"
                   : tab === "demos"
                   ? "Manajemen prospek permintaan demo"
+                  : tab === "audit"
+                  ? "Audit log aksi Super Admin"
                   : "Status sistem & utilitas platform"}
               </h1>
               <p className="mt-0.5 text-xs text-[#737373]">
@@ -607,29 +723,85 @@ export default function SuperAdminPage() {
               )}
 
               {tab === "invoices" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setManualInvoiceOpen(true)}
+                    className="btn-action inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[#d9381e] px-3.5 text-xs font-medium text-white hover:bg-[#be2e17]"
+                  >
+                    <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+                    <span>Buat Tagihan Manual</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadCsv(
+                        `ngeprint-tagihan-saas-${new Date().toISOString().slice(0, 10)}.csv`,
+                        [
+                          "Invoice",
+                          "Kode Toko",
+                          "Nama Toko",
+                          "Paket",
+                          "Nominal (Rp)",
+                          "Metode",
+                          "Status",
+                          "Tanggal",
+                        ],
+                        filteredInvoices.map((i) => [
+                          i.invoiceCode,
+                          i.shop.shopCode,
+                          i.shop.name,
+                          i.plan,
+                          i.amount,
+                          i.paymentProvider,
+                          i.status,
+                          new Date(i.createdAt).toISOString().slice(0, 10),
+                        ])
+                      )
+                    }
+                    className="btn-action inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-[#171717]/10 bg-white px-3 text-xs font-medium text-[#171717] hover:bg-[#f4f4f5]"
+                  >
+                    <Download className="h-3.5 w-3.5 text-[#737373]" strokeWidth={1.5} />
+                    <span>Ekspor CSV</span>
+                  </button>
+                </>
+              )}
+
+              {tab === "jobs" && (
                 <button
+                  type="button"
                   onClick={() =>
                     downloadCsv(
-                      `ngeprint-tagihan-saas-${new Date().toISOString().slice(0, 10)}.csv`,
+                      `ngeprint-aktivitas-cetak-${new Date().toISOString().slice(0, 10)}.csv`,
                       [
-                        "Invoice",
-                        "Kode Toko",
-                        "Nama Toko",
-                        "Paket",
-                        "Nominal (Rp)",
+                        "Kode Order",
+                        "Toko",
+                        "Pelanggan",
+                        "Dokumen",
+                        "Halaman",
+                        "Rangkap",
+                        "Mode",
+                        "Kertas",
+                        "Total (Rp)",
                         "Metode",
-                        "Status",
-                        "Tanggal",
+                        "Bayar",
+                        "Cetak",
+                        "Waktu",
                       ],
-                      invoices.map((i) => [
-                        i.invoiceCode,
-                        i.shop.shopCode,
-                        i.shop.name,
-                        i.plan,
-                        i.amount,
-                        i.paymentProvider,
-                        i.status,
-                        new Date(i.createdAt).toISOString().slice(0, 10),
+                      filteredJobs.map((j) => [
+                        j.jobCode,
+                        `${j.shopName} (${j.shopCode})`,
+                        j.customerName,
+                        j.fileName,
+                        j.pageCount,
+                        j.copies,
+                        j.colorMode,
+                        j.paperSize,
+                        j.totalPrice,
+                        j.paymentMethod,
+                        j.paymentStatus,
+                        j.printStatus,
+                        new Date(j.createdAt).toLocaleString("id-ID"),
                       ])
                     )
                   }
@@ -671,6 +843,7 @@ export default function SuperAdminPage() {
               stats={stats}
               dailyTrend={dailyTrend}
               planDistribution={planDistribution}
+              shops={shops}
               invoices={invoices}
               demos={demos}
               pendingInvoicesCount={pendingInvoicesCount}
@@ -678,6 +851,12 @@ export default function SuperAdminPage() {
               maxTrendJobs={maxTrendJobs}
               busyId={busyId}
               onNavigateTab={setTab}
+              onOpenShop={(shop) => {
+                setSelectedShopId(shop.id);
+                setModalPlan(shop.plan === "DEMO" ? "PRO" : shop.plan);
+                setResetPassInput("");
+                setConfirmDeleteId(null);
+              }}
               onRunAdminAction={runAdminAction}
             />
           )}
@@ -883,25 +1062,98 @@ export default function SuperAdminPage() {
           {/* TAB 3: SAAS INVOICES */}
           {tab === "invoices" && (
             <div className="rounded-xl border border-[#171717]/8 bg-white">
-              <div className="flex flex-wrap items-center gap-1.5 border-b border-[#171717]/8 p-4">
-                {[
-                  { id: "ALL" as const, label: "Semua" },
-                  { id: "PENDING" as const, label: "Menunggu bayar" },
-                  { id: "PAID" as const, label: "Lunas" },
-                  { id: "CANCELLED" as const, label: "Dibatalkan" },
-                ].map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setInvoiceFilter(f.id)}
-                    className={`h-8 cursor-pointer rounded-lg px-3 text-xs font-medium ${
-                      invoiceFilter === f.id
-                        ? "bg-[#171717] text-white"
-                        : "bg-[#f4f4f5] text-[#525252] hover:text-[#171717]"
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+              <div className="space-y-3 border-b border-[#171717]/8 p-4">
+                <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {[
+                      { id: "ALL" as const, label: "Semua Status" },
+                      { id: "PENDING" as const, label: "Menunggu bayar" },
+                      { id: "PAID" as const, label: "Lunas" },
+                      { id: "CANCELLED" as const, label: "Dibatalkan" },
+                    ].map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setInvoiceFilter(f.id)}
+                        className={`h-8 cursor-pointer rounded-lg px-3 text-xs font-medium ${
+                          invoiceFilter === f.id
+                            ? "bg-[#171717] text-white"
+                            : "bg-[#f4f4f5] text-[#525252] hover:text-[#171717]"
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="relative w-full md:w-64">
+                    <Search
+                      className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#737373]"
+                      strokeWidth={1.5}
+                    />
+                    <input
+                      type="search"
+                      value={invoiceSearch}
+                      onChange={(e) => setInvoiceSearch(e.target.value)}
+                      placeholder="Cari invoice, toko, paket..."
+                      className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] pr-3 pl-9 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="text-[#737373]">Periode:</span>
+                    {[
+                      { id: "ALL" as const, label: "Semua" },
+                      { id: "THIS_MONTH" as const, label: "Bulan Ini" },
+                      { id: "LAST_30D" as const, label: "30 Hari" },
+                      { id: "LAST_MONTH" as const, label: "Bulan Lalu" },
+                      { id: "CUSTOM" as const, label: "Rentang Tanggal" },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setInvoicePeriod(p.id)}
+                        className={`h-7 cursor-pointer rounded-md px-2.5 text-[11px] font-medium ${
+                          invoicePeriod === p.id
+                            ? "bg-[#d9381e] text-white"
+                            : "border border-[#171717]/12 bg-[#fafafa] text-[#525252] hover:text-[#171717]"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                    {invoicePeriod === "CUSTOM" && (
+                      <div className="flex flex-wrap items-center gap-1.5 pl-1">
+                        <input
+                          type="date"
+                          aria-label="Tanggal mulai"
+                          value={invoiceStartDate}
+                          onChange={(e) => setInvoiceStartDate(e.target.value)}
+                          className="font-mono-num h-7 rounded-md border border-[#171717]/12 bg-white px-2 text-[11px]"
+                        />
+                        <span className="text-[#737373]">s/d</span>
+                        <input
+                          type="date"
+                          aria-label="Tanggal selesai"
+                          value={invoiceEndDate}
+                          onChange={(e) => setInvoiceEndDate(e.target.value)}
+                          className="font-mono-num h-7 rounded-md border border-[#171717]/12 bg-white px-2 text-[11px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <p className="font-mono-num text-[11px] text-[#525252]">
+                    Lunas{" "}
+                    <strong className="text-[#16a34a]">
+                      {formatRupiah(filteredInvoicePaidSum)}
+                    </strong>{" "}
+                    · Tertunda {formatRupiah(filteredInvoicePendingSum)} ·{" "}
+                    {filteredInvoices.length} tagihan
+                  </p>
+                </div>
               </div>
 
               {filteredInvoices.length === 0 ? (
@@ -1003,13 +1255,59 @@ export default function SuperAdminPage() {
           {/* TAB 4: GLOBAL LIVE PRINT JOBS */}
           {tab === "jobs" && (
             <div className="rounded-xl border border-[#171717]/8 bg-white">
-              {recentJobs.length === 0 ? (
+              <div className="flex flex-col justify-between gap-3 border-b border-[#171717]/8 p-4 md:flex-row md:items-center">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[
+                    { id: "ALL" as const, label: "Semua" },
+                    { id: "TODAY" as const, label: "Hari Ini" },
+                    { id: "7D" as const, label: "7 Hari" },
+                    { id: "30D" as const, label: "30 Hari" },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setJobPeriod(p.id)}
+                      className={`h-8 cursor-pointer rounded-lg px-3 text-xs font-medium ${
+                        jobPeriod === p.id
+                          ? "bg-[#171717] text-white"
+                          : "bg-[#f4f4f5] text-[#525252] hover:text-[#171717]"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="font-mono-num text-[11px] text-[#525252]">
+                    {filteredJobs.length} order · GMV{" "}
+                    <strong className="text-[#171717]">
+                      {formatRupiah(filteredJobsPaidGmv)}
+                    </strong>
+                  </span>
+                  <div className="relative w-full md:w-64">
+                    <Search
+                      className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[#737373]"
+                      strokeWidth={1.5}
+                    />
+                    <input
+                      type="search"
+                      value={jobSearch}
+                      onChange={(e) => setJobSearch(e.target.value)}
+                      placeholder="Cari order, toko, pelanggan..."
+                      className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] pr-3 pl-9 text-xs outline-none focus:border-[#171717] focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {filteredJobs.length === 0 ? (
                 <div className="py-12 text-center text-xs text-[#737373]">
-                  Belum ada transaksi cetak di seluruh mitra toko.
+                  Belum ada transaksi cetak yang sesuai filter.
                 </div>
               ) : (
                 <div className="divide-y divide-[#171717]/8">
-                  {recentJobs.map((j) => (
+                  {filteredJobs.map((j) => (
                     <div
                       key={j.id}
                       className="flex flex-col justify-between gap-3 p-4 sm:flex-row sm:items-center"
@@ -1207,14 +1505,24 @@ export default function SuperAdminPage() {
           {tab === "system" && (
             <AdminSystemTab
               system={data.system}
+              broadcast={data.broadcast}
               busyId={busyId}
               onCleanupStale={() =>
                 runAdminAction("cleanup_stale", {
                   action: "CLEANUP_STALE_JOBS",
                 })
               }
+              onSaveBroadcast={(payload) =>
+                runAdminAction("save_broadcast", {
+                  action: "SAVE_BROADCAST",
+                  ...payload,
+                })
+              }
             />
           )}
+
+          {/* TAB 7: ADMIN AUDIT LOG */}
+          {tab === "audit" && <AdminAuditTab auditLogs={auditLogs} />}
         </div>
       </main>
 
@@ -1245,6 +1553,22 @@ export default function SuperAdminPage() {
           creatingShop={creatingShop}
           onClose={() => setCreateOpen(false)}
           onSubmit={handleCreateShop}
+        />
+      )}
+
+      {/* CREATE MANUAL INVOICE MODAL */}
+      {manualInvoiceOpen && (
+        <CreateManualInvoiceModal
+          shops={shops}
+          creating={busyId === "manual_invoice"}
+          onClose={() => setManualInvoiceOpen(false)}
+          onSubmit={(payload) =>
+            runAdminAction(
+              "manual_invoice",
+              { action: "CREATE_MANUAL_INVOICE", ...payload },
+              () => setManualInvoiceOpen(false)
+            )
+          }
         />
       )}
     </div>

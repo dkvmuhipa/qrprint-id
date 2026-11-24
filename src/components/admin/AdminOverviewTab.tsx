@@ -1,12 +1,19 @@
 "use client";
 
+import { AlertTriangle, Award, MessageCircle, Printer } from "lucide-react";
 import { formatRupiah } from "@/lib/utils";
-import type { AdminInvoiceRow, DemoRow, OverviewData } from "./types";
+import type {
+  AdminInvoiceRow,
+  AdminShopRow,
+  DemoRow,
+  OverviewData,
+} from "./types";
 
 interface AdminOverviewTabProps {
   stats: OverviewData["stats"];
   dailyTrend: OverviewData["dailyTrend"];
   planDistribution: OverviewData["planDistribution"];
+  shops: AdminShopRow[];
   invoices: AdminInvoiceRow[];
   demos: DemoRow[];
   pendingInvoicesCount: number;
@@ -14,8 +21,9 @@ interface AdminOverviewTabProps {
   maxTrendJobs: number;
   busyId: string | null;
   onNavigateTab: (
-    tab: "overview" | "shops" | "invoices" | "jobs" | "demos" | "system"
+    tab: "overview" | "shops" | "invoices" | "jobs" | "demos" | "system" | "audit"
   ) => void;
+  onOpenShop: (shop: AdminShopRow) => void;
   onRunAdminAction: (
     actionKey: string,
     payload: Record<string, unknown>,
@@ -23,10 +31,18 @@ interface AdminOverviewTabProps {
   ) => Promise<void>;
 }
 
+function formatWaNumber(phone: string): string {
+  const d = (phone || "").replace(/\D/g, "");
+  if (d.startsWith("0")) return `62${d.slice(1)}`;
+  if (d.startsWith("62")) return d;
+  return `62${d}`;
+}
+
 export function AdminOverviewTab({
   stats,
   dailyTrend,
   planDistribution,
+  shops,
   invoices,
   demos,
   pendingInvoicesCount,
@@ -34,8 +50,32 @@ export function AdminOverviewTab({
   maxTrendJobs,
   busyId,
   onNavigateTab,
+  onOpenShop,
   onRunAdminAction,
 }: AdminOverviewTabProps) {
+  const retentionAlerts = shops
+    .filter(
+      (s) =>
+        !s.isTestShop &&
+        (!s.canAcceptJobs || (s.daysLeft !== null && s.daysLeft <= 7))
+    )
+    .sort((a, b) => {
+      if (a.canAcceptJobs !== b.canAcceptJobs) {
+        return a.canAcceptJobs ? 1 : -1;
+      }
+      const ad = a.daysLeft ?? -1;
+      const bd = b.daysLeft ?? -1;
+      return ad - bd;
+    });
+
+  const topPartners = shops
+    .filter((s) => !s.isTestShop)
+    .sort((a, b) => {
+      if (b.shopGmv !== a.shopGmv) return b.shopGmv - a.shopGmv;
+      return b.totalJobs - a.totalJobs;
+    })
+    .slice(0, 5);
+
   return (
     <div className="space-y-6">
       {/* Top 4 Financial & SaaS KPIs */}
@@ -180,6 +220,189 @@ export function AdminOverviewTab({
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Retention Radar & Top Active Partners */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="rounded-xl border border-[#171717]/8 bg-white p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle
+                className="h-4 w-4 text-[#b45309]"
+                strokeWidth={1.6}
+              />
+              <h3 className="text-sm font-medium text-[#171717]">
+                Radar retensi (≤ 7 hari / kedaluwarsa · {retentionAlerts.length})
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateTab("shops")}
+              className="cursor-pointer text-xs font-medium text-[#d9381e] hover:underline"
+            >
+              Semua toko →
+            </button>
+          </div>
+
+          {retentionAlerts.length === 0 ? (
+            <p className="mt-3 text-xs text-[#737373]">
+              Semua mitra aktif berada di zona aman (&gt; 7 hari).
+            </p>
+          ) : (
+            <div className="mt-3 divide-y divide-[#171717]/8 text-xs">
+              {retentionAlerts.slice(0, 6).map((shop) => {
+                const waText = encodeURIComponent(
+                  `Halo Kak ${shop.ownerName} (${shop.name}), mengingatkan masa aktif Ngeprint paket ${shop.plan} ${
+                    !shop.canAcceptJobs
+                      ? "sudah berakhir"
+                      : `tinggal ${shop.daysLeft} hari lagi`
+                  }. Yuk perpanjang dari Dashboard → Langganan & Paket agar layanan cetak QR di toko tetap lancar!`
+                );
+                return (
+                  <div
+                    key={shop.id}
+                    className="flex flex-wrap items-center justify-between gap-2 py-2.5"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="truncate font-medium text-[#171717]">
+                          {shop.name}
+                        </p>
+                        <span
+                          className={`rounded px-1.5 py-0.5 font-mono-num text-[10px] font-medium ${
+                            !shop.canAcceptJobs
+                              ? "bg-[#dc2626]/10 text-[#dc2626]"
+                              : "bg-[#b45309]/12 text-[#b45309]"
+                          }`}
+                        >
+                          {!shop.canAcceptJobs
+                            ? `${shop.plan} · Expired`
+                            : `${shop.plan} · H-${shop.daysLeft}`}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-[11px] text-[#737373]">
+                        {shop.ownerName} · WA {shop.phone || "-"}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {shop.phone && (
+                        <a
+                          href={`https://wa.me/${formatWaNumber(shop.phone)}?text=${waText}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex h-7 items-center gap-1 rounded-md border border-[#16a34a]/30 bg-[#16a34a]/10 px-2 text-[11px] font-medium text-[#15803d] hover:bg-[#16a34a]/15"
+                        >
+                          <MessageCircle className="h-3 w-3" strokeWidth={1.6} />
+                          <span>WA</span>
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        disabled={busyId === `ret_${shop.id}`}
+                        onClick={() =>
+                          onRunAdminAction(`ret_${shop.id}`, {
+                            action: "EXTEND_DAYS",
+                            shopId: shop.id,
+                            extraDays: 30,
+                          })
+                        }
+                        title="Perpanjang masa aktif +30 hari"
+                        className="cursor-pointer rounded-md border border-[#171717]/12 bg-[#fafafa] px-2 py-1 font-mono-num text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5] disabled:opacity-50"
+                      >
+                        +30h
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onOpenShop(shop)}
+                        className="cursor-pointer rounded-md bg-[#171717] px-2.5 py-1 text-[11px] font-medium text-white hover:bg-[#171717]/90"
+                      >
+                        Detail
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-[#171717]/8 bg-white p-5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Award
+                className="h-4 w-4 text-[#d9381e]"
+                strokeWidth={1.6}
+              />
+              <h3 className="text-sm font-medium text-[#171717]">
+                Top 5 mitra paling aktif
+              </h3>
+            </div>
+            <button
+              type="button"
+              onClick={() => onNavigateTab("jobs")}
+              className="cursor-pointer text-xs font-medium text-[#d9381e] hover:underline"
+            >
+              Monitor cetak →
+            </button>
+          </div>
+
+          {topPartners.length === 0 ? (
+            <p className="mt-3 text-xs text-[#737373]">
+              Belum ada mitra terdaftar selain akun testing.
+            </p>
+          ) : (
+            <div className="mt-3 divide-y divide-[#171717]/8 text-xs">
+              {topPartners.map((shop, idx) => (
+                <button
+                  key={shop.id}
+                  type="button"
+                  onClick={() => onOpenShop(shop)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-3 py-2.5 text-left transition-colors hover:bg-[#fafafa]"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <span
+                      className={`font-mono-num flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold ${
+                        idx === 0
+                          ? "bg-[#d9381e] text-white"
+                          : "bg-[#f4f4f5] text-[#525252]"
+                      }`}
+                    >
+                      #{idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate font-medium text-[#171717]">
+                          {shop.name}
+                        </p>
+                        {shop.isAgentOnline && (
+                          <span
+                            title="Print Agent Online"
+                            className="inline-flex items-center gap-0.5 text-[10px] text-[#16a34a]"
+                          >
+                            <Printer className="h-3 w-3" strokeWidth={1.6} />
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-mono-num truncate text-[11px] text-[#737373]">
+                        {shop.plan} · /s/{shop.shopCode}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <p className="font-mono-num font-medium text-[#171717]">
+                      {formatRupiah(shop.shopGmv)}
+                    </p>
+                    <p className="font-mono-num text-[11px] text-[#737373]">
+                      {shop.totalJobs} job
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

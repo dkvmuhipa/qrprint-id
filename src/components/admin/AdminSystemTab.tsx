@@ -1,19 +1,64 @@
 "use client";
 
-import { useState } from "react";
-import { Bell, Check, Copy, Database, Download, ExternalLink, Send, Smartphone, Trash2 } from "lucide-react";
-import type { OverviewData } from "./types";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  Bell,
+  Check,
+  Copy,
+  Database,
+  Download,
+  ExternalLink,
+  HardDrive,
+  Megaphone,
+  Send,
+  Server,
+  Smartphone,
+  Trash2,
+} from "lucide-react";
+import type { OverviewData, PlatformBroadcastData } from "./types";
 
 interface AdminSystemTabProps {
   system?: OverviewData["system"];
+  broadcast?: PlatformBroadcastData | null;
   busyId: string | null;
   onCleanupStale: () => void;
+  onSaveBroadcast: (payload: {
+    active: boolean;
+    level: string;
+    title: string;
+    message: string;
+    linkUrl: string;
+    linkLabel: string;
+  }) => Promise<void>;
+}
+
+function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null || !Number.isFinite(bytes)) return "-";
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  if (mb < 1024) return `${mb.toFixed(1)} MB`;
+  const gb = mb / 1024;
+  return `${gb.toFixed(2)} GB`;
+}
+
+function formatUptime(seconds: number | undefined): string {
+  if (!seconds || !Number.isFinite(seconds)) return "-";
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  if (days > 0) return `${days}h ${hours}j`;
+  if (hours > 0) return `${hours}j ${mins}m`;
+  return `${mins}m`;
 }
 
 export function AdminSystemTab({
   system,
+  broadcast,
   busyId,
   onCleanupStale,
+  onSaveBroadcast,
 }: AdminSystemTabProps) {
   const [copied, setCopied] = useState<string | null>(null);
   const [testingAlert, setTestingAlert] = useState(false);
@@ -21,8 +66,39 @@ export function AdminSystemTab({
     ok: boolean;
     text: string;
   } | null>(null);
+
+  const [bcActive, setBcActive] = useState(false);
+  const [bcLevel, setBcLevel] = useState<"INFO" | "PROMO" | "WARNING">("INFO");
+  const [bcTitle, setBcTitle] = useState("");
+  const [bcMessage, setBcMessage] = useState("");
+  const [bcLinkUrl, setBcLinkUrl] = useState("");
+  const [bcLinkLabel, setBcLinkLabel] = useState("");
+
+  useEffect(() => {
+    if (!broadcast) return;
+    setBcActive(Boolean(broadcast.active));
+    setBcLevel(
+      broadcast.level === "PROMO" || broadcast.level === "WARNING"
+        ? broadcast.level
+        : "INFO"
+    );
+    setBcTitle(broadcast.title || "");
+    setBcMessage(broadcast.message || "");
+    setBcLinkUrl(broadcast.linkUrl || "");
+    setBcLinkLabel(broadcast.linkLabel || "");
+  }, [broadcast]);
+
   const appUrl = system?.appUrl || "https://ngeprint.gellona.web.id";
   const listenerKey = system?.platformListenerKey || "";
+  const metrics = system?.metrics;
+  const vpsRamUsedPct =
+    metrics && metrics.totalMemBytes > 0
+      ? Math.round(
+          ((metrics.totalMemBytes - metrics.freeMemBytes) /
+            metrics.totalMemBytes) *
+            100
+        )
+      : null;
 
   async function handleTestTelegramAlert() {
     setTestingAlert(true);
@@ -49,6 +125,18 @@ export function AdminSystemTab({
     } finally {
       setTestingAlert(false);
     }
+  }
+
+  async function handleBroadcastSubmit(e: FormEvent) {
+    e.preventDefault();
+    await onSaveBroadcast({
+      active: bcActive,
+      level: bcLevel,
+      title: bcTitle,
+      message: bcMessage,
+      linkUrl: bcLinkUrl,
+      linkLabel: bcLinkLabel,
+    });
   }
 
   function copyVal(val: string, id: string) {
@@ -105,6 +193,230 @@ export function AdminSystemTab({
         </div>
       </div>
 
+      {/* Live Server & Storage Telemetry */}
+      <div className="rounded-xl border border-[#171717]/8 bg-white p-5">
+        <div className="flex items-center gap-2">
+          <Server className="h-4 w-4 text-[#d9381e]" strokeWidth={1.6} />
+          <h3 className="text-sm font-medium text-[#171717]">
+            Monitor Server &amp; Storage Real-Time
+          </h3>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-3.5">
+            <div className="flex items-center justify-between text-xs text-[#737373]">
+              <span>Ukuran DB SQLite</span>
+              <Database className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </div>
+            <p className="font-mono-num mt-1.5 text-lg font-medium text-[#171717]">
+              {formatBytes(metrics?.dbSizeBytes)}
+            </p>
+            <p className="mt-0.5 text-[11px] text-[#737373]">
+              File database utama
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-3.5">
+            <div className="flex items-center justify-between text-xs text-[#737373]">
+              <span>Folder Uploads</span>
+              <HardDrive className="h-3.5 w-3.5" strokeWidth={1.5} />
+            </div>
+            <p className="font-mono-num mt-1.5 text-lg font-medium text-[#171717]">
+              {metrics ? `${metrics.uploadsFilesCount} file` : "-"}
+            </p>
+            <p className="font-mono-num mt-0.5 text-[11px] text-[#737373]">
+              Total {formatBytes(metrics?.uploadsSizeBytes)} di disk
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-3.5">
+            <p className="text-xs text-[#737373]">Memori Node.js &amp; VPS</p>
+            <p className="font-mono-num mt-1.5 text-lg font-medium text-[#171717]">
+              {formatBytes(metrics?.processRssBytes)}
+            </p>
+            <p className="font-mono-num mt-0.5 text-[11px] text-[#737373]">
+              {vpsRamUsedPct !== null
+                ? `RAM VPS terpakai ${vpsRamUsedPct}% (${formatBytes(metrics?.totalMemBytes)})`
+                : "RSS proses aplikasi"}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-[#171717]/8 bg-[#fafafa] p-3.5">
+            <p className="text-xs text-[#737373]">Ruang Disk &amp; Uptime</p>
+            <p className="font-mono-num mt-1.5 text-lg font-medium text-[#171717]">
+              {metrics?.diskFreeBytes != null
+                ? `${formatBytes(metrics.diskFreeBytes)} bebas`
+                : formatUptime(metrics?.uptimeSeconds)}
+            </p>
+            <p className="font-mono-num mt-0.5 text-[11px] text-[#737373]">
+              Uptime {formatUptime(metrics?.uptimeSeconds)}
+              {metrics?.diskTotalBytes
+                ? ` · Kapasitas ${formatBytes(metrics.diskTotalBytes)}`
+                : ""}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Global Broadcast Banner to Shop Dashboards */}
+      <form
+        onSubmit={handleBroadcastSubmit}
+        className="rounded-xl border border-[#171717]/8 bg-white p-5"
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#d9381e]/10 text-[#d9381e]">
+              <Megaphone className="h-4 w-4" strokeWidth={1.6} />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium text-[#171717]">
+                Broadcast Pengumuman Global ke Dashboard Semua Mitra
+              </h3>
+              <p className="mt-0.5 text-xs text-[#525252]">
+                Tampilkan banner info pembaruan Print Agent/APK Listener, promo
+                perpanjangan, atau info pemeliharaan di bagian atas Dashboard
+                seluruh toko.
+              </p>
+            </div>
+          </div>
+
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 py-1.5 text-xs font-medium text-[#171717]">
+            <input
+              type="checkbox"
+              checked={bcActive}
+              onChange={(e) => setBcActive(e.target.checked)}
+              className="h-4 w-4 accent-[#d9381e]"
+            />
+            <span>{bcActive ? "Aktif Ditampilkan" : "Nonaktif"}</span>
+          </label>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[#737373]">Tipe banner:</span>
+            {(["INFO", "PROMO", "WARNING"] as const).map((lvl) => (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => setBcLevel(lvl)}
+                className={`cursor-pointer rounded-md px-3 py-1 text-xs font-medium ${
+                  bcLevel === lvl
+                    ? lvl === "PROMO"
+                      ? "bg-[#d9381e] text-white"
+                      : lvl === "WARNING"
+                      ? "bg-[#b45309] text-white"
+                      : "bg-[#171717] text-white"
+                    : "border border-[#171717]/12 bg-[#fafafa] text-[#525252] hover:text-[#171717]"
+                }`}
+              >
+                {lvl === "INFO"
+                  ? "Info Sistem"
+                  : lvl === "PROMO"
+                  ? "Promo / Update"
+                  : "Peringatan"}
+              </button>
+            ))}
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs text-[#525252]">
+              Judul pengumuman
+            </label>
+            <input
+              maxLength={120}
+              value={bcTitle}
+              onChange={(e) => setBcTitle(e.target.value)}
+              placeholder="Contoh: Pembaruan Windows Print Agent v2.1 Tersedia"
+              className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-xs text-[#525252]">
+              Isi pesan singkat
+            </label>
+            <textarea
+              rows={2}
+              maxLength={500}
+              value={bcMessage}
+              onChange={(e) => setBcMessage(e.target.value)}
+              placeholder="Tulis pengumuman yang jelas dan ringkas untuk pemilik toko..."
+              className="w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] p-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-[#525252]">
+              Tautan tombol opsional (/panduan atau https://...)
+            </label>
+            <input
+              maxLength={240}
+              value={bcLinkUrl}
+              onChange={(e) => setBcLinkUrl(e.target.value)}
+              placeholder="/panduan"
+              className="font-mono-num h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs text-[#525252]">
+              Label tombol tautan (opsional)
+            </label>
+            <input
+              maxLength={40}
+              value={bcLinkLabel}
+              onChange={(e) => setBcLinkLabel(e.target.value)}
+              placeholder="Lihat Panduan"
+              className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white"
+            />
+          </div>
+        </div>
+
+        {(bcTitle || bcMessage) && (
+          <div
+            className={`mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3.5 py-2.5 text-xs ${
+              bcLevel === "PROMO"
+                ? "border-[#d9381e]/30 bg-[#fff5f3]"
+                : bcLevel === "WARNING"
+                ? "border-[#b45309]/30 bg-[#fffbeb]"
+                : "border-[#171717]/12 bg-[#fdfbf7]"
+            }`}
+          >
+            <div>
+              <span className="font-mono-num text-[10px] font-semibold uppercase text-[#737373]">
+                Pratinjau Banner:
+              </span>
+              {bcTitle && <p className="font-semibold text-[#171717]">{bcTitle}</p>}
+              {bcMessage && <p className="text-[#525252]">{bcMessage}</p>}
+            </div>
+            {bcLinkUrl && (
+              <span className="rounded-md bg-[#171717] px-2.5 py-1 text-[11px] font-medium text-white">
+                {bcLinkLabel || "Lihat Detail"}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-[11px] text-[#737373]">
+            {broadcast?.updatedAt
+              ? `Terakhir diubah oleh ${broadcast.updatedBy || "admin"} · ${new Date(broadcast.updatedAt).toLocaleString("id-ID")}`
+              : "Belum ada broadcast tersimpan."}
+          </p>
+          <button
+            type="submit"
+            disabled={busyId === "save_broadcast"}
+            className="btn-action inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-60"
+          >
+            <Megaphone className="h-3.5 w-3.5" strokeWidth={1.6} />
+            <span>
+              {busyId === "save_broadcast"
+                ? "Menyimpan..."
+                : "Simpan Pengaturan Broadcast"}
+            </span>
+          </button>
+        </div>
+      </form>
+
       {/* Platform SaaS Auto-Approve Listener Card */}
       <div className="rounded-xl border border-[#d9381e]/25 bg-white p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -117,7 +429,12 @@ export function AdminSystemTab({
                 Auto-Lunas Tagihan Langganan SaaS (APK Ngeprint Listener HP Admin)
               </h3>
               <p className="mt-0.5 text-xs leading-relaxed text-[#525252]">
-                Pasang <strong>Ngeprint Listener</strong> di HP yang menerima notifikasi GoPay Merchant <strong>Gellona Indonesia, Digita</strong>, lalu masukkan URL Server &amp; Platform Listener Key di bawah. Setiap kali mitra transfer QRIS langganan, paket &amp; Add-On langsung aktif otomatis 24 jam tanpa klik manual!
+                Pasang aplikasi resmi <strong>Ngeprint Listener</strong> di HP
+                yang menerima notifikasi GoPay Merchant{" "}
+                <strong>Gellona Indonesia, Digita</strong>, lalu masukkan URL
+                Server &amp; Platform Listener Key di bawah. Setiap kali mitra
+                transfer QRIS langganan, paket &amp; Add-On langsung aktif
+                otomatis 24 jam tanpa klik manual!
               </p>
             </div>
           </div>
