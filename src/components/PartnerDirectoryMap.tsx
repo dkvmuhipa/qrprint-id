@@ -289,7 +289,7 @@ export function PartnerDirectoryMap({
   return (
     <div
       id="mitra-map"
-      className="relative overflow-hidden rounded-2xl border border-[#1f1b16]/12 bg-[#fdfbf7]"
+      className="relative isolate z-0 overflow-hidden rounded-2xl border border-[#1f1b16]/12 bg-[#fdfbf7]"
     >
       <div
         ref={containerRef}

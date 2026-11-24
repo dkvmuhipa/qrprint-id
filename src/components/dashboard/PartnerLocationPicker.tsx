@@ -166,7 +166,7 @@ export function PartnerLocationPicker({
   }, [mapReady, shopName, logoDataUrl]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-[#171717]/12 bg-[#ede8df]">
+    <div className="relative isolate z-0 overflow-hidden rounded-xl border border-[#171717]/12 bg-[#ede8df]">
       <div
         ref={containerRef}
         className="h-56 w-full"
