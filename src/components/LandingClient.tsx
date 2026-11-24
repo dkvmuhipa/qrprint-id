@@ -431,8 +431,9 @@ export function LandingClient() {
         </div>
       </div>
 
-      {/* Hero Section — Asymmetric Split with Calm Copy & Real Product Preview */}
-      <section className="mx-auto max-w-6xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 sm:pb-16 lg:pt-20 lg:pb-24">
+      {/* Hero Section — Asymmetric Split with Subtle Warm Paper Dot-Grid */}
+      <div className="bg-paper-grid">
+        <section className="mx-auto max-w-6xl px-4 pt-8 pb-12 sm:px-6 sm:pt-12 sm:pb-16 lg:pt-20 lg:pb-24">
         <div className="grid items-center gap-8 sm:gap-12 lg:grid-cols-12">
           <div className="min-w-0 lg:col-span-6">
             <div key={currentProduct.id} className="animate-tab-in">
@@ -503,7 +504,8 @@ export function LandingClient() {
             <HeroIllustration />
           </div>
         </div>
-      </section>
+        </section>
+      </div>
 
       {/* Capability Strip & Key Numbers */}
       <section className="border-y border-[#1f1b16]/8 bg-[#fdfbf7] py-10">
@@ -633,6 +635,7 @@ export function LandingClient() {
 
       {/* Setup 2 Minutes Guide (#setup) */}
       <section id="setup" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        <RevealOnScroll>
         <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#161513] p-8 text-[#efe9de] sm:p-10">
           <div className="flex flex-col justify-between gap-4 border-b border-[#efe9de]/10 pb-6 md:flex-row md:items-end">
             <div>
@@ -704,10 +707,12 @@ export function LandingClient() {
             </Link>
           </div>
         </div>
+        </RevealOnScroll>
       </section>
 
       {/* Pricing Plans (#harga) */}
       <section id="harga" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        <RevealOnScroll>
         <div className="max-w-2xl">
           <p className="text-xs font-medium text-[#d9381e]">
             Biaya berlangganan tetap
@@ -882,10 +887,12 @@ export function LandingClient() {
             })}
           </div>
         </div>
+        </RevealOnScroll>
       </section>
 
       {/* Privacy by Design (#privasi) */}
       <section id="privasi" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        <RevealOnScroll>
         <div className="rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-8 sm:p-10">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 text-xs font-medium text-[#16a34a]">
@@ -938,11 +945,14 @@ export function LandingClient() {
             })}
           </div>
         </div>
+        </RevealOnScroll>
       </section>
 
       {/* QRIS & Referral Partner Row */}
       <section className="mx-auto max-w-6xl space-y-4 px-6 pb-20">
-        <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 sm:flex-row sm:items-center">
+        <RevealOnScroll>
+        <div className="space-y-4">
+        <div className="card-lift flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6 sm:flex-row sm:items-center">
           <div className="max-w-2xl">
             <p className="text-xs font-medium text-[#d9381e]">
               0% potongan · Langsung ke QRIS toko Anda
@@ -992,10 +1002,13 @@ export function LandingClient() {
             Daftar mitra toko
           </Link>
         </div>
+        </div>
+        </RevealOnScroll>
       </section>
 
       {/* Subscribed Partner Directory (#mitra) */}
       <section id="mitra" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        <RevealOnScroll>
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 text-xs font-medium text-[#d9381e]">
@@ -1115,6 +1128,7 @@ export function LandingClient() {
             </button>
           </div>
         )}
+        </RevealOnScroll>
 
         {showPartnerMap && !loadingPartners && partners.length > 0 && (
           <div className="mt-6">
@@ -1358,6 +1372,7 @@ export function LandingClient() {
 
       {/* FAQ Section (#faq) */}
       <section id="faq" className="mx-auto max-w-6xl px-4 sm:px-6 pb-20">
+        <RevealOnScroll>
         <div className="max-w-2xl">
           <p className="text-xs font-medium text-[#d9381e]">
             Pertanyaan umum
@@ -1375,27 +1390,31 @@ export function LandingClient() {
                 <button
                   type="button"
                   onClick={() => setOpenFaqIdx(isOpen ? null : idx)}
+                  aria-expanded={isOpen}
                   className="flex w-full cursor-pointer items-center justify-between gap-4 px-6 py-4 text-left"
                 >
                   <span className="text-sm font-medium text-[#1f1b16]">
                     {item.q}
                   </span>
                   <ChevronDown
-                    className={`h-4 w-4 shrink-0 text-[#7b7266] transition-transform duration-150 ${
+                    className={`h-4 w-4 shrink-0 text-[#7b7266] transition-transform duration-200 ${
                       isOpen ? "rotate-180 text-[#1f1b16]" : ""
                     }`}
                     strokeWidth={1.5}
                   />
                 </button>
-                {isOpen && (
-                  <div className="px-6 pb-5 text-xs leading-relaxed text-[#5e554a]">
-                    {item.a}
+                <div className="faq-panel" data-open={isOpen ? "true" : "false"}>
+                  <div>
+                    <div className="px-6 pb-5 text-xs leading-relaxed text-[#5e554a]">
+                      {item.a}
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
         </div>
+        </RevealOnScroll>
       </section>
 
       {/* Footer */}

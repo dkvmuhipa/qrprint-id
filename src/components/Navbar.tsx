@@ -1,11 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Menu, X, Printer } from "lucide-react";
 
 export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
   const [open, setOpen] = useState(false);
+  const [scrollPct, setScrollPct] = useState(0);
+
+  useEffect(() => {
+    let rafId = 0;
+    function updateScroll() {
+      const doc = document.documentElement;
+      const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight);
+      const pct = Math.min(
+        100,
+        Math.max(0, (window.scrollY / maxScroll) * 100)
+      );
+      setScrollPct(pct);
+    }
+    function onScroll() {
+      if (rafId) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = 0;
+        updateScroll();
+      });
+    }
+    updateScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (rafId) window.cancelAnimationFrame(rafId);
+    };
+  }, []);
 
   function handleLogoClick(e: React.MouseEvent<HTMLAnchorElement>) {
     setOpen(false);
@@ -175,6 +202,17 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           </div>
         </div>
       )}
+
+      {/* Subtle Vermilion Scroll Reading Progress Bar */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute right-0 bottom-0 left-0 h-[2px] bg-transparent"
+      >
+        <div
+          style={{ width: `${scrollPct}%` }}
+          className="h-full bg-[#d9381e] transition-[width] duration-75 ease-out"
+        />
+      </div>
     </header>
   );
 }

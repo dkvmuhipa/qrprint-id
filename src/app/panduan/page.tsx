@@ -104,7 +104,7 @@ const TROUBLESHOOT = [
 
 export default function PanduanPage() {
   return (
-    <div className="bg-app min-h-screen text-[#1f1b16]">
+    <div className="bg-ambient bg-paper-grid min-h-screen text-[#1f1b16]">
       <header className="sticky top-0 z-30 border-b border-[#1f1b16]/10 bg-[#f7f4ee]/90 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-4 sm:px-6">
           <Link
@@ -153,7 +153,7 @@ export default function PanduanPage() {
             return (
               <div
                 key={step.num}
-                className="rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-6"
+                className="card-lift rounded-2xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5 sm:p-6"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1f1b16] text-[#fdfbf7]">

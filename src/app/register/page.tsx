@@ -144,7 +144,7 @@ function RegisterForm() {
     PLAN_OPTIONS.find((p) => p.id === form.plan) || PLAN_OPTIONS[0];
 
   return (
-    <div className="bg-ambient min-h-screen px-6 py-10">
+    <div className="bg-ambient bg-paper-grid min-h-screen px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-between">
           <Link
