@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock,
   Copy,
+  Download,
   FileText,
   Loader2,
   Printer,
@@ -20,6 +21,7 @@ import {
   estimateClientPrintSeconds,
   playCustomerCompleteFeedback,
 } from "@/lib/client-print-feedback";
+import { downloadCustomerReceiptPng } from "@/lib/customer-receipt-png";
 
 interface TrackedJob {
   jobCode: string;
@@ -55,6 +57,7 @@ function TrackJobContent({
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [printingProgressPct, setPrintingProgressPct] = useState(0);
   const prevPrintStatusRef = useRef<string | null>(null);
 
@@ -359,35 +362,72 @@ function TrackJobContent({
 
           {job.paymentStatus === "PAID" && (
             <div className="mt-5 rounded-xl border border-dashed border-[#1f1b16]/25 bg-[#f7f4ee] p-4 text-xs">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2.5">
                 <div>
                   <p className="font-mono-num text-[10px] tracking-wider text-[#7b7266] uppercase">
                     Bukti Antrean Digital · Lunas
                   </p>
                   <p className="mt-0.5 text-[11px] text-[#5e554a]">
-                    Tunjukkan layar ini saat mengambil hasil cetakan di kasir.
+                    Simpan atau tunjukkan bukti ini saat mengambil hasil cetakan di kasir.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const txt = [
-                      `BUKTI CETAK — ${job.shopName}`,
-                      `Kode Antrean: ${job.jobCode}`,
-                      `File: ${job.fileName}`,
-                      `Rincian: ${job.pageCount} hal (${job.pageRange}) x${job.copies} · ${colorLabel} · ${job.paperSize}${job.duplex ? " · Bolak-balik" : ""}${job.bindingType && job.bindingType !== "NONE" ? ` · ${getBindingLabel(job.bindingType)}` : ""}`,
-                      `Bayar: ${job.paymentMethod} (LUNAS)`,
-                      `Total: ${formatRupiah(job.totalPrice)}`,
-                    ].join("\n");
-                    navigator.clipboard.writeText(txt);
-                    setCopiedReceipt(true);
-                    setTimeout(() => setCopiedReceipt(false), 2000);
-                  }}
-                  className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
-                >
-                  <Copy className="h-3 w-3" strokeWidth={1.5} />
-                  <span>{copiedReceipt ? "Tersalin!" : "Salin Bukti"}</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={downloadingReceipt}
+                    onClick={async () => {
+                      setDownloadingReceipt(true);
+                      try {
+                        await downloadCustomerReceiptPng({
+                          shopName: job.shopName,
+                          jobCode: job.jobCode,
+                          createdAt: job.createdAt,
+                          customerName: job.customerName,
+                          customerNotes: job.customerNotes,
+                          fileName: job.fileName,
+                          pageCount: job.pageCount,
+                          pageRange: job.pageRange,
+                          copies: job.copies,
+                          colorMode: job.colorMode,
+                          paperSize: job.paperSize,
+                          duplex: job.duplex,
+                          bindingType: job.bindingType,
+                          bindingPrice: job.bindingPrice,
+                          paymentMethod: job.paymentMethod,
+                          totalPrice: job.totalPrice,
+                        });
+                      } finally {
+                        setDownloadingReceipt(false);
+                      }
+                    }}
+                    className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-[#1f1b16] px-2.5 text-[11px] font-medium text-[#fdfbf7] hover:bg-[#333] disabled:opacity-60"
+                  >
+                    <Download className="h-3 w-3" strokeWidth={1.6} />
+                    <span>
+                      {downloadingReceipt ? "Menyiapkan..." : "Unduh Bukti"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const txt = [
+                        `BUKTI CETAK — ${job.shopName}`,
+                        `Kode Antrean: ${job.jobCode}`,
+                        `File: ${job.fileName}`,
+                        `Rincian: ${job.pageCount} hal (${job.pageRange}) x${job.copies} · ${colorLabel} · ${job.paperSize}${job.duplex ? " · Bolak-balik" : ""}${job.bindingType && job.bindingType !== "NONE" ? ` · ${getBindingLabel(job.bindingType)}` : ""}`,
+                        `Bayar: ${job.paymentMethod} (LUNAS)`,
+                        `Total: ${formatRupiah(job.totalPrice)}`,
+                      ].join("\n");
+                      navigator.clipboard.writeText(txt);
+                      setCopiedReceipt(true);
+                      setTimeout(() => setCopiedReceipt(false), 2000);
+                    }}
+                    className="inline-flex h-8 shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                  >
+                    <Copy className="h-3 w-3" strokeWidth={1.5} />
+                    <span>{copiedReceipt ? "Tersalin!" : "Salin Bukti"}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -400,6 +400,7 @@ export async function POST(req: Request) {
           paymentStatus: job.paymentStatus,
           printStatus: job.printStatus,
           fileDeletedAt: job.fileDeletedAt,
+          createdAt: job.createdAt,
         },
       },
       { status: 201 }

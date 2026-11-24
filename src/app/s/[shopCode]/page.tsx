@@ -37,6 +37,7 @@ import {
   BookOpen,
   Sparkles,
   Camera,
+  Download,
 } from "lucide-react";
 import {
   calculatePrintPrice,
@@ -56,6 +57,7 @@ import {
   estimateClientPrintSeconds,
   playCustomerCompleteFeedback,
 } from "@/lib/client-print-feedback";
+import { downloadCustomerReceiptPng } from "@/lib/customer-receipt-png";
 
 interface PublicShop {
   shopCode: string;
@@ -109,6 +111,7 @@ interface ActiveJob {
   paymentStatus: string;
   printStatus: string;
   fileDeletedAt: string | null;
+  createdAt?: string;
   qrisName?: string;
 }
 
@@ -169,6 +172,7 @@ function CustomerScanPortalContent({
   const [cancellingOrder, setCancellingOrder] = useState(false);
   const [copiedQrUrl, setCopiedQrUrl] = useState(false);
   const [copiedReceipt, setCopiedReceipt] = useState(false);
+  const [downloadingReceipt, setDownloadingReceipt] = useState(false);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const [recentOrders, setRecentOrders] = useState<
     Array<{
@@ -1390,26 +1394,64 @@ function CustomerScanPortalContent({
                         {activeJob.jobCode}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const txt = [
-                          `BUKTI CETAK — ${shop.name}`,
-                          `Kode Antrean: ${activeJob.jobCode}`,
-                          `File: ${activeJob.fileName}`,
-                          `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : activeJob.colorMode === "AUTO" ? "Otomatis" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}${activeJob.bindingType && activeJob.bindingType !== "NONE" ? ` · ${getBindingLabel(activeJob.bindingType)}` : ""}`,
-                          `Bayar: ${activeJob.paymentMethod} (LUNAS)`,
-                          `Total: ${formatRupiah(activeJob.totalPrice)}`,
-                        ].join("\n");
-                        navigator.clipboard.writeText(txt);
-                        setCopiedReceipt(true);
-                        setTimeout(() => setCopiedReceipt(false), 2000);
-                      }}
-                      className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
-                    >
-                      <Copy className="h-3 w-3" strokeWidth={1.5} />
-                      <span>{copiedReceipt ? "Tersalin!" : "Salin Bukti"}</span>
-                    </button>
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      <button
+                        type="button"
+                        disabled={downloadingReceipt}
+                        onClick={async () => {
+                          setDownloadingReceipt(true);
+                          try {
+                            await downloadCustomerReceiptPng({
+                              shopName: shop.name,
+                              shopAddress: shop.address,
+                              jobCode: activeJob.jobCode,
+                              createdAt: activeJob.createdAt,
+                              customerName: activeJob.customerName,
+                              customerNotes: activeJob.customerNotes,
+                              fileName: activeJob.fileName,
+                              pageCount: activeJob.pageCount,
+                              pageRange: activeJob.pageRange,
+                              copies: activeJob.copies,
+                              colorMode: activeJob.colorMode,
+                              paperSize: activeJob.paperSize,
+                              duplex: activeJob.duplex,
+                              bindingType: activeJob.bindingType,
+                              bindingPrice: activeJob.bindingPrice,
+                              paymentMethod: activeJob.paymentMethod,
+                              totalPrice: activeJob.totalPrice,
+                            });
+                          } finally {
+                            setDownloadingReceipt(false);
+                          }
+                        }}
+                        className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-[#1f1b16] px-2.5 text-[11px] font-medium text-[#fdfbf7] hover:bg-[#333] disabled:opacity-60"
+                      >
+                        <Download className="h-3 w-3" strokeWidth={1.6} />
+                        <span>
+                          {downloadingReceipt ? "Menyiapkan..." : "Unduh Bukti"}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const txt = [
+                            `BUKTI CETAK — ${shop.name}`,
+                            `Kode Antrean: ${activeJob.jobCode}`,
+                            `File: ${activeJob.fileName}`,
+                            `Rincian: ${activeJob.pageCount} hal (${activeJob.pageRange}) x${activeJob.copies} · ${activeJob.colorMode === "COLOR" ? "Warna" : activeJob.colorMode === "AUTO" ? "Otomatis" : "HP"} · ${activeJob.paperSize}${activeJob.duplex ? " · Bolak-balik" : ""}${activeJob.bindingType && activeJob.bindingType !== "NONE" ? ` · ${getBindingLabel(activeJob.bindingType)}` : ""}`,
+                            `Bayar: ${activeJob.paymentMethod} (LUNAS)`,
+                            `Total: ${formatRupiah(activeJob.totalPrice)}`,
+                          ].join("\n");
+                          navigator.clipboard.writeText(txt);
+                          setCopiedReceipt(true);
+                          setTimeout(() => setCopiedReceipt(false), 2000);
+                        }}
+                        className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                      >
+                        <Copy className="h-3 w-3" strokeWidth={1.5} />
+                        <span>{copiedReceipt ? "Tersalin!" : "Salin Bukti"}</span>
+                      </button>
+                    </div>
                   </div>
                   <div className="mt-2.5 space-y-1 text-[11px] text-[#5e554a]">
                     <div className="flex justify-between gap-2">
