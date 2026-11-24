@@ -1058,6 +1058,13 @@ export function LandingClient() {
               Pilih toko mitra aktif di sekitar Anda untuk langsung unggah
               dokumen dan cetak mandiri dari HP.
             </p>
+            <Link
+              href="/mitra"
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[#d9381e] hover:underline"
+            >
+              <span>Buka halaman direktori penuh &amp; filter tarif</span>
+              <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.6} />
+            </Link>
           </div>
           {partners.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">

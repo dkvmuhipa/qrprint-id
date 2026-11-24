@@ -8,7 +8,13 @@ const PLAN_RANK: Record<string, number> = {
   BULANAN: 1,
 };
 
-export async function GET() {
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const rawLimit = Number(searchParams.get("limit"));
+  const limit = Number.isFinite(rawLimit)
+    ? Math.max(1, Math.min(100, Math.floor(rawLimit)))
+    : 24;
+
   try {
     const shops = await prisma.shop.findMany({
       where: {
@@ -101,7 +107,7 @@ export async function GET() {
         if (bHasLogo !== aHasLogo) return bHasLogo - aHasLogo;
         return a._createdMs - b._createdMs;
       })
-      .slice(0, 24)
+      .slice(0, limit)
       .map(({ _rank, _createdMs, ...rest }) => rest);
 
     return NextResponse.json(
