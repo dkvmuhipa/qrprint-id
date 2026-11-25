@@ -921,84 +921,88 @@ function CustomerScanPortalContent({
 
       <main className="mx-auto max-w-xl px-4 pt-5">
         {/* Shop Identity Card */}
-        <div className="rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7] p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <span className="font-mono-num text-xs text-[#7b7266]">
-                {shop.shopCode}
-              </span>
-              <h1 className="mt-1 text-xl font-medium text-[#1f1b16]">
-                {shop.name}
-              </h1>
-              {shop.tagline && (
-                <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
-                  {shop.tagline}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-[#7b7266]">
-                {shop.city ? `${shop.city} · ` : ""}
-                {shop.address}
-                {shop.scheduleLabel ? ` · Jam buka: ${shop.scheduleLabel}` : ""}
-              </p>
-              {(shop.mapsUrl ||
-                (shop.latitude != null && shop.longitude != null) ||
-                shop.phone ||
-                shop.instagramHandle) && (() => {
-                const resolvedMapsHref =
-                  shop.mapsUrl ||
-                  (shop.latitude != null && shop.longitude != null
-                    ? `https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}`
-                    : "");
-                return (
-                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                  {resolvedMapsHref && (
-                    <a
-                      href={resolvedMapsHref}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md border border-[#1f1b16]/12 bg-white px-2 py-1 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
-                    >
-                      <MapPin className="h-3 w-3 text-[#d9381e]" strokeWidth={1.6} />
-                      <span>Lokasi Maps</span>
-                    </a>
-                  )}
-                  {shop.phone && (
-                    <a
-                      href={`https://wa.me/${(() => {
-                        const d = shop.phone.replace(/\D/g, "");
-                        if (d.startsWith("0")) return `62${d.slice(1)}`;
-                        if (d.startsWith("62")) return d;
-                        return `62${d}`;
-                      })()}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md border border-[#16a34a]/25 bg-[#16a34a]/8 px-2 py-1 text-[11px] font-medium text-[#15803d] hover:bg-[#16a34a]/15"
-                    >
-                      <MessageCircle className="h-3 w-3" strokeWidth={1.6} />
-                      <span>WA Toko</span>
-                    </a>
-                  )}
-                  {shop.instagramHandle && (
-                    <span className="font-mono-num rounded-md border border-[#1f1b16]/10 bg-[#f7f4ee] px-2 py-1 text-[11px] text-[#5e554a]">
-                      {shop.instagramHandle}
-                    </span>
-                  )}
-                </div>
-                );
-              })()}
-            </div>
-            {shop.logoDataUrl ? (
+        <div className="overflow-hidden rounded-xl border border-[#1f1b16]/10 bg-[#fdfbf7]">
+          {shop.logoDataUrl && (
+            <div className="flex h-24 w-full items-center justify-center border-b border-[#1f1b16]/8 bg-white px-6 py-3 sm:h-28">
               <img
                 src={shop.logoDataUrl}
                 alt={shop.name}
-                className="h-12 w-12 shrink-0 rounded-xl border border-[#1f1b16]/10 bg-white object-cover"
+                className="max-h-[76px] max-w-[86%] w-auto object-contain sm:max-h-[84px]"
               />
-            ) : (
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1f1b16] text-[#fdfbf7]">
-                <Printer className="h-5 w-5" strokeWidth={1.5} />
+            </div>
+          )}
+          <div className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="font-mono-num text-xs text-[#7b7266]">
+                  {shop.shopCode}
+                </span>
+                <h1 className="mt-1 text-xl font-medium text-[#1f1b16]">
+                  {shop.name}
+                </h1>
+                {shop.tagline && (
+                  <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
+                    {shop.tagline}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-[#7b7266]">
+                  {shop.city ? `${shop.city} · ` : ""}
+                  {shop.address}
+                  {shop.scheduleLabel ? ` · Jam buka: ${shop.scheduleLabel}` : ""}
+                </p>
+                {(shop.mapsUrl ||
+                  (shop.latitude != null && shop.longitude != null) ||
+                  shop.phone ||
+                  shop.instagramHandle) && (() => {
+                  const resolvedMapsHref =
+                    shop.mapsUrl ||
+                    (shop.latitude != null && shop.longitude != null
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${shop.latitude},${shop.longitude}`
+                      : "");
+                  return (
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                    {resolvedMapsHref && (
+                      <a
+                        href={resolvedMapsHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border border-[#1f1b16]/12 bg-white px-2 py-1 text-[11px] font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                      >
+                        <MapPin className="h-3 w-3 text-[#d9381e]" strokeWidth={1.6} />
+                        <span>Lokasi Maps</span>
+                      </a>
+                    )}
+                    {shop.phone && (
+                      <a
+                        href={`https://wa.me/${(() => {
+                          const d = shop.phone.replace(/\D/g, "");
+                          if (d.startsWith("0")) return `62${d.slice(1)}`;
+                          if (d.startsWith("62")) return d;
+                          return `62${d}`;
+                        })()}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 rounded-md border border-[#16a34a]/25 bg-[#16a34a]/8 px-2 py-1 text-[11px] font-medium text-[#15803d] hover:bg-[#16a34a]/15"
+                      >
+                        <MessageCircle className="h-3 w-3" strokeWidth={1.6} />
+                        <span>WA Toko</span>
+                      </a>
+                    )}
+                    {shop.instagramHandle && (
+                      <span className="font-mono-num rounded-md border border-[#1f1b16]/10 bg-[#f7f4ee] px-2 py-1 text-[11px] text-[#5e554a]">
+                        {shop.instagramHandle}
+                      </span>
+                    )}
+                  </div>
+                  );
+                })()}
               </div>
-            )}
-          </div>
+              {!shop.logoDataUrl && (
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1f1b16] text-[#fdfbf7]">
+                  <Printer className="h-5 w-5" strokeWidth={1.5} />
+                </div>
+              )}
+            </div>
 
           <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#1f1b16]/8 pt-3.5">
             <div className="rounded-lg bg-[#f7f4ee] p-2.5">
@@ -1053,6 +1057,7 @@ function CustomerScanPortalContent({
               </span>
             </div>
           )}
+          </div>
         </div>
 
         {/* Internal Test Shop Banner */}

@@ -190,11 +190,31 @@ export function PartnerDirectoryMap({
         p.mapsUrl || buildGoogleMapsDirectionsUrl(lat, lng)
       );
       const shopHref = escapeHtml(`/s/${encodeURIComponent(p.shopCode)}`);
-      const avatarHtml = safeLogo
-        ? `<img src="${safeLogo}" alt="" style="width:34px;height:34px;border-radius:9px;object-fit:cover;border:1px solid rgba(31,27,22,0.12);background:#ffffff;flex-shrink:0;" />`
-        : `<div style="width:34px;height:34px;border-radius:9px;background:#f7f4ee;border:1px solid rgba(31,27,22,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">${buildPrinterBadgeSvg(
-            pinColor
-          )}</div>`;
+      const headerHtml = safeLogo
+        ? `<div style="height:50px;width:100%;display:flex;align-items:center;justify-content:center;background:#ffffff;border:1px solid rgba(31,27,22,0.1);border-radius:9px;padding:4px 10px;margin-bottom:8px;box-sizing:border-box;">
+            <img src="${safeLogo}" alt="" style="max-height:40px;max-width:100%;width:auto;object-fit:contain;display:block;" />
+          </div>
+          <div style="min-width:0;">
+            <div style="font-size:10px;font-weight:600;color:${statusColor};margin-bottom:1px;">${escapeHtml(
+              statusText
+            )}</div>
+            <div style="font-size:13px;font-weight:600;color:#1f1b16;line-height:1.25;">${escapeHtml(
+              p.name
+            )}</div>
+          </div>`
+        : `<div style="display:flex;align-items:center;gap:9px;">
+            <div style="width:34px;height:34px;border-radius:9px;background:#f7f4ee;border:1px solid rgba(31,27,22,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">${buildPrinterBadgeSvg(
+              pinColor
+            )}</div>
+            <div style="min-width:0;">
+              <div style="font-size:10px;font-weight:600;color:${statusColor};margin-bottom:1px;">${escapeHtml(
+                statusText
+              )}</div>
+              <div style="font-size:13px;font-weight:600;color:#1f1b16;line-height:1.25;">${escapeHtml(
+                p.name
+              )}</div>
+            </div>
+          </div>`;
       const distanceHtml =
         typeof p.distanceKm === "number"
           ? `<div style="margin-top:5px;font-size:11px;font-weight:600;color:#2563eb;">📍 ${escapeHtml(
@@ -204,17 +224,7 @@ export function PartnerDirectoryMap({
 
       const popupHtml = `
         <div style="font-family:inherit;">
-          <div style="display:flex;align-items:center;gap:9px;">
-            ${avatarHtml}
-            <div style="min-width:0;">
-              <div style="font-size:10px;font-weight:600;color:${statusColor};margin-bottom:1px;">${escapeHtml(
-        statusText
-      )}</div>
-              <div style="font-size:13px;font-weight:600;color:#1f1b16;line-height:1.25;">${escapeHtml(
-            p.name
-          )}</div>
-            </div>
-          </div>
+          ${headerHtml}
           <div style="margin-top:6px;font-size:11px;color:#5e554a;line-height:1.35;">${escapeHtml(
             p.city ? `${p.city} · ${p.address}` : p.address
           )}</div>

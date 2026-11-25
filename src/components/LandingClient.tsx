@@ -1224,151 +1224,155 @@ export function LandingClient() {
               return (
                 <div
                   key={p.shopCode}
-                  className={`flex flex-col justify-between rounded-2xl border bg-[#fdfbf7] p-5 transition-colors hover:border-[#1f1b16]/25 ${
+                  className={`flex flex-col overflow-hidden rounded-2xl border bg-[#fdfbf7] transition-colors hover:border-[#1f1b16]/25 ${
                     isNearest
                       ? "border-[#2563eb]/40 ring-1 ring-[#2563eb]/15"
                       : "border-[#1f1b16]/10"
                   }`}
                 >
-                  <div>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        {p.logoDataUrl ? (
-                          <img
-                            src={p.logoDataUrl}
-                            alt={p.name}
-                            className="h-12 w-12 shrink-0 rounded-xl border border-[#1f1b16]/10 bg-white object-cover"
-                          />
-                        ) : (
-                          <div className="font-mono-num flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#1f1b16] text-sm font-semibold text-[#fdfbf7]">
-                            {initials || "NP"}
-                          </div>
-                        )}
-                        <div className="min-w-0">
+                  {p.logoDataUrl ? (
+                    <div className="flex h-28 w-full items-center justify-center border-b border-[#1f1b16]/8 bg-white px-5 py-3">
+                      <img
+                        src={p.logoDataUrl}
+                        alt={p.name}
+                        className="max-h-[84px] max-w-[88%] w-auto object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-28 w-full items-center justify-center border-b border-[#1f1b16]/8 bg-[#f3eee5] bg-[radial-gradient(#1f1b1614_1px,transparent_1px)] [background-size:14px_14px] px-5 py-3">
+                      <div className="font-mono-num flex h-12 w-12 items-center justify-center rounded-xl bg-[#1f1b16] text-sm font-semibold text-[#fdfbf7] shadow-xs">
+                        {initials || "NP"}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex flex-1 flex-col justify-between p-5">
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`inline-block rounded px-1.5 py-0.5 font-mono-num text-[10px] font-semibold ${
+                            p.isTestShop
+                              ? "bg-purple-500/12 text-purple-800"
+                              : "bg-[#d9381e]/10 text-[#d9381e]"
+                          }`}
+                        >
+                          {planBadge}
+                        </span>
+
+                        <span
+                          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                            !p.isShopOpen
+                              ? "bg-[#1f1b16]/8 text-[#7b7266]"
+                              : p.isAgentOnline
+                              ? "bg-[#16a34a]/12 text-[#15803d]"
+                              : "bg-[#b45309]/12 text-[#b45309]"
+                          }`}
+                        >
                           <span
-                            className={`inline-block rounded px-1.5 py-0.5 font-mono-num text-[10px] font-semibold ${
-                              p.isTestShop
-                                ? "bg-purple-500/12 text-purple-800"
-                                : "bg-[#d9381e]/10 text-[#d9381e]"
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              !p.isShopOpen
+                                ? "bg-[#7b7266]"
+                                : p.isAgentOnline
+                                ? "bg-[#16a34a]"
+                                : "bg-[#b45309]"
+                            }`}
+                          />
+                          <span>
+                            {!p.isShopOpen
+                              ? "Tutup"
+                              : p.isAgentOnline
+                              ? "Siap Cetak"
+                              : "Buka"}
+                          </span>
+                        </span>
+                      </div>
+
+                      <h3 className="mt-2 truncate text-base font-medium text-[#1f1b16]">
+                        {p.name}
+                      </h3>
+
+                      {p.distanceKm != null && (
+                        <div className="mt-2.5 flex items-center gap-1.5">
+                          <span
+                            className={`font-mono-num inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
+                              isNearest
+                                ? "bg-[#16a34a]/12 text-[#15803d]"
+                                : "bg-[#2563eb]/10 text-[#1d4ed8]"
                             }`}
                           >
-                            {planBadge}
+                            <LocateFixed className="h-3 w-3" strokeWidth={1.8} />
+                            <span>
+                              {isNearest
+                                ? `Terdekat · ${formatDistanceId(p.distanceKm)}`
+                                : `${formatDistanceId(p.distanceKm)} dari Anda`}
+                            </span>
                           </span>
-                          <h3 className="mt-1 truncate text-base font-medium text-[#1f1b16]">
-                            {p.name}
-                          </h3>
                         </div>
-                      </div>
-
-                      <span
-                        className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                          !p.isShopOpen
-                            ? "bg-[#1f1b16]/8 text-[#7b7266]"
-                            : p.isAgentOnline
-                            ? "bg-[#16a34a]/12 text-[#15803d]"
-                            : "bg-[#b45309]/12 text-[#b45309]"
-                        }`}
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 rounded-full ${
-                            !p.isShopOpen
-                              ? "bg-[#7b7266]"
-                              : p.isAgentOnline
-                              ? "bg-[#16a34a]"
-                              : "bg-[#b45309]"
-                          }`}
-                        />
-                        <span>
-                          {!p.isShopOpen
-                            ? "Tutup"
-                            : p.isAgentOnline
-                            ? "Siap Cetak"
-                            : "Buka"}
-                        </span>
-                      </span>
-                    </div>
-
-                    {p.distanceKm != null && (
-                      <div className="mt-2.5 flex items-center gap-1.5">
-                        <span
-                          className={`font-mono-num inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-semibold ${
-                            isNearest
-                              ? "bg-[#16a34a]/12 text-[#15803d]"
-                              : "bg-[#2563eb]/10 text-[#1d4ed8]"
-                          }`}
-                        >
-                          <LocateFixed className="h-3 w-3" strokeWidth={1.8} />
-                          <span>
-                            {isNearest
-                              ? `Terdekat · ${formatDistanceId(p.distanceKm)}`
-                              : `${formatDistanceId(p.distanceKm)} dari Anda`}
-                          </span>
-                        </span>
-                      </div>
-                    )}
-
-                    {p.tagline && (
-                      <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-[#5e554a]">
-                        {p.tagline}
-                      </p>
-                    )}
-
-                    <p className="mt-2.5 text-xs text-[#7b7266]">
-                      {p.city ? `${p.city} · ` : ""}
-                      {p.address}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 border-t border-[#1f1b16]/8 pt-3.5">
-                    <div className="flex items-center justify-between gap-2 font-mono-num text-[11px] text-[#5e554a]">
-                      <span>HP {formatRupiah(p.bwPrice)}/lbr</span>
-                      <span>Warna {formatRupiah(p.colorPrice)}/lbr</span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Link
-                        href={`/s/${p.shopCode}`}
-                        className="btn-action inline-flex h-9 min-w-[140px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f1b16] px-3 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
-                      >
-                        <span>
-                          {isDemoShowcase
-                            ? "Coba Simulasi Cetak"
-                            : "Cetak di Toko Ini"}
-                        </span>
-                        <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
-                      </Link>
-                      {p._hasCoords && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowPartnerMap(true);
-                            setFocusedShopCode(p.shopCode);
-                            document
-                              .getElementById("mitra-map")
-                              ?.scrollIntoView({
-                                behavior: "smooth",
-                                block: "center",
-                              });
-                          }}
-                          title="Lihat titik lokasi toko di peta"
-                          className="inline-flex h-9 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
-                        >
-                          <MapIcon className="h-3.5 w-3.5 text-[#1f1b16]" strokeWidth={1.6} />
-                          <span>Peta</span>
-                        </button>
                       )}
-                      <a
-                        href={mapsHref}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="Buka rute di Google Maps"
-                        className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
-                      >
-                        <MapPin
-                          className="h-3.5 w-3.5 text-[#d9381e]"
-                          strokeWidth={1.6}
-                        />
-                        <span>Rute</span>
-                      </a>
+
+                      {p.tagline && (
+                        <p className="mt-2.5 line-clamp-2 text-xs leading-relaxed text-[#5e554a]">
+                          {p.tagline}
+                        </p>
+                      )}
+
+                      <p className="mt-2 text-xs text-[#7b7266]">
+                        {p.city ? `${p.city} · ` : ""}
+                        {p.address}
+                      </p>
+                    </div>
+
+                    <div className="mt-4 border-t border-[#1f1b16]/8 pt-3.5">
+                      <div className="flex items-center justify-between gap-2 font-mono-num text-[11px] text-[#5e554a]">
+                        <span>HP {formatRupiah(p.bwPrice)}/lbr</span>
+                        <span>Warna {formatRupiah(p.colorPrice)}/lbr</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Link
+                          href={`/s/${p.shopCode}`}
+                          className="btn-action inline-flex h-9 min-w-[140px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#1f1b16] px-3 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
+                        >
+                          <span>
+                            {isDemoShowcase
+                              ? "Coba Simulasi Cetak"
+                              : "Cetak di Toko Ini"}
+                          </span>
+                          <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                        </Link>
+                        {p._hasCoords && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPartnerMap(true);
+                              setFocusedShopCode(p.shopCode);
+                              document
+                                .getElementById("mitra-map")
+                                ?.scrollIntoView({
+                                  behavior: "smooth",
+                                  block: "center",
+                                });
+                            }}
+                            title="Lihat titik lokasi toko di peta"
+                            className="inline-flex h-9 cursor-pointer items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                          >
+                            <MapIcon className="h-3.5 w-3.5 text-[#1f1b16]" strokeWidth={1.6} />
+                            <span>Peta</span>
+                          </button>
+                        )}
+                        <a
+                          href={mapsHref}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Buka rute di Google Maps"
+                          className="inline-flex h-9 items-center justify-center gap-1 rounded-lg border border-[#1f1b16]/15 bg-white px-2.5 text-xs font-medium text-[#1f1b16] hover:bg-[#efe9df]"
+                        >
+                          <MapPin
+                            className="h-3.5 w-3.5 text-[#d9381e]"
+                            strokeWidth={1.6}
+                          />
+                          <span>Rute</span>
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </div>

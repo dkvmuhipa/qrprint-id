@@ -1199,15 +1199,17 @@ function DashboardContent() {
           </div>
 
           <div className="mt-4 rounded-xl border border-[#171717]/8 bg-[#fafafa] p-3">
+            {shop.logoDataUrl && (
+              <div className="mb-2.5 flex h-12 w-full items-center justify-center overflow-hidden rounded-lg border border-[#171717]/8 bg-white px-3 py-1.5">
+                <img
+                  src={shop.logoDataUrl}
+                  alt={shop.name}
+                  className="max-h-full max-w-full w-auto object-contain"
+                />
+              </div>
+            )}
             <div className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
-                {shop.logoDataUrl && (
-                  <img
-                    src={shop.logoDataUrl}
-                    alt={shop.name}
-                    className="h-7 w-7 shrink-0 rounded-md border border-[#171717]/10 bg-white object-cover"
-                  />
-                )}
                 <p className="truncate text-sm font-medium text-[#171717]">
                   {shop.name}
                 </p>
@@ -1336,7 +1338,7 @@ function DashboardContent() {
                 <img
                   src={shop.logoDataUrl}
                   alt={shop.name}
-                  className="h-full w-full bg-white object-cover"
+                  className="h-full w-full bg-white object-contain p-0.5"
                 />
               ) : (
                 <Printer className="h-4 w-4" strokeWidth={1.5} />

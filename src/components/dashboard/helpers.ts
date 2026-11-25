@@ -703,24 +703,44 @@ export async function downloadShopStoryCardPng(params: {
 
   ctx.font = "700 32px system-ui, -apple-system, sans-serif";
   if (logoImg) {
-    const logoSize = 54;
+    const logoBoxH = 54;
+    const padX = 10;
+    const padY = 6;
+    const innerH = logoBoxH - padY * 2;
+    const natW = logoImg.naturalWidth || logoImg.width || innerH;
+    const natH = logoImg.naturalHeight || logoImg.height || innerH;
+    const rawInnerW = Math.round(innerH * (natW / Math.max(1, natH)));
+    const innerW = Math.min(180, Math.max(innerH, rawInnerW));
+    const drawScale = Math.min(
+      innerW / Math.max(1, natW),
+      innerH / Math.max(1, natH)
+    );
+    const drawW = natW * drawScale;
+    const drawH = natH * drawScale;
+    const logoBoxW = innerW + padX * 2;
     const gap = 14;
     const textWidth = ctx.measureText(cleanShopName).width;
-    const totalWidth = logoSize + gap + textWidth;
+    const totalWidth = logoBoxW + gap + textWidth;
     const startX = Math.max(80, (W - totalWidth) / 2);
 
     ctx.save();
     ctx.fillStyle = "#FFFFFF";
     ctx.beginPath();
-    ctx.roundRect(startX, shopRowY - 10, logoSize, logoSize, 12);
+    ctx.roundRect(startX, shopRowY - 10, logoBoxW, logoBoxH, 12);
     ctx.fill();
     ctx.clip();
-    ctx.drawImage(logoImg, startX, shopRowY - 10, logoSize, logoSize);
+    ctx.drawImage(
+      logoImg,
+      startX + (logoBoxW - drawW) / 2,
+      shopRowY - 10 + (logoBoxH - drawH) / 2,
+      drawW,
+      drawH
+    );
     ctx.restore();
 
     ctx.fillStyle = "#FDE68A";
     ctx.textAlign = "left";
-    ctx.fillText(cleanShopName, startX + logoSize + gap, shopRowY + 28);
+    ctx.fillText(cleanShopName, startX + logoBoxW + gap, shopRowY + 28);
     ctx.textAlign = "center";
   } else {
     ctx.fillStyle = "#FDE68A";

@@ -220,27 +220,39 @@ export function SettingsTab({
       });
       URL.revokeObjectURL(objUrl);
 
-      const size = 192;
+      const maxWidth = 640;
+      const maxHeight = 240;
+      const scale = Math.min(1, maxWidth / img.width, maxHeight / img.height);
+      const drawW = Math.max(1, Math.round(img.width * scale));
+      const drawH = Math.max(1, Math.round(img.height * scale));
+
       const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = drawW;
+      canvas.height = drawH;
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Browser tidak mendukung pemrosesan gambar.");
 
-      ctx.clearRect(0, 0, size, size);
-      const scale = Math.min(size / img.width, size / img.height);
-      const drawW = Math.round(img.width * scale);
-      const drawH = Math.round(img.height * scale);
-      const dx = Math.round((size - drawW) / 2);
-      const dy = Math.round((size - drawH) / 2);
-      ctx.drawImage(img, dx, dy, drawW, drawH);
+      ctx.clearRect(0, 0, drawW, drawH);
+      ctx.drawImage(img, 0, 0, drawW, drawH);
 
-      let dataUrl = canvas.toDataURL("image/webp", 0.85);
+      let dataUrl = canvas.toDataURL("image/webp", 0.88);
       if (!dataUrl.startsWith("data:image/webp")) {
         dataUrl = canvas.toDataURL("image/png");
+      } else if (dataUrl.length > 115_000) {
+        dataUrl = canvas.toDataURL("image/webp", 0.72);
       }
+
       if (dataUrl.length > 115_000) {
-        dataUrl = canvas.toDataURL("image/jpeg", 0.78);
+        const jpgCanvas = document.createElement("canvas");
+        jpgCanvas.width = drawW;
+        jpgCanvas.height = drawH;
+        const jpgCtx = jpgCanvas.getContext("2d");
+        if (jpgCtx) {
+          jpgCtx.fillStyle = "#ffffff";
+          jpgCtx.fillRect(0, 0, drawW, drawH);
+          jpgCtx.drawImage(img, 0, 0, drawW, drawH);
+          dataUrl = jpgCanvas.toDataURL("image/jpeg", 0.82);
+        }
       }
       if (dataUrl.length > 115_000) {
         throw new Error("Ukuran logo terlalu besar. Gunakan gambar lain yang lebih ringan.");
@@ -287,13 +299,15 @@ export function SettingsTab({
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 {settingsForm.logoDataUrl ? (
-                  <img
-                    src={settingsForm.logoDataUrl}
-                    alt={settingsForm.name || "Logo toko"}
-                    className="h-16 w-16 shrink-0 rounded-xl border border-[#171717]/12 bg-white object-cover"
-                  />
+                  <div className="flex h-16 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[#171717]/12 bg-white px-2.5 py-1.5">
+                    <img
+                      src={settingsForm.logoDataUrl}
+                      alt={settingsForm.name || "Logo toko"}
+                      className="max-h-full max-w-full w-auto object-contain"
+                    />
+                  </div>
                 ) : (
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-[#171717]/20 bg-white text-[#737373]">
+                  <div className="flex h-16 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed border-[#171717]/20 bg-white text-[#737373]">
                     <Printer className="h-6 w-6" strokeWidth={1.5} />
                   </div>
                 )}
@@ -302,9 +316,9 @@ export function SettingsTab({
                     Logo Mitra Toko
                   </p>
                   <p className="mt-0.5 text-[11px] text-[#737373]">
-                    Tampil di halaman scan QR pelanggan, direktori mitra publik,
-                    dan sidebar dashboard. Otomatis dikompres ke ukuran 192×192
-                    px.
+                    Tampil di header kartu direktori mitra, halaman scan QR
+                    pelanggan, dan sidebar dashboard. Mendukung logo persegi
+                    maupun melebar (otomatis dioptimalkan hingga 640×240 px).
                   </p>
                   {logoError && (
                     <p className="mt-1 text-[11px] font-medium text-[#dc2626]">

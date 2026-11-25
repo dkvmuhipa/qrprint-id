@@ -63,7 +63,7 @@ export function buildPartnerMapPinHtml(opts: {
     : "rgba(31,27,22,0.16)";
 
   const medallionHtml = safeLogo
-    ? `<img src="${safeLogo}" alt="" style="width:28px;height:28px;border-radius:9999px;object-fit:cover;background:#ffffff;border:1.5px solid #ffffff;display:block;box-shadow:0 1px 2px rgba(0,0,0,0.12);" />`
+    ? `<img src="${safeLogo}" alt="" style="width:28px;height:28px;border-radius:9999px;object-fit:contain;padding:2px;box-sizing:border-box;background:#ffffff;border:1.5px solid #ffffff;display:block;box-shadow:0 1px 2px rgba(0,0,0,0.12);" />`
     : `<div style="width:28px;height:28px;border-radius:9999px;background:#fdfbf7;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px rgba(31,27,22,0.08);">
         ${buildPrinterBadgeSvg(pinColor)}
       </div>`;

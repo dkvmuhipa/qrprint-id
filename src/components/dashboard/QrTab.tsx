@@ -522,7 +522,7 @@ export function QrTab({
                       <img
                         src={shop.logoDataUrl}
                         alt={shop.name}
-                        className="h-4 w-4 rounded bg-white object-cover"
+                        className="h-5 max-w-[96px] w-auto rounded bg-white px-1.5 py-0.5 object-contain"
                       />
                     )}
                     <p className="truncate text-[11px] font-bold text-[#FDE68A]">
