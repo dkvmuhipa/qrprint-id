@@ -312,7 +312,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: false,
     allowListener: false,
     allowPasFoto: false,
-    allowHoldPrint: false,
+    allowHoldPrint: true,
     description: "Uji coba langsung di printer toko selama 24 jam",
     features: [
       "Masa aktif 24 jam penuh",
@@ -334,7 +334,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: true,
     allowListener: false,
     allowPasFoto: false,
-    allowHoldPrint: false,
+    allowHoldPrint: true,
     description: "Fleksibel per bulan · Add-On Ngeprint Listener +Rp 25.000/bln",
     features: [
       "Cetak dokumen tanpa batas kuota (30 hari)",
@@ -356,7 +356,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: true,
     allowListener: true,
     allowPasFoto: false,
-    allowHoldPrint: false,
+    allowHoldPrint: true,
     description: "Paket tahunan hemat (setara Rp 37rb/bln) — sudah termasuk Ngeprint Listener",
     features: [
       "Cetak dokumen tanpa batas 1 tahun penuh",
@@ -414,12 +414,11 @@ export function canUseHoldPrint(params: {
   isTestShop?: boolean | null;
 }): boolean {
   if (params.isTestShop) return true;
-  const plan = getPlanDef(params.planId);
   if (params.planExpiresAt) {
     const expMs = new Date(params.planExpiresAt).getTime();
     if (expMs <= Date.now()) return false;
   }
-  return plan.allowHoldPrint || Boolean(params.hasHoldPrintAddon);
+  return true;
 }
 
 export function canUseListener(params: {

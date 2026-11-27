@@ -28,7 +28,6 @@ export interface BillingCartState {
   extraPrinters: number;
   urlChange: boolean;
   pasFoto: boolean;
-  holdPrint: boolean;
 }
 
 interface BillingTabProps {
@@ -102,12 +101,6 @@ export function BillingTab({
     cartRows.push({
       label: "Add-On Generator Grid Pas Foto (30 hari)",
       price: 30000,
-    });
-  }
-  if (cart.holdPrint) {
-    cartRows.push({
-      label: "Add-On Cetak Rahasia / Hold-to-Print (30 hari)",
-      price: 20000,
     });
   }
   const cartTotal = cartRows.reduce((acc, r) => acc + r.price, 0);
@@ -625,43 +618,6 @@ export function BillingTab({
                   : "+ Tambah ke keranjang"}
               </button>
             </div>
-
-            <div className="flex flex-col justify-between rounded-lg border border-[#171717]/8 bg-white p-3.5">
-              <div>
-                <p className="font-medium text-[#171717]">
-                  Cetak Rahasia (Hold-to-Print)
-                </p>
-                <p className="font-mono-num mt-0.5 font-medium text-[#d9381e]">
-                  +Rp 20.000 / 30 hari
-                </p>
-                <p className="mt-1 text-[11px] text-[#737373]">
-                  Tahan dokumen rahasia pelanggan sampai tiba di depan printer
-                  toko. Gratis di paket Premium.
-                </p>
-              </div>
-              <button
-                type="button"
-                disabled={
-                  Boolean(shop.canUseHoldPrint) || cart.planId === "PREMIUM"
-                }
-                onClick={() =>
-                  setCart((prev) => ({ ...prev, holdPrint: !prev.holdPrint }))
-                }
-                className={`btn-action mt-3 h-8 w-full cursor-pointer rounded-lg text-[11px] font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-                  cart.holdPrint
-                    ? "border border-[#16a34a] bg-[#16a34a]/10 text-[#16a34a]"
-                    : "bg-[#171717] text-white hover:bg-[#171717]/90"
-                }`}
-              >
-                {shop.canUseHoldPrint
-                  ? "Sudah aktif"
-                  : cart.planId === "PREMIUM"
-                  ? "Gratis di Premium"
-                  : cart.holdPrint
-                  ? "✓ Di keranjang (hapus)"
-                  : "+ Tambah ke keranjang"}
-              </button>
-            </div>
           </div>
         </div>
 
@@ -687,7 +643,6 @@ export function BillingTab({
                     extraPrinters: 0,
                     urlChange: false,
                     pasFoto: false,
-                    holdPrint: false,
                   })
                 }
                 className="inline-flex cursor-pointer items-center gap-1 text-xs text-[#737373] hover:text-[#dc2626]"
