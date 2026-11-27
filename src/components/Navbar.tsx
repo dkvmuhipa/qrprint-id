@@ -51,67 +51,61 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
         <Link
           href="/"
           onClick={handleLogoClick}
-          className="flex min-w-0 items-center gap-2"
+          className="flex shrink-0 items-center gap-2"
         >
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#1f1b16] text-[#fdfbf7]">
             <Printer className="h-4 w-4" strokeWidth={1.5} />
           </div>
-          <div className="flex min-w-0 items-baseline gap-1.5">
-            <span className="truncate text-base font-semibold tracking-tight text-[#1f1b16]">
+          <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+            <span className="text-base font-semibold tracking-tight text-[#1f1b16]">
               Ngeprint
             </span>
-            <span className="font-mono-num hidden text-xs text-[#7b7266] min-[380px]:inline">
+            <span className="font-mono-num hidden text-xs text-[#7b7266] xl:inline">
               by Gellona
             </span>
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-7 text-sm text-[#5e554a] md:flex">
-          <a
-            href="#fitur"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+        <nav className="hidden items-center gap-4 text-[13px] text-[#5e554a] lg:flex xl:gap-6">
+          <Link
+            href="/#fitur"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
             Perbandingan
-          </a>
-          <a
-            href="#setup"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          </Link>
+          <Link
+            href="/#setup"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
             Cara kerja
-          </a>
-          <a
-            href="#harga"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          </Link>
+          <Link
+            href="/#harga"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
             Harga
-          </a>
-          <a
-            href="#privasi"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          </Link>
+          <Link
+            href="/#mitra"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
-            Privasi
-          </a>
-          <a
-            href="#mitra"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
-          >
-            Mitra toko
-          </a>
+            Mitra
+          </Link>
           <Link
             href="/panduan"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
             Panduan
           </Link>
           <Link
             href="/sekolah"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
             Sekolah &amp; Lab
           </Link>
           <Link
             href="/tools"
-            className="transition-colors duration-150 hover:text-[#1f1b16]"
+            className="whitespace-nowrap transition-colors duration-150 hover:text-[#1f1b16]"
           >
             Alat PDF
           </Link>
@@ -120,14 +114,14 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
           <Link
             href="/login"
-            className="hidden text-sm font-medium text-[#5e554a] transition-colors duration-150 hover:text-[#1f1b16] sm:inline-block"
+            className="hidden whitespace-nowrap text-sm font-medium text-[#5e554a] transition-colors duration-150 hover:text-[#1f1b16] sm:inline-block"
           >
             Masuk toko
           </Link>
 
           <Link
             href="/register"
-            className="btn-action inline-flex h-10 items-center justify-center rounded-lg bg-[#1f1b16] px-3.5 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90 sm:h-9 sm:px-4 sm:text-sm"
+            className="btn-action inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg bg-[#1f1b16] px-3.5 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90 sm:h-9 sm:px-4 sm:text-sm"
           >
             Daftar toko
           </Link>
@@ -135,7 +129,7 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           <button
             onClick={() => setOpen(!open)}
             aria-label="Buka menu navigasi"
-            className="inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#1f1b16]/12 bg-[#fdfbf7] px-2.5 text-xs font-medium text-[#1f1b16] md:hidden"
+            className="inline-flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-[#1f1b16]/12 bg-[#fdfbf7] px-2.5 text-xs font-medium text-[#1f1b16] lg:hidden"
           >
             {open ? (
               <X className="h-4 w-4" strokeWidth={1.5} />
@@ -148,7 +142,7 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
       </div>
 
       {open && (
-        <div className="border-t border-[#1f1b16]/8 bg-[#f7f4ee] px-4 py-4 sm:px-6 md:hidden">
+        <div className="border-t border-[#1f1b16]/8 bg-[#f7f4ee] px-4 py-4 sm:px-6 lg:hidden">
           <div className="flex flex-col gap-1 text-sm text-[#1f1b16]">
             <a
               href="#fitur"
