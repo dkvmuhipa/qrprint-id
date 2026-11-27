@@ -104,6 +104,12 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
             Panduan
           </Link>
           <Link
+            href="/sekolah"
+            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          >
+            Sekolah &amp; Lab
+          </Link>
+          <Link
             href="/tools"
             className="transition-colors duration-150 hover:text-[#1f1b16]"
           >
@@ -185,6 +191,13 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
               className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Panduan pemasangan
+            </Link>
+            <Link
+              href="/sekolah"
+              onClick={() => setOpen(false)}
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
+            >
+              Untuk Sekolah &amp; Lab
             </Link>
             <Link
               href="/tools"
