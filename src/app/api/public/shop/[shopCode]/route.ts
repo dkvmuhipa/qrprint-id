@@ -42,7 +42,8 @@ export async function GET(
     );
   }
 
-  const [totalJobsCount, activeQueueCount, customServices] = await Promise.all([
+  const [totalJobsCount, activeQueueCount, customServices, activeQuotaPinsCount] =
+    await Promise.all([
     prisma.printJob.count({
       where: {
         shopId: shop.id,
@@ -70,6 +71,12 @@ export async function GET(
         price: true,
         unitLabel: true,
         requiresFile: true,
+      },
+    }),
+    prisma.shopQuotaPin.count({
+      where: {
+        shopId: shop.id,
+        isActive: true,
       },
     }),
   ]);
@@ -140,6 +147,7 @@ export async function GET(
         scheduleLabel: openStatus.scheduleLabel,
         activeQueueCount,
         customServices,
+        hasQuotaMode: activeQuotaPinsCount > 0,
       },
     },
     {

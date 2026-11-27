@@ -56,6 +56,7 @@ model Shop {
   jobs              PrintJob[]
   invoices          SubscriptionInvoice[]
   customServices    ShopCustomService[]
+  quotaPins         ShopQuotaPin[]
 }
 
 model PrintJob {
@@ -64,6 +65,8 @@ model PrintJob {
   jobType         String    @default("AUTO_PRINT") // "AUTO_PRINT" | "CUSTOM_SERVICE"
   serviceName     String?
   serviceUnit     String?
+  quotaPinId      String?
+  quotaLabel      String?
   shopId          String
   shop            Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
   customerName    String    @default("Pelanggan")
@@ -134,4 +137,21 @@ model ShopCustomService {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model ShopQuotaPin {
+  id         String    @id @default(cuid())
+  shopId     String
+  shop       Shop      @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  label      String
+  pinCode    String
+  maxPages   Int       @default(200)
+  usedPages  Int       @default(0)
+  allowColor Boolean   @default(true)
+  isActive   Boolean   @default(true)
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([shopId, pinCode])
 }

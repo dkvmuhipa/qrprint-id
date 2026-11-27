@@ -38,6 +38,7 @@ interface TrackedJob {
   jobType?: string;
   serviceName?: string | null;
   serviceUnit?: string | null;
+  quotaLabel?: string | null;
   customerName: string;
   customerNotes?: string | null;
   fileName: string;
@@ -318,7 +319,9 @@ function TrackJobContent({
             <div className="text-right">
               <p className="text-xs text-[#7b7266]">Total biaya</p>
               <p className="font-mono-num mt-0.5 text-xl font-semibold text-[#d9381e]">
-                {formatRupiah(job.totalPrice)}
+                {job.paymentMethod === "QUOTA_PIN"
+                  ? "Rp 0 (Kuota)"
+                  : formatRupiah(job.totalPrice)}
               </p>
               <span
                 className={`mt-1 inline-block rounded px-2 py-0.5 font-mono-num text-[10px] font-semibold ${
@@ -330,7 +333,9 @@ function TrackJobContent({
                 }`}
               >
                 {job.paymentStatus === "PAID"
-                  ? `${job.paymentMethod} · LUNAS`
+                  ? job.paymentMethod === "QUOTA_PIN"
+                    ? `PIN KUOTA · ${job.quotaLabel || "SEKOLAH"}`
+                    : `${job.paymentMethod} · LUNAS`
                   : job.printStatus === "CANCELLED"
                   ? "DIBATALKAN"
                   : "MENUNGGU BAYAR"}

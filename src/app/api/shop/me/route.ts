@@ -113,7 +113,7 @@ export async function GET() {
     totalPagesPrinted += pages;
     if (j.paymentMethod === "QRIS") {
       qrisRevenue += j.totalPrice;
-    } else {
+    } else if (j.paymentMethod === "CASH") {
       cashRevenue += j.totalPrice;
     }
 
@@ -123,7 +123,7 @@ export async function GET() {
       todayPagesPrinted += pages;
       if (j.paymentMethod === "QRIS") {
         todayQrisRevenue += j.totalPrice;
-      } else {
+      } else if (j.paymentMethod === "CASH") {
         todayCashRevenue += j.totalPrice;
       }
     }

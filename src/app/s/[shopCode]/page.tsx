@@ -40,6 +40,7 @@ import {
   Download,
   MapPin,
   MessageCircle,
+  KeyRound,
 } from "lucide-react";
 import {
   calculatePrintPrice,
@@ -101,6 +102,7 @@ interface PublicShop {
   scheduleLabel?: string | null;
   activeQueueCount?: number;
   customServices?: PublicCustomService[];
+  hasQuotaMode?: boolean;
 }
 
 interface ActiveJob {
@@ -108,6 +110,7 @@ interface ActiveJob {
   jobType?: string;
   serviceName?: string | null;
   serviceUnit?: string | null;
+  quotaLabel?: string | null;
   customerName: string;
   customerNotes?: string | null;
   fileName: string;
@@ -171,7 +174,10 @@ function CustomerScanPortalContent({
   const [duplex, setDuplex] = useState(false);
   const [pageRange, setPageRange] = useState("ALL");
   const [bindingType, setBindingType] = useState<BindingType>("NONE");
-  const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "QRIS" | "CASH" | "QUOTA_PIN"
+  >("QRIS");
+  const [quotaPinCode, setQuotaPinCode] = useState("");
   const [holdUntilArrival, setHoldUntilArrival] = useState(false);
   const [releasingHold, setReleasingHold] = useState(false);
   const [previewModal, setPreviewModal] = useState<{
@@ -719,6 +725,12 @@ function CustomerScanPortalContent({
   async function handleUploadAndOrder(e: React.FormEvent) {
     e.preventDefault();
     if (selectedFiles.length === 0 || !shop) return;
+    if (paymentMethod === "QUOTA_PIN" && quotaPinCode.trim().length < 4) {
+      setSubmitError(
+        "Masukkan Kode PIN Kuota kelas/guru (minimal 4 karakter) terlebih dahulu."
+      );
+      return;
+    }
     setSubmitting(true);
     setSubmitError(null);
     try {
@@ -745,6 +757,9 @@ function CustomerScanPortalContent({
       fd.append("pageCount", String(detectedPages));
       fd.append("bindingType", paperSize === "PHOTO_4X6" ? "NONE" : bindingType);
       fd.append("paymentMethod", paymentMethod);
+      if (paymentMethod === "QUOTA_PIN") {
+        fd.append("quotaPinCode", quotaPinCode.trim().toUpperCase());
+      }
       fd.append(
         "holdUntilArrival",
         String(Boolean(shop.allowHoldPrint && holdUntilArrival))
@@ -1660,9 +1675,15 @@ function CustomerScanPortalContent({
                       </span>
                     </div>
                     <div className="flex justify-between gap-2 pt-1 font-medium text-[#1f1b16]">
-                      <span>Total Dibayar ({activeJob.paymentMethod})</span>
+                      <span>
+                        {activeJob.paymentMethod === "QUOTA_PIN"
+                          ? `PIN Kuota (${activeJob.quotaLabel || "Sekolah"})`
+                          : `Total Dibayar (${activeJob.paymentMethod})`}
+                      </span>
                       <span className="font-mono-num text-[#16a34a]">
-                        {formatRupiah(activeJob.totalPrice)}
+                        {activeJob.paymentMethod === "QUOTA_PIN"
+                          ? "Rp 0 (Kuota)"
+                          : formatRupiah(activeJob.totalPrice)}
                       </span>
                     </div>
                     {activeJob.customerNotes && (
@@ -2416,7 +2437,59 @@ function CustomerScanPortalContent({
                     </p>
                   </div>
                 </button>
+                {shop.hasQuotaMode && (
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod("QUOTA_PIN")}
+                    className={`flex cursor-pointer items-start gap-2.5 rounded-xl border p-3 text-left transition-colors min-[380px]:col-span-2 ${
+                      paymentMethod === "QUOTA_PIN"
+                        ? "border-[#16a34a] bg-[#16a34a]/8"
+                        : "border-[#1f1b16]/10 bg-[#f7f4ee]/60"
+                    }`}
+                  >
+                    <KeyRound
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[#16a34a]"
+                      strokeWidth={1.6}
+                    />
+                    <div>
+                      <p className="text-xs font-medium text-[#1f1b16]">
+                        PIN Kuota Sekolah / Lab (Tanpa QRIS)
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-[#7b7266]">
+                        Cetak gratis untuk siswa/guru — langsung potong kuota lembar kelas
+                      </p>
+                    </div>
+                  </button>
+                )}
               </div>
+
+              {paymentMethod === "QUOTA_PIN" && (
+                <div className="mt-3 rounded-xl border border-[#16a34a]/30 bg-[#16a34a]/6 p-3.5">
+                  <label className="mb-1.5 block text-xs font-medium text-[#1f1b16]">
+                    Masukkan Kode PIN Kelas / Guru *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    maxLength={20}
+                    value={quotaPinCode}
+                    onChange={(e) =>
+                      setQuotaPinCode(
+                        e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, "")
+                      )
+                    }
+                    placeholder="Contoh: LAB-AB12"
+                    className="font-mono-num h-10 w-full rounded-lg border border-[#16a34a]/35 bg-white px-3.5 text-sm font-semibold uppercase tracking-wider outline-none focus:border-[#16a34a]"
+                  />
+                  <p className="mt-1.5 text-[11px] text-[#5e554a]">
+                    Memerlukan{" "}
+                    <span className="font-mono-num font-semibold text-[#1f1b16]">
+                      {priceCalc.effectivePages * copies} lembar
+                    </span>{" "}
+                    dari kuota PIN Anda.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Sticky Price Summary & Submit — Fixed cleanly at bottom with safe-area inset */}
@@ -2428,7 +2501,9 @@ function CustomerScanPortalContent({
                     {priceCalc.bindingTotal > 0 ? ` + Jilid` : ""})
                   </p>
                   <p className="font-mono-num mt-0.5 text-lg font-medium text-[#efe9de] sm:text-xl">
-                    {formatRupiah(priceCalc.totalPrice)}
+                    {paymentMethod === "QUOTA_PIN"
+                      ? "Rp 0 (PIN Kuota)"
+                      : formatRupiah(priceCalc.totalPrice)}
                   </p>
                 </div>
                 <button
@@ -2436,7 +2511,9 @@ function CustomerScanPortalContent({
                     !file ||
                     submitting ||
                     shop.canAcceptJobs === false ||
-                    shop.isShopOpen === false
+                    shop.isShopOpen === false ||
+                    (paymentMethod === "QUOTA_PIN" &&
+                      quotaPinCode.trim().length < 4)
                   }
                   type="submit"
                   className="btn-action h-11 shrink-0 cursor-pointer rounded-lg bg-[#d9381e] px-4 text-xs font-medium text-white hover:bg-[#be2e17] disabled:cursor-not-allowed disabled:opacity-50 sm:px-5 sm:text-sm"
@@ -2447,6 +2524,8 @@ function CustomerScanPortalContent({
                     ? "Mengunggah..."
                     : !file
                     ? "Pilih file dulu"
+                    : paymentMethod === "QUOTA_PIN"
+                    ? "Cetak dengan PIN Kuota →"
                     : "Lanjut pembayaran →"}
                 </button>
               </div>

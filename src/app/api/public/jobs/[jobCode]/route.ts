@@ -134,6 +134,7 @@ export async function GET(
         jobType: job.jobType,
         serviceName: job.serviceName,
         serviceUnit: job.serviceUnit,
+        quotaLabel: job.quotaLabel,
         customerName: job.customerName,
         customerNotes: job.customerNotes,
         fileName: job.fileName,

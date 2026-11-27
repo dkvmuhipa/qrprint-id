@@ -436,6 +436,11 @@ export function QueueTab({
                           Layanan Custom · Manual
                         </span>
                       )}
+                      {job.paymentMethod === "QUOTA_PIN" && (
+                        <span className="rounded bg-[#16a34a]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[#15803d]">
+                          PIN Kuota · {job.quotaLabel || "Sekolah"}
+                        </span>
+                      )}
                       <span className="text-[#737373]">·</span>
                       <span
                         className={`inline-flex items-center gap-1.5 font-medium ${
@@ -479,7 +484,9 @@ export function QueueTab({
                       </span>
                       <span className="text-[#737373]">·</span>
                       <span className="font-mono-num text-[#525252]">
-                        {job.paymentMethod}{" "}
+                        {job.paymentMethod === "QUOTA_PIN"
+                          ? "PIN Kuota"
+                          : job.paymentMethod}{" "}
                         {job.paymentStatus === "PAID"
                           ? "(Lunas)"
                           : "(Belum lunas)"}

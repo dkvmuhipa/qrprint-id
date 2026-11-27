@@ -5,6 +5,7 @@ import { Bluetooth, Download, Eye, EyeOff, ImagePlus, Link2, LocateFixed, Lock, 
 import type { EntitlementInfo, PrintJobItem, ShopInfo } from "./types";
 import { PartnerLocationPicker } from "./PartnerLocationPicker";
 import { CustomServicesSection } from "./CustomServicesSection";
+import { QuotaPinsSection } from "./QuotaPinsSection";
 
 export interface SettingsFormState {
   shopCode: string;
@@ -1643,6 +1644,9 @@ export function SettingsTab({
 
       {/* Katalog Jasa Custom Percetakan */}
       <CustomServicesSection />
+
+      {/* Mode Sekolah / Lab Kampus (PIN Kuota Tanpa QRIS) */}
+      <QuotaPinsSection />
 
       {/* Security & Change Password Card */}
       <form

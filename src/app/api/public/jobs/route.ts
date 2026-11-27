@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { prisma } from "@/lib/prisma";
-import { detectVerifiedFileType, saveUploadedFile } from "@/lib/storage";
+import {
+  deleteUploadedFile,
+  detectVerifiedFileType,
+  saveUploadedFile,
+} from "@/lib/storage";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   calculatePrintPrice,
@@ -77,10 +81,19 @@ export async function POST(req: Request) {
     const requestedBindingType = normalizeBindingType(
       String(formData.get("bindingType") || "NONE")
     );
-    const paymentMethod =
-      String(formData.get("paymentMethod") || "QRIS") === "CASH"
+    const paymentMethodRaw = String(
+      formData.get("paymentMethod") || "QRIS"
+    ).toUpperCase();
+    const paymentMethod: "QRIS" | "CASH" | "QUOTA_PIN" =
+      paymentMethodRaw === "CASH"
         ? "CASH"
+        : paymentMethodRaw === "QUOTA_PIN"
+        ? "QUOTA_PIN"
         : "QRIS";
+    const quotaPinCode = String(formData.get("quotaPinCode") || "")
+      .toUpperCase()
+      .replace(/[^A-Z0-9-]/g, "")
+      .slice(0, 20);
     const wantsHold =
       String(formData.get("holdUntilArrival") || "").toLowerCase() === "true";
 
@@ -274,10 +287,98 @@ export async function POST(req: Request) {
     let qrisUrl: string | null = null;
     let qrisString: string | null = null;
     let midtransIsProd = false;
+    let initialPaymentStatus = "PENDING";
+    const effectiveHold =
+      wantsHold &&
+      canUseHoldPrint({
+        planId: shop.plan,
+        planExpiresAt: shop.planExpiresAt,
+        hasHoldPrintAddon: shop.hasHoldPrintAddon,
+        isTestShop: shop.isTestShop,
+      });
+    let initialPrintStatus = "WAITING_PAYMENT";
+    let quotaPinId: string | null = null;
+    let quotaLabel: string | null = null;
 
     let finalTotalPrice = pricing.totalPrice;
 
-    if (paymentMethod === "QRIS") {
+    if (paymentMethod === "QUOTA_PIN") {
+      const requiredPages = Math.max(1, pricing.effectivePages * copies);
+      const pin = quotaPinCode
+        ? await prisma.shopQuotaPin.findFirst({
+            where: {
+              shopId: shop.id,
+              pinCode: quotaPinCode,
+              isActive: true,
+            },
+          })
+        : null;
+
+      if (!quotaPinCode || !pin) {
+        await deleteUploadedFile(storedFilePath).catch(() => {});
+        return NextResponse.json(
+          { error: "Kode PIN Kuota tidak ditemukan atau sedang nonaktif." },
+          { status: 400 }
+        );
+      }
+
+      if (pin.expiresAt && new Date(pin.expiresAt).getTime() < Date.now()) {
+        await deleteUploadedFile(storedFilePath).catch(() => {});
+        return NextResponse.json(
+          { error: "Kode PIN Kuota sudah kedaluwarsa." },
+          { status: 400 }
+        );
+      }
+
+      if (!pin.allowColor && (colorMode === "COLOR" || colorMode === "AUTO")) {
+        await deleteUploadedFile(storedFilePath).catch(() => {});
+        return NextResponse.json(
+          {
+            error:
+              "PIN Kuota ini khusus cetak Hitam Putih (BW). Ubah pilihan warna ke Hitam Putih.",
+          },
+          { status: 400 }
+        );
+      }
+
+      const remaining = Math.max(0, pin.maxPages - pin.usedPages);
+      if (pin.usedPages + requiredPages > pin.maxPages) {
+        await deleteUploadedFile(storedFilePath).catch(() => {});
+        return NextResponse.json(
+          {
+            error: `Sisa kuota PIN ${pin.label} tidak cukup (tersisa ${remaining} lembar, butuh ${requiredPages} lembar).`,
+          },
+          { status: 400 }
+        );
+      }
+
+      const dec = await prisma.shopQuotaPin.updateMany({
+        where: {
+          id: pin.id,
+          isActive: true,
+          usedPages: { lte: pin.maxPages - requiredPages },
+        },
+        data: { usedPages: { increment: requiredPages } },
+      });
+      if (dec.count === 0) {
+        await deleteUploadedFile(storedFilePath).catch(() => {});
+        return NextResponse.json(
+          {
+            error:
+              "Sisa kuota PIN baru saja habis. Hubungi admin lab/sekolah.",
+          },
+          { status: 409 }
+        );
+      }
+
+      effectivePaymentMethod = "QUOTA_PIN";
+      paymentProvider = "QUOTA_PIN";
+      finalTotalPrice = 0;
+      initialPaymentStatus = "PAID";
+      initialPrintStatus = effectiveHold ? "HOLD_FOR_PICKUP" : "QUEUED";
+      quotaPinId = pin.id;
+      quotaLabel = pin.label;
+    } else if (paymentMethod === "QRIS") {
       const midtransConfig = resolveMidtransConfig(shop);
       let midtransSucceeded = false;
 
@@ -371,23 +472,19 @@ export async function POST(req: Request) {
         paymentOrderId,
         qrisUrl,
         qrisString,
-      paymentStatus: "PENDING",
-      printStatus: "WAITING_PAYMENT",
-      holdUntilArrival:
-        wantsHold &&
-        canUseHoldPrint({
-          planId: shop.plan,
-          planExpiresAt: shop.planExpiresAt,
-          hasHoldPrintAddon: shop.hasHoldPrintAddon,
-          isTestShop: shop.isTestShop,
-        }),
-    },
+        quotaPinId,
+        quotaLabel,
+        paymentStatus: initialPaymentStatus,
+        printStatus: initialPrintStatus,
+        holdUntilArrival: effectiveHold,
+      },
     });
 
     return NextResponse.json(
       {
         job: {
           jobCode: job.jobCode,
+          quotaLabel: job.quotaLabel,
           customerName: job.customerName,
           customerNotes: job.customerNotes,
           fileName: job.fileName,

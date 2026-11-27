@@ -107,6 +107,7 @@ export interface PrintJobItem {
   jobType?: string;
   serviceName?: string | null;
   serviceUnit?: string | null;
+  quotaLabel?: string | null;
   customerName: string;
   customerWhatsapp?: string | null;
   customerNotes?: string | null;
@@ -163,6 +164,32 @@ export interface CustomServiceItem {
   unitLabel: string;
   requiresFile: boolean;
   isActive: boolean;
+}
+
+export interface QuotaPinItem {
+  id: string;
+  label: string;
+  pinCode: string;
+  maxPages: number;
+  usedPages: number;
+  allowColor: boolean;
+  isActive: boolean;
+  expiresAt: string | null;
+  createdAt: string;
+}
+
+export interface QuotaAuditJob {
+  id: string;
+  jobCode: string;
+  customerName: string;
+  fileName: string;
+  pageCount: number;
+  copies: number;
+  colorMode: string;
+  paperSize: string;
+  quotaLabel: string | null;
+  printStatus: string;
+  createdAt: string;
 }
 
 export interface DashboardData {
