@@ -395,8 +395,6 @@ export function BillingTab({
                             nextPlan === "PREMIUM" ? 0 : prev.extraPrinters,
                           pasFoto:
                             nextPlan === "PREMIUM" ? false : prev.pasFoto,
-                          holdPrint:
-                            nextPlan === "PREMIUM" ? false : prev.holdPrint,
                         };
                       });
                     }}
