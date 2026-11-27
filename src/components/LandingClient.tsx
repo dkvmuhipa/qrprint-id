@@ -48,6 +48,7 @@ import { TiltCard3D } from "./TiltCard3D";
 import { Standee3DShowcase } from "./Standee3DShowcase";
 import { PrivacyIso3D } from "./PrivacyIso3D";
 import { VideoDemoModal } from "./VideoDemoModal";
+import { RoiCalculatorCard } from "./RoiCalculatorCard";
 
 interface PublicPartnerItem {
   shopCode: string;
@@ -916,6 +917,12 @@ export function LandingClient() {
           </div>
         </div>
         </RevealOnScroll>
+
+        <div className="mt-8">
+          <RevealOnScroll>
+            <RoiCalculatorCard />
+          </RevealOnScroll>
+        </div>
       </section>
 
       {/* Privacy by Design (#privasi) */}
@@ -1019,24 +1026,40 @@ export function LandingClient() {
         </div>
 
         <div className="flex flex-col items-start justify-between gap-4 rounded-xl border border-[#1f1b16]/10 bg-[#efe9df] p-6 sm:flex-row sm:items-center">
-          <div className="space-y-1">
+          <div className="max-w-2xl space-y-1">
             <div className="inline-flex items-center gap-2 text-xs font-medium text-[#5e554a]">
               <Users className="h-4 w-4" strokeWidth={1.5} />
-              <span>Program mitra lapangan</span>
+              <span>Program Referral Toko &amp; Mitra Kampus</span>
             </div>
             <h3 className="text-base font-medium text-[#1f1b16]">
-              Rekomendasikan toko fotokopi, dapatkan komisi Rp 25.000 per toko aktif
+              Ajak 1 toko fotokopi aktif, otomatis dapat +10 hari langganan gratis
             </h3>
-            <p className="text-xs text-[#5e554a]">
-              Bagikan kode mitra Anda ke pemilik fotokopi sekitar kampus atau kantor.
+            <p className="text-xs leading-relaxed text-[#5e554a]">
+              Bagikan link referral dari Dashboard toko Anda — setiap toko rekanan
+              yang mengaktifkan paket Bulanan, Pro, atau Premium otomatis menambah{" "}
+              <strong>+10 hari masa aktif gratis</strong> ke toko Anda. Tertarik
+              menjadi Mitra Sales Lapangan di area kampus Anda? Hubungi tim
+              kemitraan kami.
             </p>
           </div>
-          <Link
-            href="/register"
-            className="btn-action inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-[#1f1b16] px-4 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
-          >
-            Daftar mitra toko
-          </Link>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Link
+              href="/register"
+              className="btn-action inline-flex h-9 items-center justify-center rounded-lg bg-[#1f1b16] px-4 text-xs font-medium text-[#fdfbf7] hover:bg-[#1f1b16]/90"
+            >
+              Daftar Mitra Toko
+            </Link>
+            <a
+              href={`https://wa.me/6285961194621?text=${encodeURIComponent(
+                "Halo Tim Gellona Teknologi, saya tertarik menjadi Mitra Sales Lapangan Ngeprint di area kampus saya."
+              )}`}
+              target="_blank"
+              rel="noreferrer"
+              className="btn-action inline-flex h-9 items-center justify-center rounded-lg border border-[#1f1b16]/15 bg-white px-3.5 text-xs font-medium text-[#1f1b16] hover:bg-[#fdfbf7]"
+            >
+              Mitra Lapangan (WA)
+            </a>
+          </div>
         </div>
         </div>
         </RevealOnScroll>

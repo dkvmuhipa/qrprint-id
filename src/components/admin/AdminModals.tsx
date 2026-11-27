@@ -4,15 +4,19 @@ import { useEffect, useState, type Dispatch, type FormEvent, type SetStateAction
 import {
   Ban,
   CalendarPlus,
+  Download,
   KeyRound,
   Link2,
   MapPin,
   MessageCircle,
+  Monitor,
+  Printer,
   RotateCw,
   Trash2,
   UserCheck,
   X,
 } from "lucide-react";
+import { openOnboardingPrintSheet } from "@/lib/admin-onboarding-kit";
 import { formatRupiah } from "@/lib/utils";
 import type { AdminShopRow } from "./types";
 
@@ -72,6 +76,38 @@ export function ShopDetailDrawer({
   );
   const [resolvingLoc, setResolvingLoc] = useState(false);
   const [locNote, setLocNote] = useState<string | null>(null);
+  const [printingKit, setPrintingKit] = useState(false);
+  const [kitError, setKitError] = useState<string | null>(null);
+
+  async function handlePrintOnboardingKit() {
+    setPrintingKit(true);
+    setKitError(null);
+    try {
+      const opened = await openOnboardingPrintSheet(
+        {
+          name: selectedShop.name,
+          ownerName: selectedShop.ownerName,
+          shopCode: selectedShop.shopCode,
+          email: selectedShop.email,
+          phone: selectedShop.phone,
+          plan: selectedShop.plan,
+          planExpiresAt: selectedShop.planExpiresAt,
+          bwPrice: selectedShop.bwPrice,
+          colorPrice: selectedShop.colorPrice,
+        },
+        window.location.origin
+      );
+      if (!opened) {
+        setKitError(
+          "Popup cetak diblokir browser. Izinkan pop-up lalu klik lagi tombol cetak."
+        );
+      }
+    } catch {
+      setKitError("Gagal menyiapkan lembar cetak onboarding.");
+    } finally {
+      setPrintingKit(false);
+    }
+  }
 
   useEffect(() => {
     setLocCity(selectedShop.city || "");
@@ -168,6 +204,88 @@ export function ShopDetailDrawer({
             </div>
           </div>
 
+          {/* 0.5 Kit Onboarding Sales Lapangan */}
+          <div className="space-y-2.5 rounded-xl border border-[#d9381e]/25 bg-[#fff7f5] p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold text-[#171717]">
+                  Kit Onboarding Sales Lapangan (Siap Pasang)
+                </p>
+                <p className="mt-0.5 text-[11px] text-[#525252]">
+                  Cetak Standee QR A6 + Lembar Serah Terima dan unduh Windows Agent
+                  terkonfigurasi tanpa harus login ke dashboard toko.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              disabled={printingKit}
+              onClick={handlePrintOnboardingKit}
+              className="btn-action flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#d9381e] text-xs font-medium text-white hover:bg-[#be2e17] disabled:opacity-50"
+            >
+              <Printer className="h-3.5 w-3.5" strokeWidth={1.6} />
+              <span>
+                {printingKit
+                  ? "Menyiapkan QR & Lembar Cetak..."
+                  : "Cetak Standee QR A6 + Lembar Serah Terima"}
+              </span>
+            </button>
+
+            <div className="grid grid-cols-2 gap-2">
+              <a
+                href={`/api/shop/agent-bundle?shopId=${encodeURIComponent(
+                  selectedShop.id
+                )}`}
+                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-2.5 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+              >
+                <Download className="h-3.5 w-3.5 text-[#171717]" strokeWidth={1.6} />
+                <span>Agent Win 10/11 (.zip)</span>
+              </a>
+              <a
+                href={`/api/shop/agent-bundle?shopId=${encodeURIComponent(
+                  selectedShop.id
+                )}&os=win7`}
+                className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-[#171717]/15 bg-white px-2.5 text-[11px] font-medium text-[#171717] hover:bg-[#f4f4f5]"
+              >
+                <Monitor className="h-3.5 w-3.5 text-[#525252]" strokeWidth={1.6} />
+                <span>Agent Win 7 (.exe)</span>
+              </a>
+            </div>
+
+            {selectedShop.phone && (
+              <a
+                href={`https://wa.me/${(() => {
+                  const digits = selectedShop.phone.replace(/\D/g, "");
+                  if (digits.startsWith("0")) return `62${digits.slice(1)}`;
+                  if (digits.startsWith("62")) return digits;
+                  return `62${digits}`;
+                })()}?text=${encodeURIComponent(
+                  [
+                    `Halo Kak ${selectedShop.ownerName || "Mitra"}, selamat bergabung di *Ngeprint by Gellona Teknologi*! 🎉`,
+                    `Akun toko *${selectedShop.name}* sudah aktif:`,
+                    `• Link Portal Pelanggan (QR): https://ngeprint.gellona.web.id/s/${selectedShop.shopCode}`,
+                    `• Login Dashboard Kasir: https://ngeprint.gellona.web.id/login`,
+                    `• Email Login: ${selectedShop.email}`,
+                    `Jika butuh bantuan teknis atau setup printer/QRIS, langsung balas chat ini ya (WA Support 085961194621).`,
+                  ].join("\n\n")
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-[#16a34a]/30 bg-white px-3 text-[11px] font-medium text-[#15803d] hover:bg-[#f0fdf4]"
+              >
+                <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.6} />
+                <span>Kirim Info Akun &amp; Link QR ke WA Mitra</span>
+              </a>
+            )}
+
+            {kitError && (
+              <p className="text-[11px] font-medium text-[#dc2626]">
+                {kitError}
+              </p>
+            )}
+          </div>
+
           {/* 1. Upgrade / Change Plan */}
           <div className="rounded-xl border border-[#171717]/8 p-4">
             <p className="text-xs font-medium text-[#171717]">
@@ -191,6 +309,9 @@ export function ShopDetailDrawer({
                 className="h-9 flex-1 rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs font-medium outline-none"
               >
                 <option value="DEMO">Demo (24 jam · Rp 0)</option>
+                <option value="PERINTIS_7D">
+                  Perintis Lapangan (7 hr Full · Rp 0)
+                </option>
                 <option value="BULANAN">Bulanan (30 hr · Rp 79rb)</option>
                 <option value="PRO">Pro Tahunan (365 hr · Rp 449rb)</option>
                 <option value="PREMIUM">
@@ -912,6 +1033,9 @@ export function CreateShopModal({
                 }
                 className="h-9 w-full rounded-lg border border-[#171717]/12 bg-[#fafafa] px-3 text-xs outline-none focus:border-[#171717] focus:bg-white disabled:opacity-60"
               >
+                <option value="PERINTIS_7D">
+                  Perintis Lapangan (Trial 7 Hari Full Fitur + Listener · Rp 0)
+                </option>
                 <option value="DEMO">Demo 24 Jam (Gratis)</option>
                 <option value="BULANAN">Bulanan (Rp 79.000 · 30 hari)</option>
                 <option value="PRO">

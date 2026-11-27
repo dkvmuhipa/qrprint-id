@@ -36,7 +36,11 @@ export async function POST(req: Request) {
     const cleanAddress = String(body.address || "").trim().slice(0, 200) || "Indonesia";
     const rawPassword = String(body.password || "").trim();
     const isTestShop = Boolean(body.isTestShop);
-    const requestedPlan = getPlanDef(isTestShop ? "PREMIUM" : body.plan || "DEMO");
+    const rawPlanUpper = String(body.plan || "DEMO").trim().toUpperCase();
+    const isPerintisTrial = !isTestShop && rawPlanUpper === "PERINTIS_7D";
+    const requestedPlan = getPlanDef(
+      isTestShop ? "PREMIUM" : isPerintisTrial ? "BULANAN" : rawPlanUpper
+    );
     const demoId = body.demoId ? String(body.demoId) : null;
 
     if (!cleanName || !cleanEmail || !cleanPhone || rawPassword.length < 6) {
@@ -76,7 +80,9 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(rawPassword, 10);
     const agentKey = generateAgentKey();
-    const expiresAt = calculateNewExpiryDate(null, requestedPlan.durationDays);
+    const expiresAt = isPerintisTrial
+      ? calculateNewExpiryDate(null, 7)
+      : calculateNewExpiryDate(null, requestedPlan.durationDays);
 
     const shop = await prisma.shop.create({
       data: {
@@ -91,7 +97,7 @@ export async function POST(req: Request) {
         planStatus: "ACTIVE",
         planExpiresAt: expiresAt,
         isTestShop,
-        hasListenerAddon: isTestShop ? true : false,
+        hasListenerAddon: isTestShop || isPerintisTrial ? true : false,
         hasPasFotoAddon: isTestShop ? true : false,
         bwPrice: Math.max(100, Number(body.bwPrice) || 500),
         colorPrice: Math.max(100, Number(body.colorPrice) || 1500),
@@ -100,7 +106,7 @@ export async function POST(req: Request) {
       },
     });
 
-    if (requestedPlan.price > 0 && !isTestShop) {
+    if (requestedPlan.price > 0 && !isTestShop && !isPerintisTrial) {
       await prisma.subscriptionInvoice.create({
         data: {
           invoiceCode: generateInvoiceCode(),
@@ -128,14 +134,18 @@ export async function POST(req: Request) {
       adminEmail: admin.email,
       action: "CREATE_SHOP",
       target: `${shop.name} (/s/${shop.shopCode})`,
-      details: `Paket ${requestedPlan.name}${isTestShop ? " · Testing" : ""}`,
+      details: isPerintisTrial
+        ? "Paket Perintis Lapangan (Trial 7 Hari Full Fitur · Rp 0)"
+        : `Paket ${requestedPlan.name}${isTestShop ? " · Testing" : ""}`,
     });
 
     return NextResponse.json(
       {
         ok: true,
         shop,
-        message: `Toko ${shop.name} (/s/${shop.shopCode}) berhasil dibuat dengan paket ${requestedPlan.name}.`,
+        message: isPerintisTrial
+          ? `Toko ${shop.name} (/s/${shop.shopCode}) berhasil dibuat dengan Paket Perintis Lapangan (Trial 7 Hari Full Fitur).`
+          : `Toko ${shop.name} (/s/${shop.shopCode}) berhasil dibuat dengan paket ${requestedPlan.name}.`,
       },
       { status: 201 }
     );
@@ -235,6 +245,29 @@ export async function PATCH(req: Request) {
           { error: "Toko tidak ditemukan." },
           { status: 404 }
         );
+      }
+
+      if (String(plan).toUpperCase() === "PERINTIS_7D") {
+        const trialExpiry = calculateNewExpiryDate(null, 7);
+        await prisma.shop.update({
+          where: { id: shop.id },
+          data: {
+            plan: "BULANAN",
+            planStatus: "ACTIVE",
+            planExpiresAt: trialExpiry,
+            hasListenerAddon: true,
+          },
+        });
+        await recordAdminAudit({
+          adminEmail: admin.email,
+          action: "ACTIVATE_PLAN",
+          target: `${shop.name} (/s/${shop.shopCode})`,
+          details: "Aktifkan Paket Perintis Lapangan (7 Hari Full Fitur · Rp 0)",
+        });
+        return NextResponse.json({
+          ok: true,
+          message: `Paket Perintis Lapangan (7 Hari Full Fitur) berhasil diaktifkan untuk ${shop.name}.`,
+        });
       }
 
       const planDef = getPlanDef(plan);

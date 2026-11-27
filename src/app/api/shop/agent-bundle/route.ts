@@ -1,17 +1,36 @@
 import { NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { getCurrentAdmin } from "@/lib/admin-auth";
 import { getCurrentShop } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { createZipBuffer, ZipEntry } from "@/lib/zip";
 
 export async function GET(req: Request) {
-  const shop = await getCurrentShop();
-  if (!shop) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const reqUrl = new URL(req.url);
+  const requestedShopId = reqUrl.searchParams.get("shopId");
+
+  let shop = null;
+  if (requestedShopId) {
+    const admin = await getCurrentAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    shop = await prisma.shop.findUnique({ where: { id: requestedShopId } });
+    if (!shop) {
+      return NextResponse.json(
+        { error: "Toko tidak ditemukan." },
+        { status: 404 }
+      );
+    }
+  } else {
+    shop = await getCurrentShop();
+    if (!shop) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
   }
 
   try {
-    const reqUrl = new URL(req.url);
     const osMode = String(reqUrl.searchParams.get("os") || "win10").toLowerCase();
     const isWin7 = osMode === "win7";
     const forwardedProto = req.headers.get("x-forwarded-proto");

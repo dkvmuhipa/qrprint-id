@@ -154,7 +154,7 @@ export default function SuperAdminPage() {
     address: "",
     shopCode: "",
     password: "",
-    plan: "PRO",
+    plan: "PERINTIS_7D",
     demoId: "",
     isTestShop: false,
   });
@@ -169,7 +169,7 @@ export default function SuperAdminPage() {
       address: prefill?.address || "",
       shopCode: prefill?.shopCode || "",
       password: prefill?.password || "ngeprint123",
-      plan: prefill?.plan || "PRO",
+      plan: prefill?.plan || "PERINTIS_7D",
       demoId: prefill?.demoId || "",
       isTestShop: Boolean(prefill?.isTestShop),
     });
@@ -193,6 +193,17 @@ export default function SuperAdminPage() {
         setCreateOpen(false);
         setNotice(json.message || "Toko baru berhasil dibuat.");
         await loadOverview();
+        if (json.shop?.id) {
+          setTab("shops");
+          setSelectedShopId(String(json.shop.id));
+          setModalPlan(
+            json.shop.plan === "DEMO"
+              ? "PERINTIS_7D"
+              : String(json.shop.plan || "PRO")
+          );
+          setResetPassInput("");
+          setConfirmDeleteId(null);
+        }
       }
     } catch {
       setCreateError("Tidak dapat terhubung ke server.");

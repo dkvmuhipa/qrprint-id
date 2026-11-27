@@ -5,6 +5,7 @@ import Link from "next/link";
 import QRCode from "qrcode";
 import {
   ArrowLeft,
+  Calculator,
   Check,
   Printer,
   ShieldCheck,
@@ -13,10 +14,12 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { RoiCalculatorCard } from "@/components/RoiCalculatorCard";
 
 export default function BrosurPage() {
   const [registerQr, setRegisterQr] = useState("");
   const [origin, setOrigin] = useState("https://ngeprint.gellona.web.id");
+  const [showRoi, setShowRoi] = useState(true);
 
   useEffect(() => {
     const base =
@@ -45,11 +48,23 @@ export default function BrosurPage() {
           <span>Lihat Panduan Setup</span>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="hidden text-xs text-[#5e554a] sm:inline">
             Tips: Pilih <strong>Save as PDF</strong> / <strong>A4</strong> ·{" "}
             <strong>Background graphics: ON</strong>
           </span>
+          <button
+            type="button"
+            onClick={() => setShowRoi((prev) => !prev)}
+            className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${
+              showRoi
+                ? "border-[#1f1b16] bg-[#1f1b16] text-[#fdfbf7]"
+                : "border-[#1f1b16]/15 bg-white text-[#1f1b16] hover:bg-[#f7f4ee]"
+            }`}
+          >
+            <Calculator className="h-3.5 w-3.5" strokeWidth={1.6} />
+            <span>{showRoi ? "Sembunyikan Kalkulator" : "Kalkulator ROI Sales"}</span>
+          </button>
           <button
             type="button"
             onClick={() => window.print()}
@@ -60,6 +75,12 @@ export default function BrosurPage() {
           </button>
         </div>
       </div>
+
+      {showRoi && (
+        <div className="no-print mx-auto mb-6 max-w-[210mm] px-4">
+          <RoiCalculatorCard compact />
+        </div>
+      )}
 
       {/* A4 Printable Sales Flyer Sheet */}
       <article className="mx-auto w-full max-w-[210mm] overflow-hidden bg-[#f7f4ee] text-[#1f1b16] shadow-2xl print:max-w-none print:shadow-none">
