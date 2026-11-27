@@ -131,6 +131,9 @@ export async function GET(
     {
       job: {
         jobCode: job.jobCode,
+        jobType: job.jobType,
+        serviceName: job.serviceName,
+        serviceUnit: job.serviceUnit,
         customerName: job.customerName,
         customerNotes: job.customerNotes,
         fileName: job.fileName,

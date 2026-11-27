@@ -42,7 +42,7 @@ export async function GET(
     );
   }
 
-  const [totalJobsCount, activeQueueCount] = await Promise.all([
+  const [totalJobsCount, activeQueueCount, customServices] = await Promise.all([
     prisma.printJob.count({
       where: {
         shopId: shop.id,
@@ -54,6 +54,22 @@ export async function GET(
         shopId: shop.id,
         paymentStatus: "PAID",
         printStatus: { in: ["QUEUED", "PRINTING"] },
+      },
+    }),
+    prisma.shopCustomService.findMany({
+      where: {
+        shopId: shop.id,
+        isActive: true,
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        description: true,
+        price: true,
+        unitLabel: true,
+        requiresFile: true,
       },
     }),
   ]);
@@ -123,6 +139,7 @@ export async function GET(
         shopClosedReason: openStatus.reason,
         scheduleLabel: openStatus.scheduleLabel,
         activeQueueCount,
+        customServices,
       },
     },
     {

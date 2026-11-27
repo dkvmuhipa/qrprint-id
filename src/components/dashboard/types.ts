@@ -104,6 +104,9 @@ export interface SubscriptionInvoiceItem {
 export interface PrintJobItem {
   id: string;
   jobCode: string;
+  jobType?: string;
+  serviceName?: string | null;
+  serviceUnit?: string | null;
   customerName: string;
   customerWhatsapp?: string | null;
   customerNotes?: string | null;
@@ -149,6 +152,17 @@ export interface DashboardBroadcast {
   linkUrl: string;
   linkLabel: string;
   updatedAt: string;
+}
+
+export interface CustomServiceItem {
+  id: string;
+  name: string;
+  category: string;
+  description: string;
+  price: number;
+  unitLabel: string;
+  requiresFile: boolean;
+  isActive: boolean;
 }
 
 export interface DashboardData {

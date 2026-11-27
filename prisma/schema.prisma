@@ -67,11 +67,15 @@ model Shop {
   updatedAt           DateTime              @updatedAt
   jobs                PrintJob[]
   invoices            SubscriptionInvoice[]
+  customServices      ShopCustomService[]
 }
 
 model PrintJob {
   id               String    @id @default(cuid())
   jobCode          String    @unique
+  jobType          String    @default("AUTO_PRINT") // "AUTO_PRINT" | "CUSTOM_SERVICE"
+  serviceName      String?
+  serviceUnit      String?
   shopId           String?
   shop             Shop?     @relation(fields: [shopId], references: [id], onDelete: SetNull)
   shopNameSnapshot String?
@@ -155,4 +159,19 @@ model AdminAuditLog {
   target     String   @default("")
   details    String   @default("")
   createdAt  DateTime @default(now())
+}
+
+model ShopCustomService {
+  id           String   @id @default(cuid())
+  shopId       String
+  shop         Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  name         String
+  category     String   @default("OTHER") // LAMINATING | A3_PRINT | STICKER | BANNER | SCAN | OTHER
+  description  String   @default("")
+  price        Int
+  unitLabel    String   @default("pcs")
+  requiresFile Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

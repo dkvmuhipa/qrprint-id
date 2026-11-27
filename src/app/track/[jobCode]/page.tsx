@@ -35,6 +35,9 @@ import { downloadCustomerReceiptPng } from "@/lib/customer-receipt-png";
 
 interface TrackedJob {
   jobCode: string;
+  jobType?: string;
+  serviceName?: string | null;
+  serviceUnit?: string | null;
   customerName: string;
   customerNotes?: string | null;
   fileName: string;
@@ -340,12 +343,22 @@ function TrackJobContent({
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium text-[#1f1b16]">{job.fileName}</p>
               <p className="font-mono-num mt-1 text-[#7b7266]">
-                Pemesan: {job.customerName} · {job.pageCount} hal ({job.pageRange}) ×{" "}
-                {job.copies} · {colorLabel} · {job.paperSize}
-                {job.duplex ? " · Bolak-balik" : ""}
-                {job.bindingType && job.bindingType !== "NONE"
-                  ? ` · ${getBindingLabel(job.bindingType)}`
-                  : ""}
+                {job.jobType === "CUSTOM_SERVICE" ? (
+                  <>
+                    Pemesan: {job.customerName} · {job.copies}{" "}
+                    {job.serviceUnit || "pcs"} · Layanan Custom Percetakan
+                  </>
+                ) : (
+                  <>
+                    Pemesan: {job.customerName} · {job.pageCount} hal (
+                    {job.pageRange}) × {job.copies} · {colorLabel} ·{" "}
+                    {job.paperSize}
+                    {job.duplex ? " · Bolak-balik" : ""}
+                    {job.bindingType && job.bindingType !== "NONE"
+                      ? ` · ${getBindingLabel(job.bindingType)}`
+                      : ""}
+                  </>
+                )}
               </p>
               {job.customerNotes && (
                 <p className="mt-1.5 rounded-md border border-[#b45309]/20 bg-[#b45309]/8 px-2 py-1 text-[11px] font-medium text-[#92400e]">
@@ -415,9 +428,18 @@ function TrackJobContent({
                   active:
                     job.printStatus === "QUEUED" ||
                     job.printStatus === "HOLD_FOR_PICKUP",
-                  title: "Antrean Print Agent toko",
+                  title:
+                    job.jobType === "CUSTOM_SERVICE"
+                      ? "Antrean pengerjaan toko"
+                      : "Antrean Print Agent toko",
                   desc:
-                    job.printStatus === "HOLD_FOR_PICKUP"
+                    job.jobType === "CUSTOM_SERVICE"
+                      ? job.printStatus === "QUEUED"
+                        ? "Pesanan masuk daftar kerja kasir toko"
+                        : job.printStatus === "WAITING_PAYMENT"
+                        ? "Masuk antrean toko setelah lunas"
+                        : "Sedang atau sudah dikerjakan oleh tim toko"
+                      : job.printStatus === "HOLD_FOR_PICKUP"
                       ? "Ditahan aman — menunggu Anda menekan Mulai Cetak di depan printer"
                       : job.printStatus === "QUEUED"
                       ? "Menunggu komputer kasir mengambil dokumen"
@@ -428,9 +450,16 @@ function TrackJobContent({
                 {
                   done: job.printStatus === "COMPLETED",
                   active: job.printStatus === "PRINTING",
-                  title: "Pencetakan & penghapusan file",
+                  title:
+                    job.jobType === "CUSTOM_SERVICE"
+                      ? "Penyelesaian layanan"
+                      : "Pencetakan & penghapusan file",
                   desc:
-                    job.printStatus === "PRINTING"
+                    job.jobType === "CUSTOM_SERVICE"
+                      ? job.printStatus === "COMPLETED"
+                        ? "Selesai dikerjakan — silakan ambil di meja kasir"
+                        : "Dikerjakan manual oleh tim toko"
+                      : job.printStatus === "PRINTING"
                       ? "Kertas sedang keluar dari mesin printer"
                       : job.printStatus === "COMPLETED"
                       ? "Selesai dicetak — silakan ambil di meja kasir"

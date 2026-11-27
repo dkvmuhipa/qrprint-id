@@ -52,6 +52,7 @@ export async function GET(req: Request) {
       shopId: shop.id,
       paymentStatus: "PAID",
       printStatus: "QUEUED",
+      jobType: "AUTO_PRINT",
     },
     orderBy: { createdAt: "asc" },
     take: 5,

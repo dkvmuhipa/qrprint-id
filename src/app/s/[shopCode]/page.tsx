@@ -60,6 +60,10 @@ import {
   playCustomerCompleteFeedback,
 } from "@/lib/client-print-feedback";
 import { downloadCustomerReceiptPng } from "@/lib/customer-receipt-png";
+import {
+  CustomerCustomServiceForm,
+  type PublicCustomService,
+} from "@/components/CustomerCustomServiceForm";
 
 interface PublicShop {
   shopCode: string;
@@ -96,10 +100,14 @@ interface PublicShop {
   shopClosedReason?: string | null;
   scheduleLabel?: string | null;
   activeQueueCount?: number;
+  customServices?: PublicCustomService[];
 }
 
 interface ActiveJob {
   jobCode: string;
+  jobType?: string;
+  serviceName?: string | null;
+  serviceUnit?: string | null;
   customerName: string;
   customerNotes?: string | null;
   fileName: string;
@@ -175,6 +183,9 @@ function CustomerScanPortalContent({
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [portalMode, setPortalMode] = useState<"DOCUMENT" | "CUSTOM_SERVICE">(
+    "DOCUMENT"
+  );
 
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [printingProgressPct, setPrintingProgressPct] = useState(0);
@@ -1452,9 +1463,18 @@ function CustomerScanPortalContent({
                     active:
                       activeJob.printStatus === "QUEUED" ||
                       activeJob.printStatus === "HOLD_FOR_PICKUP",
-                    title: "Antrean Print Agent toko",
+                    title:
+                      activeJob.jobType === "CUSTOM_SERVICE"
+                        ? "Antrean pengerjaan toko"
+                        : "Antrean Print Agent toko",
                     desc:
-                      activeJob.printStatus === "HOLD_FOR_PICKUP"
+                      activeJob.jobType === "CUSTOM_SERVICE"
+                        ? activeJob.printStatus === "QUEUED"
+                          ? "Diterima kasir — sedang diproses manual oleh tim toko"
+                          : activeJob.printStatus === "WAITING_PAYMENT"
+                          ? "Masuk antrean toko setelah pembayaran lunas"
+                          : "Sedang atau sudah dikerjakan oleh tim toko"
+                        : activeJob.printStatus === "HOLD_FOR_PICKUP"
                         ? "Ditahan aman — menunggu Anda menekan Mulai Cetak di depan printer"
                         : activeJob.printStatus === "QUEUED"
                         ? "Menunggu komputer kasir mengambil dokumen"
@@ -1465,9 +1485,16 @@ function CustomerScanPortalContent({
                   {
                     done: activeJob.printStatus === "COMPLETED",
                     active: activeJob.printStatus === "PRINTING",
-                    title: "Pencetakan & penghapusan file",
+                    title:
+                      activeJob.jobType === "CUSTOM_SERVICE"
+                        ? "Penyelesaian layanan"
+                        : "Pencetakan & penghapusan file",
                     desc:
-                      activeJob.printStatus === "PRINTING"
+                      activeJob.jobType === "CUSTOM_SERVICE"
+                        ? activeJob.printStatus === "COMPLETED"
+                          ? "Selesai dikerjakan — silakan ambil di meja kasir"
+                          : "Dikerjakan manual oleh tim toko"
+                        : activeJob.printStatus === "PRINTING"
                         ? "Kertas sedang keluar dari mesin printer"
                         : activeJob.printStatus === "COMPLETED"
                         ? "Selesai dicetak, silakan ambil dokumen Anda di baki printer"
@@ -1610,17 +1637,26 @@ function CustomerScanPortalContent({
                     <div className="flex justify-between gap-2">
                       <span>Rincian</span>
                       <span className="font-mono-num text-right text-[#1f1b16]">
-                        {activeJob.pageCount} hal × {activeJob.copies} ·{" "}
-                        {activeJob.colorMode === "COLOR"
-                          ? "Warna"
-                          : activeJob.colorMode === "AUTO"
-                          ? "Otomatis"
-                          : "HP"}{" "}
-                        ·{" "}
-                        {activeJob.paperSize}
-                        {activeJob.bindingType && activeJob.bindingType !== "NONE"
-                          ? ` · ${getBindingLabel(activeJob.bindingType)}`
-                          : ""}
+                        {activeJob.jobType === "CUSTOM_SERVICE" ? (
+                          <>
+                            {activeJob.copies}{" "}
+                            {activeJob.serviceUnit || "pcs"} · Layanan Custom
+                          </>
+                        ) : (
+                          <>
+                            {activeJob.pageCount} hal × {activeJob.copies} ·{" "}
+                            {activeJob.colorMode === "COLOR"
+                              ? "Warna"
+                              : activeJob.colorMode === "AUTO"
+                              ? "Otomatis"
+                              : "HP"}{" "}
+                            · {activeJob.paperSize}
+                            {activeJob.bindingType &&
+                            activeJob.bindingType !== "NONE"
+                              ? ` · ${getBindingLabel(activeJob.bindingType)}`
+                              : ""}
+                          </>
+                        )}
                       </span>
                     </div>
                     <div className="flex justify-between gap-2 pt-1 font-medium text-[#1f1b16]">
@@ -1698,8 +1734,53 @@ function CustomerScanPortalContent({
             </div>
           </div>
         ) : (
-          /* STEP 1: UPLOAD & PRINT OPTIONS FORM */
-          <form onSubmit={handleUploadAndOrder} className="mt-5 space-y-4">
+          /* STEP 1: UPLOAD & PRINT OPTIONS OR CUSTOM SERVICE FORM */
+          <div className="mt-5">
+            {(shop.customServices?.length || 0) > 0 && (
+              <div className="grid grid-cols-2 gap-1.5 rounded-xl border border-[#1f1b16]/12 bg-[#f7f4ee] p-1">
+                <button
+                  type="button"
+                  onClick={() => setPortalMode("DOCUMENT")}
+                  className={`cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+                    portalMode === "DOCUMENT"
+                      ? "bg-[#1f1b16] text-[#fdfbf7] shadow-xs"
+                      : "text-[#5e554a] hover:text-[#1f1b16]"
+                  }`}
+                >
+                  Cetak Dokumen (A4/F4)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPortalMode("CUSTOM_SERVICE")}
+                  className={`cursor-pointer rounded-lg px-3 py-2 text-xs font-medium transition-all ${
+                    portalMode === "CUSTOM_SERVICE"
+                      ? "bg-[#1f1b16] text-[#fdfbf7] shadow-xs"
+                      : "text-[#5e554a] hover:text-[#1f1b16]"
+                  }`}
+                >
+                  Layanan Lainnya ({shop.customServices?.length || 0})
+                </button>
+              </div>
+            )}
+
+            {portalMode === "CUSTOM_SERVICE" &&
+            (shop.customServices?.length || 0) > 0 ? (
+              <CustomerCustomServiceForm
+                shopCode={shop.shopCode}
+                shopName={shop.name}
+                hasQrisPayment={shop.hasQrisPayment !== false}
+                isShopOpen={shop.isShopOpen !== false}
+                canAcceptJobs={shop.canAcceptJobs !== false}
+                services={shop.customServices || []}
+                onOrderCreated={(job) => {
+                  setActiveJob(job);
+                  if (typeof window !== "undefined") {
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }
+                }}
+              />
+            ) : (
+              <form onSubmit={handleUploadAndOrder} className="mt-4 space-y-4">
             {submitError && (
               <div className="rounded-lg border border-[#dc2626]/20 bg-[#dc2626]/10 p-3.5 text-xs font-medium text-[#dc2626]">
                 {submitError}
@@ -2370,7 +2451,9 @@ function CustomerScanPortalContent({
                 </button>
               </div>
             </div>
-          </form>
+              </form>
+            )}
+          </div>
         )}
       </main>
 

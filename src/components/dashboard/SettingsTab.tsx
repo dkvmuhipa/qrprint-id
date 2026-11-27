@@ -4,6 +4,7 @@ import { useState, type CSSProperties, type Dispatch, type FormEvent, type SetSt
 import { Bluetooth, Download, Eye, EyeOff, ImagePlus, Link2, LocateFixed, Lock, MapPin, Printer, Trash2 } from "lucide-react";
 import type { EntitlementInfo, PrintJobItem, ShopInfo } from "./types";
 import { PartnerLocationPicker } from "./PartnerLocationPicker";
+import { CustomServicesSection } from "./CustomServicesSection";
 
 export interface SettingsFormState {
   shopCode: string;
@@ -1639,6 +1640,9 @@ export function SettingsTab({
           {savingSettings ? "Menyimpan..." : "Simpan pengaturan"}
         </button>
       </form>
+
+      {/* Katalog Jasa Custom Percetakan */}
+      <CustomServicesSection />
 
       {/* Security & Change Password Card */}
       <form

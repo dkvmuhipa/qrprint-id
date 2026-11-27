@@ -420,6 +420,7 @@ export function QueueTab({
           <div className="divide-y divide-[#171717]/8">
             {filteredJobs.map((job) => {
               const busy = busyJobId === job.id;
+              const isCustom = job.jobType === "CUSTOM_SERVICE";
               return (
                 <div
                   key={job.id}
@@ -430,6 +431,11 @@ export function QueueTab({
                       <span className="font-mono-num font-medium text-[#171717]">
                         {job.jobCode}
                       </span>
+                      {isCustom && (
+                        <span className="rounded bg-[#b45309]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[#92400e]">
+                          Layanan Custom · Manual
+                        </span>
+                      )}
                       <span className="text-[#737373]">·</span>
                       <span
                         className={`inline-flex items-center gap-1.5 font-medium ${
@@ -496,23 +502,38 @@ export function QueueTab({
                       Pelanggan:{" "}
                       <span className="text-[#525252]">{job.customerName}</span>{" "}
                       ·{" "}
-                      <span className="font-mono-num">
-                        {job.pageCount} hal ({job.pageRange}) × {job.copies}
-                      </span>{" "}
-                      ·{" "}
-                      {job.colorMode === "COLOR"
-                        ? "Warna"
-                        : job.colorMode === "AUTO"
-                        ? "Otomatis (HP+Warna)"
-                        : "Hitam Putih"}{" "}
-                      ·{" "}
-                      {job.paperSize}
-                      {job.duplex ? " · Bolak-balik" : ""}
-                      {job.bindingType && job.bindingType !== "NONE" && (
-                        <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-[#d9381e]/10 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-[#d9381e]">
-                          <BookOpen className="h-2.5 w-2.5" strokeWidth={1.8} />
-                          {getBindingLabel(job.bindingType)}
-                        </span>
+                      {isCustom ? (
+                        <>
+                          <span className="font-medium text-[#525252]">
+                            {job.serviceName || job.fileName}
+                          </span>{" "}
+                          ·{" "}
+                          <span className="font-mono-num">
+                            {job.copies} {job.serviceUnit || "pcs"}
+                          </span>{" "}
+                          · Dikerjakan manual di kasir
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-mono-num">
+                            {job.pageCount} hal ({job.pageRange}) × {job.copies}
+                          </span>{" "}
+                          ·{" "}
+                          {job.colorMode === "COLOR"
+                            ? "Warna"
+                            : job.colorMode === "AUTO"
+                            ? "Otomatis (HP+Warna)"
+                            : "Hitam Putih"}{" "}
+                          ·{" "}
+                          {job.paperSize}
+                          {job.duplex ? " · Bolak-balik" : ""}
+                          {job.bindingType && job.bindingType !== "NONE" && (
+                            <span className="ml-1.5 inline-flex items-center gap-1 rounded bg-[#d9381e]/10 px-1.5 py-0.5 font-mono-num text-[10px] font-semibold text-[#d9381e]">
+                              <BookOpen className="h-2.5 w-2.5" strokeWidth={1.8} />
+                              {getBindingLabel(job.bindingType)}
+                            </span>
+                          )}
+                        </>
                       )}
                     </p>
                     {job.customerNotes && (
@@ -559,7 +580,9 @@ export function QueueTab({
                     {job.customerWhatsapp && job.paymentStatus === "PAID" && (
                       <a
                         href={`https://wa.me/${job.customerWhatsapp}?text=${encodeURIComponent(
-                          `Halo Kak ${job.customerName}, cetakan Anda di ${shop.name} (${job.jobCode} · ${job.fileName}) sudah selesai dicetak dan siap diambil di meja kasir. Terima kasih!`
+                          isCustom
+                            ? `Halo Kak ${job.customerName}, pesanan layanan Anda di ${shop.name} (${job.jobCode} · ${job.serviceName || job.fileName}) sudah selesai dikerjakan dan siap diambil di meja kasir. Terima kasih!`
+                            : `Halo Kak ${job.customerName}, cetakan Anda di ${shop.name} (${job.jobCode} · ${job.fileName}) sudah selesai dicetak dan siap diambil di meja kasir. Terima kasih!`
                         )}`}
                         target="_blank"
                         rel="noreferrer"
@@ -626,7 +649,11 @@ export function QueueTab({
                           className="h-3.5 w-3.5"
                           strokeWidth={1.5}
                         />
-                        <span>Selesai &amp; hapus file</span>
+                        <span>
+                          {isCustom && !job.storedFilePath
+                            ? "Tandai selesai"
+                            : "Selesai & hapus file"}
+                        </span>
                       </button>
                     )}
 
