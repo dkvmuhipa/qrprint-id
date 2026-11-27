@@ -50,6 +50,7 @@ interface TrackedJob {
   paymentMethod: string;
   paymentStatus: string;
   printStatus: string;
+  holdUntilArrival?: boolean;
   fileDeletedAt: string | null;
   createdAt: string;
   shopName: string;
@@ -83,6 +84,7 @@ function TrackJobContent({
   const [copiedReceipt, setCopiedReceipt] = useState(false);
   const [copiedTrackLink, setCopiedTrackLink] = useState(false);
   const [downloadingReceipt, setDownloadingReceipt] = useState(false);
+  const [releasingHold, setReleasingHold] = useState(false);
   const [printingProgressPct, setPrintingProgressPct] = useState(0);
   const prevPrintStatusRef = useRef<string | null>(null);
 
@@ -225,6 +227,31 @@ function TrackJobContent({
       .catch(() => {});
   }
 
+  async function handleReleaseHold() {
+    setReleasingHold(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/public/jobs/${encodeURIComponent(jobCode)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "RELEASE_HOLD" }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Gagal melepas antrean cetak.");
+      } else {
+        await fetchJob(true);
+      }
+    } catch {
+      setError("Gagal terhubung ke server.");
+    } finally {
+      setReleasingHold(false);
+    }
+  }
+
   return (
     <div className="bg-ambient min-h-screen pb-16">
       <header className="sticky top-0 z-30 border-b border-[#1f1b16]/8 bg-[#f7f4ee]/95 backdrop-blur-xs">
@@ -328,6 +355,34 @@ function TrackJobContent({
             </div>
           </div>
 
+          {job.printStatus === "HOLD_FOR_PICKUP" && (
+            <div className="mt-5 rounded-xl border border-purple-300 bg-purple-50 p-5 text-center">
+              <p className="text-xs font-semibold tracking-wider text-purple-800 uppercase">
+                Mode Cetak Rahasia Aktif
+              </p>
+              <p className="mt-1 text-sm font-medium text-[#1f1b16]">
+                Dokumen Lunas &amp; Ditahan Aman — Belum Dicetak
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
+                File Anda disimpan aman dan baru akan dikirim ke printer setelah
+                Anda tiba di toko dan menekan tombol di bawah ini.
+              </p>
+              <button
+                type="button"
+                disabled={releasingHold}
+                onClick={handleReleaseHold}
+                className="btn-action mt-4 inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-semibold text-white hover:bg-purple-800 disabled:opacity-60"
+              >
+                <Printer className="h-4 w-4" strokeWidth={1.75} />
+                <span>
+                  {releasingHold
+                    ? "Mengirim ke printer..."
+                    : "Saya Sudah di Depan Printer — Mulai Cetak Sekarang"}
+                </span>
+              </button>
+            </div>
+          )}
+
           {job.printStatus === "CANCELLED" ? (
             <div className="mt-5 rounded-xl border border-[#dc2626]/25 bg-[#dc2626]/5 p-5 text-center">
               <AlertCircle className="mx-auto h-6 w-6 text-[#dc2626]" strokeWidth={1.5} />
@@ -357,10 +412,14 @@ function TrackJobContent({
                   done:
                     job.printStatus === "PRINTING" ||
                     job.printStatus === "COMPLETED",
-                  active: job.printStatus === "QUEUED",
+                  active:
+                    job.printStatus === "QUEUED" ||
+                    job.printStatus === "HOLD_FOR_PICKUP",
                   title: "Antrean Print Agent toko",
                   desc:
-                    job.printStatus === "QUEUED"
+                    job.printStatus === "HOLD_FOR_PICKUP"
+                      ? "Ditahan aman — menunggu Anda menekan Mulai Cetak di depan printer"
+                      : job.printStatus === "QUEUED"
                       ? "Menunggu komputer kasir mengambil dokumen"
                       : job.printStatus === "WAITING_PAYMENT"
                       ? "Masuk antrean otomatis setelah lunas"

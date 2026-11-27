@@ -18,6 +18,7 @@ export interface AdminShopRow {
   isFeaturedPartner?: boolean;
   hasListenerAddon?: boolean;
   hasPasFotoAddon?: boolean;
+  hasHoldPrintAddon?: boolean;
   extraPrinterSlots?: number;
   daysLeft: number | null;
   hoursLeft: number | null;

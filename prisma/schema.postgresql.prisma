@@ -23,6 +23,8 @@ model Shop {
   planExpiresAt     DateTime?
   isTestShop        Boolean               @default(false)
   hasListenerAddon  Boolean               @default(false)
+  hasPasFotoAddon   Boolean               @default(false)
+  hasHoldPrintAddon Boolean               @default(false)
   extraPrinterSlots Int                   @default(0)
   bwPrice           Int                   @default(500)
   colorPrice        Int                   @default(1500)
@@ -78,9 +80,10 @@ model PrintJob {
   paymentOrderId  String?   @unique
   qrisUrl         String?
   qrisString      String?
-  paymentStatus   String    @default("PENDING")
-  printStatus     String    @default("WAITING_PAYMENT")
-  fileDeletedAt   DateTime?
+  paymentStatus    String    @default("PENDING")
+  printStatus      String    @default("WAITING_PAYMENT")
+  holdUntilArrival Boolean   @default(false)
+  fileDeletedAt    DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 }

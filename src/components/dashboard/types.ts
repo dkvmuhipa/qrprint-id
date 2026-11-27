@@ -12,10 +12,12 @@ export interface ShopInfo {
   planExpiresAt: string | null;
   hasListenerAddon?: boolean;
   hasPasFotoAddon?: boolean;
+  hasHoldPrintAddon?: boolean;
   extraPrinterSlots?: number;
   effectiveMaxPrinters?: number | null;
   canUseListener?: boolean;
   canUsePasFoto?: boolean;
+  canUseHoldPrint?: boolean;
   bwPrice: number;
   colorPrice: number;
   duplexDiscount: number;
@@ -119,6 +121,7 @@ export interface PrintJobItem {
   paymentMethod: string;
   paymentStatus: string;
   printStatus: string;
+  holdUntilArrival?: boolean;
   fileDeletedAt: string | null;
   createdAt: string;
 }

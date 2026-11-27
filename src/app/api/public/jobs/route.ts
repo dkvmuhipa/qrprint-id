@@ -9,7 +9,7 @@ import {
   normalizeBindingType,
   parsePageRangeIndices,
 } from "@/lib/utils";
-import { evaluateShopEntitlement } from "@/lib/plans";
+import { canUseHoldPrint, evaluateShopEntitlement } from "@/lib/plans";
 import { convertStaticQrisToDynamic, isValidStaticQris } from "@/lib/qris";
 import {
   createMidtransQrisCharge,
@@ -81,6 +81,8 @@ export async function POST(req: Request) {
       String(formData.get("paymentMethod") || "QRIS") === "CASH"
         ? "CASH"
         : "QRIS";
+    const wantsHold =
+      String(formData.get("holdUntilArrival") || "").toLowerCase() === "true";
 
     if (!shopCode || !file) {
       return NextResponse.json(
@@ -369,9 +371,17 @@ export async function POST(req: Request) {
         paymentOrderId,
         qrisUrl,
         qrisString,
-        paymentStatus: "PENDING",
-        printStatus: "WAITING_PAYMENT",
-      },
+      paymentStatus: "PENDING",
+      printStatus: "WAITING_PAYMENT",
+      holdUntilArrival:
+        wantsHold &&
+        canUseHoldPrint({
+          planId: shop.plan,
+          planExpiresAt: shop.planExpiresAt,
+          hasHoldPrintAddon: shop.hasHoldPrintAddon,
+          isTestShop: shop.isTestShop,
+        }),
+    },
     });
 
     return NextResponse.json(
@@ -399,6 +409,7 @@ export async function POST(req: Request) {
           midtransIsProd,
           paymentStatus: job.paymentStatus,
           printStatus: job.printStatus,
+          holdUntilArrival: job.holdUntilArrival,
           fileDeletedAt: job.fileDeletedAt,
           createdAt: job.createdAt,
         },

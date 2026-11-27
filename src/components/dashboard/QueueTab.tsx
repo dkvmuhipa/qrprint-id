@@ -29,7 +29,7 @@ interface QueueTabProps {
   onSelectReceiptJob: (job: PrintJobItem) => void;
   onJobAction: (
     jobId: string,
-    action: "CONFIRM_CASH" | "COMPLETE" | "CANCEL" | "REQUEUE"
+    action: "CONFIRM_CASH" | "COMPLETE" | "CANCEL" | "REQUEUE" | "RELEASE_HOLD"
   ) => void;
 }
 
@@ -62,7 +62,10 @@ export function QueueTab({
     ALL: jobs.length,
     PENDING: jobs.filter((j) => j.printStatus === "WAITING_PAYMENT").length,
     ACTIVE: jobs.filter(
-      (j) => j.printStatus === "QUEUED" || j.printStatus === "PRINTING"
+      (j) =>
+        j.printStatus === "QUEUED" ||
+        j.printStatus === "PRINTING" ||
+        j.printStatus === "HOLD_FOR_PICKUP"
     ).length,
     COMPLETED: jobs.filter((j) => j.printStatus === "COMPLETED").length,
     CANCELLED: jobs.filter((j) => j.printStatus === "CANCELLED").length,
@@ -74,7 +77,8 @@ export function QueueTab({
     if (
       jobFilter === "ACTIVE" &&
       j.printStatus !== "QUEUED" &&
-      j.printStatus !== "PRINTING"
+      j.printStatus !== "PRINTING" &&
+      j.printStatus !== "HOLD_FOR_PICKUP"
     )
       return false;
     if (jobFilter === "COMPLETED" && j.printStatus !== "COMPLETED")
@@ -433,6 +437,8 @@ export function QueueTab({
                             ? "text-[#16a34a]"
                             : job.printStatus === "PRINTING"
                             ? "text-[#171717]"
+                            : job.printStatus === "HOLD_FOR_PICKUP"
+                            ? "text-purple-700"
                             : job.printStatus === "QUEUED"
                             ? "text-[#d9381e]"
                             : job.printStatus === "CANCELLED"
@@ -444,6 +450,8 @@ export function QueueTab({
                           className={`h-1.5 w-1.5 rounded-full ${
                             job.printStatus === "COMPLETED"
                               ? "bg-[#16a34a]"
+                              : job.printStatus === "HOLD_FOR_PICKUP"
+                              ? "bg-purple-600"
                               : job.printStatus === "QUEUED"
                               ? "bg-[#d9381e]"
                               : job.printStatus === "CANCELLED"
@@ -453,6 +461,8 @@ export function QueueTab({
                         />
                         {job.printStatus === "WAITING_PAYMENT"
                           ? "Menunggu pembayaran"
+                          : job.printStatus === "HOLD_FOR_PICKUP"
+                          ? "Ditahan (Tunggu Pelanggan)"
                           : job.printStatus === "QUEUED"
                           ? "Dalam antrean"
                           : job.printStatus === "PRINTING"
@@ -560,6 +570,19 @@ export function QueueTab({
                         <span>Kabari WA</span>
                       </a>
                     )}
+
+                    {job.printStatus === "HOLD_FOR_PICKUP" &&
+                      job.storedFilePath && (
+                        <button
+                          disabled={busy}
+                          onClick={() => onJobAction(job.id, "RELEASE_HOLD")}
+                          title="Lepas dokumen dari mode tahan & kirim ke printer sekarang"
+                          className="btn-action inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg bg-purple-700 px-3 text-xs font-medium text-white hover:bg-purple-800 disabled:opacity-50"
+                        >
+                          <Printer className="h-3.5 w-3.5" strokeWidth={1.5} />
+                          <span>Lepas &amp; Cetak</span>
+                        </button>
+                      )}
 
                     {job.printStatus === "PRINTING" && job.storedFilePath && (
                       <button

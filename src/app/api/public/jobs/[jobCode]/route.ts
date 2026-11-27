@@ -91,7 +91,9 @@ export async function GET(
               paymentStatus: "PAID",
               printStatus:
                 job.printStatus === "WAITING_PAYMENT"
-                  ? "QUEUED"
+                  ? job.holdUntilArrival
+                    ? "HOLD_FOR_PICKUP"
+                    : "QUEUED"
                   : job.printStatus,
             },
             include: { shop: { select: SHOP_SELECT } },
@@ -149,6 +151,7 @@ export async function GET(
         midtransIsProd: midtransConfig?.isProduction ?? false,
         paymentStatus: job.paymentStatus,
         printStatus: job.printStatus,
+        holdUntilArrival: Boolean(job.holdUntilArrival),
         fileDeletedAt: job.fileDeletedAt,
         createdAt: job.createdAt,
         shopName: job.shop?.name || job.shopNameSnapshot || "Toko",
@@ -204,8 +207,33 @@ export async function POST(
       data: {
         paymentStatus: "PAID",
         printStatus:
-          job.printStatus === "WAITING_PAYMENT" ? "QUEUED" : job.printStatus,
+          job.printStatus === "WAITING_PAYMENT"
+            ? job.holdUntilArrival
+              ? "HOLD_FOR_PICKUP"
+              : "QUEUED"
+            : job.printStatus,
       },
+    });
+    return NextResponse.json({ ok: true, job: updated });
+  }
+
+  if (action === "RELEASE_HOLD") {
+    if (
+      job.paymentStatus !== "PAID" ||
+      job.printStatus !== "HOLD_FOR_PICKUP" ||
+      !job.storedFilePath
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Dokumen belum siap dicetak atau sudah masuk antrean printer.",
+        },
+        { status: 400 }
+      );
+    }
+    const updated = await prisma.printJob.update({
+      where: { id: job.id },
+      data: { printStatus: "QUEUED" },
     });
     return NextResponse.json({ ok: true, job: updated });
   }

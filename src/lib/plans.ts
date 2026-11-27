@@ -7,12 +7,14 @@ export const LISTENER_ADDON_PRICE = 25000;
 export const EXTRA_PRINTER_ADDON_PRICE = 20000;
 export const URL_CHANGE_ADDON_PRICE = 37000;
 export const PASFOTO_ADDON_PRICE = 30000;
+export const HOLD_PRINT_ADDON_PRICE = 20000;
 
 export type AddonId =
   | "ADDON_LISTENER"
   | "ADDON_PRINTER"
   | "ADDON_URL_CHANGE"
-  | "ADDON_PASFOTO";
+  | "ADDON_PASFOTO"
+  | "ADDON_HOLD_PRINT";
 
 export interface AddonDefinition {
   id: AddonId;
@@ -56,6 +58,15 @@ export const SAAS_ADDONS: Record<AddonId, AddonDefinition> = {
     periodLabel: "30 hari",
     description:
       "Susun otomatis pas foto 2×3, 3×4, 4×6 (300 DPI + crop & zoom) siap cetak",
+  },
+  ADDON_HOLD_PRINT: {
+    id: "ADDON_HOLD_PRINT",
+    name: "Add-On Cetak Rahasia (Hold-to-Print)",
+    price: HOLD_PRINT_ADDON_PRICE,
+    durationDays: 30,
+    periodLabel: "30 hari",
+    description:
+      "Tahan dokumen rahasia pelanggan sampai tiba di depan printer toko",
   },
 };
 
@@ -102,6 +113,7 @@ export function resolveCheckoutCart(codes: string[]): {
   let extraPrinterQty = 0;
   let wantUrlChange = false;
   let wantPasFoto = false;
+  let wantHoldPrint = false;
 
   for (const raw of codes) {
     const token = String(raw || "").trim().toUpperCase();
@@ -119,6 +131,8 @@ export function resolveCheckoutCart(codes: string[]): {
       wantUrlChange = true;
     } else if (base === "ADDON_PASFOTO" && ENABLE_PASFOTO_GRID) {
       wantPasFoto = true;
+    } else if (base === "ADDON_HOLD_PRINT") {
+      wantHoldPrint = true;
     }
   }
 
@@ -126,12 +140,15 @@ export function resolveCheckoutCart(codes: string[]): {
   if (selectedPlan && selectedPlan.allowListener) {
     wantListener = false;
   }
-  // If Premium is in the cart, printers are already unlimited and Pas Foto is included free
+  // If Premium is in the cart, printers are already unlimited and Pas Foto / Hold-to-Print are included free
   if (selectedPlan && selectedPlan.maxPrinters === null) {
     extraPrinterQty = 0;
   }
   if (selectedPlan && selectedPlan.allowPasFoto) {
     wantPasFoto = false;
+  }
+  if (selectedPlan && selectedPlan.allowHoldPrint) {
+    wantHoldPrint = false;
   }
 
   const parts: string[] = [];
@@ -170,6 +187,12 @@ export function resolveCheckoutCart(codes: string[]): {
     parts.push("ADDON_PASFOTO");
     labels.push("Generator Pas Foto");
     totalPrice += SAAS_ADDONS.ADDON_PASFOTO.price;
+    if (durationDays === null && !selectedPlan) durationDays = 30;
+  }
+  if (wantHoldPrint) {
+    parts.push("ADDON_HOLD_PRINT");
+    labels.push("Cetak Rahasia (Hold-to-Print)");
+    totalPrice += SAAS_ADDONS.ADDON_HOLD_PRINT.price;
     if (durationDays === null && !selectedPlan) durationDays = 30;
   }
 
@@ -224,6 +247,9 @@ export function buildShopUpdateForPaidInvoice(
     } else if (base === "ADDON_PASFOTO") {
       data.hasPasFotoAddon = true;
       labels.push(SAAS_ADDONS.ADDON_PASFOTO.name);
+    } else if (base === "ADDON_HOLD_PRINT") {
+      data.hasHoldPrintAddon = true;
+      labels.push(SAAS_ADDONS.ADDON_HOLD_PRINT.name);
     } else if (base === "BULANAN" || base === "PRO" || base === "PREMIUM") {
       const planDef = getPlanDef(base);
       const baseExpiry = shop.plan === "DEMO" ? null : shop.planExpiresAt;
@@ -268,6 +294,7 @@ export interface PlanDefinition {
   allowDuplex: boolean;
   allowListener: boolean; // Ngeprint Listener Android auto-verify QRIS
   allowPasFoto: boolean; // Generator Grid Pas Foto 2x3, 3x4, 4x6 (gratis di PREMIUM)
+  allowHoldPrint: boolean; // Cetak Rahasia / Hold-to-Print (gratis di PREMIUM)
   description: string;
   features: string[];
 }
@@ -285,6 +312,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: false,
     allowListener: false,
     allowPasFoto: false,
+    allowHoldPrint: false,
     description: "Uji coba langsung di printer toko selama 24 jam",
     features: [
       "Masa aktif 24 jam penuh",
@@ -306,6 +334,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: true,
     allowListener: false,
     allowPasFoto: false,
+    allowHoldPrint: false,
     description: "Fleksibel per bulan · Add-On Ngeprint Listener +Rp 25.000/bln",
     features: [
       "Cetak dokumen tanpa batas kuota (30 hari)",
@@ -327,6 +356,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: true,
     allowListener: true,
     allowPasFoto: false,
+    allowHoldPrint: false,
     description: "Paket tahunan hemat (setara Rp 37rb/bln) — sudah termasuk Ngeprint Listener",
     features: [
       "Cetak dokumen tanpa batas 1 tahun penuh",
@@ -348,6 +378,7 @@ export const SAAS_PLANS: Record<PlanId, PlanDefinition> = {
     allowDuplex: true,
     allowListener: true,
     allowPasFoto: true,
+    allowHoldPrint: true,
     description: "Kapasitas penuh untuk percetakan ramai — sudah termasuk Listener & Pas Foto Grid",
     features: [
       "Cetak dokumen tanpa batas 1 tahun penuh",
@@ -374,6 +405,21 @@ export function canUsePasFoto(params: {
     if (expMs <= Date.now()) return false;
   }
   return plan.allowPasFoto || Boolean(params.hasPasFotoAddon);
+}
+
+export function canUseHoldPrint(params: {
+  planId: string;
+  planExpiresAt: Date | string | null;
+  hasHoldPrintAddon?: boolean | null;
+  isTestShop?: boolean | null;
+}): boolean {
+  if (params.isTestShop) return true;
+  const plan = getPlanDef(params.planId);
+  if (params.planExpiresAt) {
+    const expMs = new Date(params.planExpiresAt).getTime();
+    if (expMs <= Date.now()) return false;
+  }
+  return plan.allowHoldPrint || Boolean(params.hasHoldPrintAddon);
 }
 
 export function canUseListener(params: {

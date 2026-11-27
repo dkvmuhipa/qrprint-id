@@ -33,8 +33,26 @@ export async function PATCH(
       where: { id: job.id },
       data: {
         paymentStatus: "PAID",
-        printStatus: "QUEUED",
+        printStatus: job.holdUntilArrival ? "HOLD_FOR_PICKUP" : "QUEUED",
       },
+    });
+    return NextResponse.json({ ok: true, job: updated });
+  }
+
+  if (action === "RELEASE_HOLD") {
+    cancelScheduledCompletion(job.id);
+    if (job.paymentStatus !== "PAID" || !job.storedFilePath) {
+      return NextResponse.json(
+        {
+          error:
+            "Antrean tidak bisa dilepas ke printer karena belum lunas atau file sudah dihapus.",
+        },
+        { status: 400 }
+      );
+    }
+    const updated = await prisma.printJob.update({
+      where: { id: job.id },
+      data: { printStatus: "QUEUED" },
     });
     return NextResponse.json({ ok: true, job: updated });
   }

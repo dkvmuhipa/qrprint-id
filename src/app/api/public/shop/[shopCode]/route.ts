@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { canUsePasFoto, evaluateShopEntitlement } from "@/lib/plans";
+import { canUseHoldPrint, canUsePasFoto, evaluateShopEntitlement } from "@/lib/plans";
 import { evaluateShopOpenStatus } from "@/lib/shop-hours";
 
 export async function GET(
@@ -109,6 +109,12 @@ export async function GET(
           planId: shop.plan,
           planExpiresAt: shop.planExpiresAt,
           hasPasFotoAddon: shop.hasPasFotoAddon,
+          isTestShop: shop.isTestShop,
+        }),
+        allowHoldPrint: canUseHoldPrint({
+          planId: shop.plan,
+          planExpiresAt: shop.planExpiresAt,
+          hasHoldPrintAddon: shop.hasHoldPrintAddon,
           isTestShop: shop.isTestShop,
         }),
         canAcceptJobs: entitlement.canAcceptJobs,

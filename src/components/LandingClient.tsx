@@ -25,6 +25,7 @@ import {
   Camera,
   Link2,
   LocateFixed,
+  Lock,
   PlusCircle,
   Map as MapIcon,
   MapPin,
@@ -836,7 +837,7 @@ export function LandingClient() {
             </p>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {[
               {
                 icon: Smartphone,
@@ -855,6 +856,15 @@ export function LandingClient() {
                 badge: "Unlimited di Premium",
                 comingSoon: false,
                 desc: "Tambah kapasitas slot printer USB & aktifkan Multi-Printer Pool secara fleksibel.",
+              },
+              {
+                icon: Lock,
+                name: "Cetak Rahasia (Hold-to-Print)",
+                price: "Rp 20.000",
+                period: "/ 30 hari",
+                badge: "Gratis di Premium",
+                comingSoon: false,
+                desc: "Tahan dokumen rahasia (KTP/kontrak) sampai pelanggan tiba di depan printer toko.",
               },
               {
                 icon: Link2,

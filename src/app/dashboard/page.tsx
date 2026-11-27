@@ -111,12 +111,14 @@ function DashboardContent() {
     extraPrinters: number;
     urlChange: boolean;
     pasFoto: boolean;
+    holdPrint: boolean;
   }>({
     planId: null,
     listener: false,
     extraPrinters: 0,
     urlChange: false,
     pasFoto: false,
+    holdPrint: false,
   });
   const [checkingOutCart, setCheckingOutCart] = useState(false);
 
@@ -133,6 +135,7 @@ function DashboardContent() {
     }
     if (cart.urlChange) items.push("ADDON_URL_CHANGE");
     if (cart.pasFoto) items.push("ADDON_PASFOTO");
+    if (cart.holdPrint) items.push("ADDON_HOLD_PRINT");
     if (items.length === 0) return;
 
     setCheckingOutCart(true);
@@ -151,6 +154,7 @@ function DashboardContent() {
           extraPrinters: 0,
           urlChange: false,
           pasFoto: false,
+          holdPrint: false,
         });
         setBillingMsg(
           `Invoice ${json.invoice?.invoiceCode || ""} berhasil dibuat. Silakan selesaikan pembayaran di atas.`

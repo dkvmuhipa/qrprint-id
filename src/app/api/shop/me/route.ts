@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { getCurrentShop } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
+  canUseHoldPrint,
   canUseListener,
   canUsePasFoto,
   evaluateShopEntitlement,
@@ -178,6 +179,7 @@ export async function GET() {
       planExpiresAt: shop.planExpiresAt,
       hasListenerAddon: shop.hasListenerAddon,
       hasPasFotoAddon: shop.hasPasFotoAddon,
+      hasHoldPrintAddon: Boolean(shop.hasHoldPrintAddon),
       extraPrinterSlots: shop.extraPrinterSlots,
       effectiveMaxPrinters: getEffectiveMaxPrinters(
         shop.plan,
@@ -192,6 +194,12 @@ export async function GET() {
         planId: shop.plan,
         planExpiresAt: shop.planExpiresAt,
         hasPasFotoAddon: shop.hasPasFotoAddon,
+        isTestShop: shop.isTestShop,
+      }),
+      canUseHoldPrint: canUseHoldPrint({
+        planId: shop.plan,
+        planExpiresAt: shop.planExpiresAt,
+        hasHoldPrintAddon: shop.hasHoldPrintAddon,
         isTestShop: shop.isTestShop,
       }),
       bwPrice: shop.bwPrice,

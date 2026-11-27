@@ -144,7 +144,11 @@ export async function POST(req: Request) {
         data: {
           paymentStatus: "PAID",
           printStatus:
-            job.printStatus === "WAITING_PAYMENT" ? "QUEUED" : job.printStatus,
+            job.printStatus === "WAITING_PAYMENT"
+              ? job.holdUntilArrival
+                ? "HOLD_FOR_PICKUP"
+                : "QUEUED"
+              : job.printStatus,
         },
       });
     } else if (isFailed && job.printStatus === "WAITING_PAYMENT") {

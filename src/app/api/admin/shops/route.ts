@@ -637,6 +637,37 @@ export async function PATCH(req: Request) {
       });
     }
 
+    // 13b. Toggle Hold-to-Print Add-On (+Rp 20.000/bln)
+    if (action === "TOGGLE_HOLD_PRINT_ADDON" && shopId) {
+      const shop = await prisma.shop.findUnique({ where: { id: shopId } });
+      if (!shop) {
+        return NextResponse.json(
+          { error: "Toko tidak ditemukan." },
+          { status: 404 }
+        );
+      }
+      const nextVal = !shop.hasHoldPrintAddon;
+      await prisma.shop.update({
+        where: { id: shop.id },
+        data: { hasHoldPrintAddon: nextVal },
+      });
+      await recordAdminAudit({
+        adminEmail: admin.email,
+        action: "TOGGLE_HOLD_PRINT_ADDON",
+        target: `${shop.name} (/s/${shop.shopCode})`,
+        details: nextVal
+          ? "Aktifkan Add-On Cetak Rahasia (Hold-to-Print)"
+          : "Nonaktifkan Add-On Cetak Rahasia (Hold-to-Print)",
+      });
+      return NextResponse.json({
+        ok: true,
+        hasHoldPrintAddon: nextVal,
+        message: nextVal
+          ? `Add-On Cetak Rahasia (Hold-to-Print) diaktifkan untuk ${shop.name}.`
+          : `Add-On Cetak Rahasia dinonaktifkan untuk ${shop.name}.`,
+      });
+    }
+
     // 14. Adjust Extra Printer Slots Add-On (+Rp 20.000/bln per slot)
     if (action === "SET_EXTRA_PRINTER_SLOTS" && shopId) {
       const shop = await prisma.shop.findUnique({ where: { id: shopId } });

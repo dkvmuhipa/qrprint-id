@@ -253,7 +253,9 @@ export async function POST(req: Request) {
       where: { id: matchingJob.id },
       data: {
         paymentStatus: "PAID",
-        printStatus: "QUEUED",
+        printStatus: matchingJob.holdUntilArrival
+          ? "HOLD_FOR_PICKUP"
+          : "QUEUED",
       },
     });
 

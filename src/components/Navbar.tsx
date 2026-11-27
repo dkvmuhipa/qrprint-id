@@ -103,6 +103,12 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
           >
             Panduan
           </Link>
+          <Link
+            href="/tools"
+            className="transition-colors duration-150 hover:text-[#1f1b16]"
+          >
+            Alat PDF
+          </Link>
         </nav>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-4">
@@ -179,6 +185,13 @@ export function Navbar({ onOpenDemo }: { onOpenDemo?: () => void }) {
               className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
             >
               Panduan pemasangan
+            </Link>
+            <Link
+              href="/tools"
+              onClick={() => setOpen(false)}
+              className="flex min-h-[44px] items-center rounded-md px-2 text-[#5e554a] hover:bg-[#efe9df]/60 hover:text-[#1f1b16]"
+            >
+              Alat PDF gratis
             </Link>
             <div className="my-2 border-t border-[#1f1b16]/8" />
             <Link

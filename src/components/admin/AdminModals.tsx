@@ -435,6 +435,41 @@ export function ShopDetailDrawer({
                 )}
             </div>
 
+            {/* Hold-to-Print Add-On Toggle */}
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">
+              <div>
+                <p className="font-medium text-[#171717]">
+                  Add-On Cetak Rahasia / Hold-to-Print (+Rp 20.000/bln)
+                </p>
+                <p className="text-[11px] text-[#737373]">
+                  {selectedShop.plan === "PREMIUM" || selectedShop.isTestShop
+                    ? "Sudah otomatis aktif di paket Premium / Testing"
+                    : selectedShop.hasHoldPrintAddon
+                    ? "Aktif (Add-On berbayar)"
+                    : "Nonaktif (dokumen langsung dicetak saat lunas)"}
+                </p>
+              </div>
+              {selectedShop.plan !== "PREMIUM" && !selectedShop.isTestShop && (
+                <button
+                  type="button"
+                  disabled={busyId === "toggle_hold_print"}
+                  onClick={() =>
+                    onRunAdminAction("toggle_hold_print", {
+                      action: "TOGGLE_HOLD_PRINT_ADDON",
+                      shopId: selectedShop.id,
+                    })
+                  }
+                  className={`h-8 shrink-0 cursor-pointer rounded-lg px-3 text-xs font-medium ${
+                    selectedShop.hasHoldPrintAddon
+                      ? "border border-[#dc2626]/25 bg-[#dc2626]/5 text-[#dc2626]"
+                      : "bg-[#171717] text-white"
+                  }`}
+                >
+                  {selectedShop.hasHoldPrintAddon ? "Nonaktifkan" : "Aktifkan"}
+                </button>
+              )}
+            </div>
+
             {/* Extra Printer Slots Add-On */}
             {selectedShop.plan !== "PREMIUM" && (
               <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#171717]/8 pt-3 text-xs">

@@ -89,6 +89,7 @@ interface PublicShop {
   allowExtraPaper?: boolean;
   allowDuplex?: boolean;
   allowPasFoto?: boolean;
+  allowHoldPrint?: boolean;
   canAcceptJobs?: boolean;
   blockReason?: string | null;
   isShopOpen?: boolean;
@@ -119,6 +120,7 @@ interface ActiveJob {
   midtransIsProd?: boolean;
   paymentStatus: string;
   printStatus: string;
+  holdUntilArrival?: boolean;
   fileDeletedAt: string | null;
   createdAt?: string;
   qrisName?: string;
@@ -162,6 +164,8 @@ function CustomerScanPortalContent({
   const [pageRange, setPageRange] = useState("ALL");
   const [bindingType, setBindingType] = useState<BindingType>("NONE");
   const [paymentMethod, setPaymentMethod] = useState<"QRIS" | "CASH">("QRIS");
+  const [holdUntilArrival, setHoldUntilArrival] = useState(false);
+  const [releasingHold, setReleasingHold] = useState(false);
   const [previewModal, setPreviewModal] = useState<{
     name: string;
     url: string;
@@ -730,6 +734,10 @@ function CustomerScanPortalContent({
       fd.append("pageCount", String(detectedPages));
       fd.append("bindingType", paperSize === "PHOTO_4X6" ? "NONE" : bindingType);
       fd.append("paymentMethod", paymentMethod);
+      fd.append(
+        "holdUntilArrival",
+        String(Boolean(shop.allowHoldPrint && holdUntilArrival))
+      );
 
       const res = await fetch("/api/public/jobs", {
         method: "POST",
@@ -1363,6 +1371,64 @@ function CustomerScanPortalContent({
                 </div>
               )}
 
+              {/* Hold-to-Print Secret Mode Banner */}
+              {activeJob.printStatus === "HOLD_FOR_PICKUP" && (
+                <div className="mt-5 rounded-xl border border-purple-300 bg-purple-50 p-5 text-center">
+                  <p className="text-xs font-semibold tracking-wider text-purple-800 uppercase">
+                    Mode Cetak Rahasia Aktif
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-[#1f1b16]">
+                    Dokumen Lunas &amp; Ditahan Aman — Belum Dicetak
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-[#5e554a]">
+                    File Anda ditahan aman agar tidak terbaca orang lain. Tekan
+                    tombol di bawah ini saat Anda sudah berada di depan printer
+                    toko.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={releasingHold}
+                    onClick={async () => {
+                      setReleasingHold(true);
+                      try {
+                        const res = await fetch(
+                          `/api/public/jobs/${encodeURIComponent(
+                            activeJob.jobCode
+                          )}`,
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "RELEASE_HOLD" }),
+                          }
+                        );
+                        if (res.ok) {
+                          const refreshed = await fetch(
+                            `/api/public/jobs/${encodeURIComponent(
+                              activeJob.jobCode
+                            )}?t=${Date.now()}`,
+                            { cache: "no-store" }
+                          );
+                          if (refreshed.ok) {
+                            const j = await refreshed.json();
+                            if (j.job) setActiveJob(j.job);
+                          }
+                        }
+                      } finally {
+                        setReleasingHold(false);
+                      }
+                    }}
+                    className="btn-action mt-4 inline-flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-purple-700 px-4 text-xs font-semibold text-white hover:bg-purple-800 disabled:opacity-60"
+                  >
+                    <Printer className="h-4 w-4" strokeWidth={1.75} />
+                    <span>
+                      {releasingHold
+                        ? "Mengirim ke printer..."
+                        : "Saya Sudah di Depan Printer — Mulai Cetak Sekarang"}
+                    </span>
+                  </button>
+                </div>
+              )}
+
               {/* Live Status Stepper */}
               <div className="mt-6 space-y-2.5">
                 <p className="text-xs font-medium text-[#7b7266]">
@@ -1383,10 +1449,14 @@ function CustomerScanPortalContent({
                     done:
                       activeJob.printStatus === "PRINTING" ||
                       activeJob.printStatus === "COMPLETED",
-                    active: activeJob.printStatus === "QUEUED",
+                    active:
+                      activeJob.printStatus === "QUEUED" ||
+                      activeJob.printStatus === "HOLD_FOR_PICKUP",
                     title: "Antrean Print Agent toko",
                     desc:
-                      activeJob.printStatus === "QUEUED"
+                      activeJob.printStatus === "HOLD_FOR_PICKUP"
+                        ? "Ditahan aman — menunggu Anda menekan Mulai Cetak di depan printer"
+                        : activeJob.printStatus === "QUEUED"
                         ? "Menunggu komputer kasir mengambil dokumen"
                         : activeJob.printStatus === "WAITING_PAYMENT"
                         ? "Masuk antrean otomatis setelah pembayaran lunas"
@@ -2189,6 +2259,27 @@ function CustomerScanPortalContent({
                   className="h-10 w-full rounded-lg border border-[#1f1b16]/12 bg-white px-3.5 text-sm outline-none focus:border-[#1f1b16]"
                 />
               </div>
+
+              {shop.allowHoldPrint && (
+                <label className="mt-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-purple-200 bg-purple-50/70 p-3 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={holdUntilArrival}
+                    onChange={(e) => setHoldUntilArrival(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-purple-700"
+                  />
+                  <div>
+                    <p className="font-medium text-purple-950">
+                      Cetak Rahasia (Tahan Sampai Saya Tiba)
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-relaxed text-purple-900/75">
+                      Cocok untuk KTP, kontrak, atau dokumen penting. File ditahan
+                      aman setelah bayar dan baru dicetak saat Anda menekan{" "}
+                      <strong>Mulai Cetak</strong> di depan printer toko.
+                    </p>
+                  </div>
+                </label>
+              )}
             </div>
 
             {/* Payment Method */}

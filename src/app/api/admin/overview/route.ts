@@ -196,6 +196,7 @@ export async function GET() {
       isFeaturedPartner: Boolean(s.isFeaturedPartner),
       hasListenerAddon: s.hasListenerAddon,
       hasPasFotoAddon: Boolean(s.hasPasFotoAddon),
+      hasHoldPrintAddon: Boolean(s.hasHoldPrintAddon),
       extraPrinterSlots: s.extraPrinterSlots,
       daysLeft: entitlement.daysLeft,
       hoursLeft: entitlement.hoursLeft,
