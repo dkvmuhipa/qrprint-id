@@ -687,6 +687,7 @@ export function BillingTab({
                     extraPrinters: 0,
                     urlChange: false,
                     pasFoto: false,
+                    holdPrint: false,
                   })
                 }
                 className="inline-flex cursor-pointer items-center gap-1 text-xs text-[#737373] hover:text-[#dc2626]"

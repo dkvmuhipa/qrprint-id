@@ -162,8 +162,8 @@ export function PdfToolsClient() {
 
   async function handleSplitDownload() {
     if (!splitFile) return;
-    const indices = parsePageRangeIndices(splitRange, splitFile.pages);
-    if (indices.length === 0) {
+    const zeroBased = parsePageRangeIndices(splitFile.pages, splitRange);
+    if (zeroBased.length === 0) {
       setStatusMsg({
         type: "err",
         text: `Rentang halaman tidak valid. Gunakan angka 1–${splitFile.pages}, misal: 1-3, 5.`,
@@ -176,14 +176,13 @@ export function PdfToolsClient() {
       const buf = await splitFile.file.arrayBuffer();
       const src = await PDFDocument.load(buf, { ignoreEncryption: true });
       const outDoc = await PDFDocument.create();
-      const zeroBased = indices.map((n) => n - 1);
       const copied = await outDoc.copyPages(src, zeroBased);
       copied.forEach((p) => outDoc.addPage(p));
       const out = await outDoc.save();
       triggerPdfDownload(out, `ngeprint-halaman-${Date.now()}.pdf`);
       setStatusMsg({
         type: "ok",
-        text: `Berhasil mengambil ${indices.length} halaman dari total ${splitFile.pages} halaman.`,
+        text: `Berhasil mengambil ${zeroBased.length} halaman dari total ${splitFile.pages} halaman.`,
       });
     } catch {
       setStatusMsg({
